@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, Upload, Clock, Calendar, Tag, Stethoscope, MapPin } from "lucide-react";
+import { Plus, Search, Upload, Clock, Calendar, Tag, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -136,7 +136,7 @@ const Dashboard = () => {
         ) : filtered.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <Stethoscope className="mb-4 h-12 w-12 text-muted-foreground/50" />
+              <img src={nexusLogo} alt="Nexus" className="mb-4 h-16 w-16 rounded-xl object-cover opacity-60" />
               <h3 className="text-lg font-semibold">Nenhum curso encontrado</h3>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                 {courses.length === 0

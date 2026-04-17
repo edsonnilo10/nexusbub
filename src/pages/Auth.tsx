@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Stethoscope } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import nexusLogo from "@/assets/nexus-logo.jpg";
 
 const emailSchema = z.string().trim().email("E-mail inválido").max(255);
 const passwordSchema = z.string().min(6, "Mínimo 6 caracteres").max(72);
@@ -89,8 +90,8 @@ const Auth = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center text-primary-foreground">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-foreground/10 backdrop-blur">
-            <Stethoscope className="h-8 w-8" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-primary-foreground/10 ring-1 ring-primary-foreground/20 backdrop-blur">
+            <img src={nexusLogo} alt="Nexus Ultrassonografia" className="h-full w-full object-cover" />
           </div>
           <h1 className="text-3xl font-bold">Nexus Ultrassonografia</h1>
           <p className="mt-2 text-primary-foreground/80">Hub interno de cursos</p>
