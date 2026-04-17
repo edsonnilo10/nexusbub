@@ -117,13 +117,19 @@ const CourseDetail = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="info">
-          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex sm:grid-cols-none">
+        <Tabs defaultValue="assistant">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex sm:grid-cols-none">
+            <TabsTrigger value="assistant" className="gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> Assistente IA
+            </TabsTrigger>
             <TabsTrigger value="info">Informações</TabsTrigger>
             <TabsTrigger value="classes">Turmas</TabsTrigger>
             <TabsTrigger value="landing">Apresentação</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           </TabsList>
+          <TabsContent value="assistant" className="mt-6">
+            <CourseAssistant course={course} />
+          </TabsContent>
           <TabsContent value="info" className="mt-6">
             <CourseInfoTab course={course} modules={modules} classes={classes} />
           </TabsContent>
