@@ -446,18 +446,27 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
             <div className="absolute right-[10mm] top-[10mm] h-[80mm] w-[80mm] rounded-full border-[18mm] border-[#bfe3d0]/40" />
             <div className="absolute bottom-[10mm] left-[10mm] h-[100mm] w-[100mm] rounded-full border-[20mm] border-[#0d6b4f]/30" />
             <div className="relative flex h-full items-center justify-center p-[20mm]">
-              <div className="w-full max-w-[140mm] rounded-3xl border-2 border-[#0d6b4f] bg-white p-[20mm] text-center shadow-xl">
-                <div className="text-[18px] font-bold text-[#0d6b4f]">Investimento:</div>
-                <div className="mt-6 inline-block rounded-2xl bg-gradient-to-br from-[#0d6b4f] to-[#003d2a] px-10 py-6 text-white shadow-lg">
-                  <div className="text-[48px] font-extrabold leading-none">R$ {priceValue}</div>
+              <div className="w-full max-w-[150mm] rounded-3xl border-2 border-[#0d6b4f] bg-white p-[18mm] text-center shadow-xl">
+                <div className="text-[18px] font-bold text-[#0d6b4f]">Investimento</div>
+                <div className="mt-5 inline-block rounded-2xl bg-gradient-to-br from-[#0d6b4f] to-[#003d2a] px-10 py-6 text-white shadow-lg">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#bfe3d0]">
+                    Valor total
+                  </div>
+                  <div className="mt-1 text-[44px] font-extrabold leading-none">R$ {priceValue}</div>
                 </div>
-                {course.installments && course.installments > 1 && (
-                  <div className="mt-4 text-sm text-neutral-600">
-                    em até {course.installments}x sem juros
+                {installments > 1 && totalPrice > 0 && (
+                  <div className="mt-6 inline-block rounded-2xl border-2 border-dashed border-[#0d6b4f] bg-[#f3f8f5] px-8 py-5">
+                    <div className="text-[12px] font-semibold uppercase tracking-wider text-[#0d6b4f]">
+                      Ou parcele em
+                    </div>
+                    <div className="mt-1 text-[28px] font-extrabold leading-none text-[#0d6b4f]">
+                      {installments}x de {formatBRL(installmentValue)}
+                    </div>
+                    <div className="mt-1 text-[11px] text-neutral-600">sem juros</div>
                   </div>
                 )}
                 {course.payment_methods && (
-                  <div className="mt-2 text-xs text-neutral-500">{course.payment_methods}</div>
+                  <div className="mt-5 text-xs text-neutral-500">{course.payment_methods}</div>
                 )}
               </div>
             </div>
