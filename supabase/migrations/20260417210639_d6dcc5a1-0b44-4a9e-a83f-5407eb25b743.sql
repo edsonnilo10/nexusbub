@@ -1,0 +1,1 @@
+ALTER TYPE public.class_status ADD VALUE IF NOT EXISTS 'aguardando_confirmacao';
