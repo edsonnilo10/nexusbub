@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Loader2, Trash2, Sparkles } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { CourseLandingTab } from "@/components/course/CourseLandingTab";
 import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
 import { CourseClassesTab } from "@/components/course/CourseClassesTab";
 import { CourseAssistant } from "@/components/course/CourseAssistant";
+import { CourseProposal } from "@/components/course/CourseProposal";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -118,9 +119,12 @@ const CourseDetail = () => {
         </div>
 
         <Tabs defaultValue="assistant">
-          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex sm:grid-cols-none">
+          <TabsList className="flex w-full flex-wrap gap-1 sm:w-auto sm:inline-flex">
             <TabsTrigger value="assistant" className="gap-1.5">
               <Sparkles className="h-3.5 w-3.5" /> Assistente IA
+            </TabsTrigger>
+            <TabsTrigger value="proposal" className="gap-1.5">
+              <FileText className="h-3.5 w-3.5" /> Proposta
             </TabsTrigger>
             <TabsTrigger value="info">Informações</TabsTrigger>
             <TabsTrigger value="classes">Turmas</TabsTrigger>
@@ -129,6 +133,9 @@ const CourseDetail = () => {
           </TabsList>
           <TabsContent value="assistant" className="mt-6">
             <CourseAssistant course={course} />
+          </TabsContent>
+          <TabsContent value="proposal" className="mt-6">
+            <CourseProposal course={course} modules={modules} classes={classes} />
           </TabsContent>
           <TabsContent value="info" className="mt-6">
             <CourseInfoTab course={course} modules={modules} classes={classes} />
