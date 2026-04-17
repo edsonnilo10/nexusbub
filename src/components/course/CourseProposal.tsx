@@ -39,6 +39,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
 
   // Valores editáveis (preferem o que o usuário salvou; senão, fallback)
   const [priceValue, setPriceValue] = useState<string>(defaultPrice);
+  const [installments, setInstallments] = useState<number>(course.installments || 1);
   const [startDate, setStartDate] = useState<string>(nextClass?.start_date || "");
   const [endDate, setEndDate] = useState<string>(nextClass?.end_date || "");
   const [coordinators, setCoordinators] = useState<string>("");
@@ -48,28 +49,48 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   useEffect(() => {
     if (!loaded) return;
     setPriceValue(overrides.proposal_price ?? defaultPrice);
+    setInstallments(overrides.proposal_installments ?? course.installments ?? 1);
     const initStart = overrides.proposal_start_date ?? nextClass?.start_date ?? "";
     const initEnd = overrides.proposal_end_date ?? nextClass?.end_date ?? "";
     setStartDate(initStart);
     setEndDate(initEnd);
     setCoordinators(overrides.proposal_coordinators ?? "");
-    // tenta casar com uma turma existente
-    const match = classes.find((c) => c.start_date === initStart && (c.end_date || "") === (initEnd || ""));
+    // prefere ID salvo; senão tenta casar por datas
+    const fromId = overrides.proposal_class_id && classes.find((c) => c.id === overrides.proposal_class_id);
+    const match = fromId || classes.find((c) => c.start_date === initStart && (c.end_date || "") === (initEnd || ""));
     setSelectedClassId(match?.id ?? "manual");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
   const handleClassChange = (id: string) => {
     setSelectedClassId(id);
-    if (id === "manual") return;
+    if (id === "manual") {
+      save({ proposal_class_id: null });
+      return;
+    }
     const c = classes.find((x) => x.id === id);
     if (!c) return;
     const s = c.start_date || "";
     const e = c.end_date || "";
     setStartDate(s);
     setEndDate(e);
-    save({ proposal_start_date: s || null, proposal_end_date: e || null });
+    save({ proposal_start_date: s || null, proposal_end_date: e || null, proposal_class_id: id });
   };
+
+  // Turma selecionada (para exibir nome/local na proposta)
+  const selectedClass = useMemo(
+    () => (selectedClassId !== "manual" ? classes.find((c) => c.id === selectedClassId) : null),
+    [selectedClassId, classes]
+  );
+
+  // Cálculo de parcelamento
+  const parsePrice = (s: string): number => {
+    const cleaned = s.replace(/\./g, "").replace(",", ".").replace(/[^0-9.]/g, "");
+    const n = parseFloat(cleaned);
+    return isFinite(n) ? n : 0;
+  };
+  const totalPrice = parsePrice(priceValue);
+  const installmentValue = installments > 0 ? totalPrice / installments : totalPrice;
 
   // Gera lista de dias entre startDate e endDate
   const courseDays = useMemo(() => {
