@@ -42,16 +42,34 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   const [startDate, setStartDate] = useState<string>(nextClass?.start_date || "");
   const [endDate, setEndDate] = useState<string>(nextClass?.end_date || "");
   const [coordinators, setCoordinators] = useState<string>("");
+  const [selectedClassId, setSelectedClassId] = useState<string>("manual");
 
   // Quando overrides carregam, aplica valores salvos do usuário
   useEffect(() => {
     if (!loaded) return;
     setPriceValue(overrides.proposal_price ?? defaultPrice);
-    setStartDate(overrides.proposal_start_date ?? nextClass?.start_date ?? "");
-    setEndDate(overrides.proposal_end_date ?? nextClass?.end_date ?? "");
+    const initStart = overrides.proposal_start_date ?? nextClass?.start_date ?? "";
+    const initEnd = overrides.proposal_end_date ?? nextClass?.end_date ?? "";
+    setStartDate(initStart);
+    setEndDate(initEnd);
     setCoordinators(overrides.proposal_coordinators ?? "");
+    // tenta casar com uma turma existente
+    const match = classes.find((c) => c.start_date === initStart && (c.end_date || "") === (initEnd || ""));
+    setSelectedClassId(match?.id ?? "manual");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
+
+  const handleClassChange = (id: string) => {
+    setSelectedClassId(id);
+    if (id === "manual") return;
+    const c = classes.find((x) => x.id === id);
+    if (!c) return;
+    const s = c.start_date || "";
+    const e = c.end_date || "";
+    setStartDate(s);
+    setEndDate(e);
+    save({ proposal_start_date: s || null, proposal_end_date: e || null });
+  };
 
   // Gera lista de dias entre startDate e endDate
   const courseDays = useMemo(() => {
