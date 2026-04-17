@@ -170,9 +170,9 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
             </p>
           </div>
         )}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>
-            <Label className="text-xs">Valor (R$)</Label>
+            <Label className="text-xs">Valor total (R$)</Label>
             <Input
               value={priceValue}
               onChange={(e) => {
@@ -181,6 +181,25 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               }}
               placeholder="3.990,00"
             />
+          </div>
+          <div>
+            <Label className="text-xs">Parcelas (sem juros)</Label>
+            <Input
+              type="number"
+              min={1}
+              max={24}
+              value={installments}
+              onChange={(e) => {
+                const n = Math.max(1, Math.min(24, parseInt(e.target.value) || 1));
+                setInstallments(n);
+                save({ proposal_installments: n });
+              }}
+            />
+            {totalPrice > 0 && installments > 1 && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {installments}x de <strong>{formatBRL(installmentValue)}</strong>
+              </p>
+            )}
           </div>
           <div>
             <Label className="text-xs">Data início</Label>
