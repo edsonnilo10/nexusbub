@@ -236,10 +236,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           <section className="proposal-page relative" style={pageStyle}>
             <div className="grid h-full grid-cols-[1fr_70mm]">
               <div className="flex flex-col justify-center p-[20mm]">
-                <div className="mb-10 flex items-center gap-3">
-                  <img src={nexusLogo} alt="Nexus" className="h-12 w-12 rounded-lg object-cover" />
-                  <span className="text-3xl font-light tracking-tight text-[#0a3d2e]">nexus</span>
-                </div>
+                <img src={nexusBrand} alt="Nexus" className="mb-8 h-[22mm] w-auto" crossOrigin="anonymous" />
                 <h2 className="text-[26px] font-bold leading-tight text-[#0d6b4f]">
                   Nexus: Sua jornada para a excelência em ultrassonografia começa aqui.
                 </h2>
