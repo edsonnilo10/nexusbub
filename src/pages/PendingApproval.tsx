@@ -1,7 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, LogOut, Stethoscope } from "lucide-react";
+import { Clock, LogOut } from "lucide-react";
+import nexusLogo from "@/assets/nexus-logo.jpg";
 import { useEffect } from "react";
 
 const PendingApproval = () => {
@@ -15,8 +16,8 @@ const PendingApproval = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center text-primary-foreground">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-foreground/10 backdrop-blur">
-            <Stethoscope className="h-8 w-8" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-primary-foreground/10 ring-1 ring-primary-foreground/20 backdrop-blur">
+            <img src={nexusLogo} alt="Nexus Ultrassonografia" className="h-full w-full object-cover" />
           </div>
           <h1 className="text-3xl font-bold">Nexus Ultrassonografia</h1>
         </div>
