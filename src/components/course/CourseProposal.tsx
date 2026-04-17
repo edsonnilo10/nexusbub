@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { CourseFull, CourseModule, CourseClass, formatBRL, unitLabel } from "@/lib/courseHelpers";
-import nexusLogo from "@/assets/nexus-logo.jpg";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CourseFull, CourseModule, CourseClass, formatBRL, unitLabel, formatClassDateRange, classStatusLabel } from "@/lib/courseHelpers";
+import nexusBrand from "@/assets/nexus-brand.png";
 import plantImg from "@/assets/proposal-plant.jpg";
 import doctorImg from "@/assets/proposal-doctor.jpg";
 import { toast } from "@/hooks/use-toast";
@@ -41,16 +42,34 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   const [startDate, setStartDate] = useState<string>(nextClass?.start_date || "");
   const [endDate, setEndDate] = useState<string>(nextClass?.end_date || "");
   const [coordinators, setCoordinators] = useState<string>("");
+  const [selectedClassId, setSelectedClassId] = useState<string>("manual");
 
   // Quando overrides carregam, aplica valores salvos do usuário
   useEffect(() => {
     if (!loaded) return;
     setPriceValue(overrides.proposal_price ?? defaultPrice);
-    setStartDate(overrides.proposal_start_date ?? nextClass?.start_date ?? "");
-    setEndDate(overrides.proposal_end_date ?? nextClass?.end_date ?? "");
+    const initStart = overrides.proposal_start_date ?? nextClass?.start_date ?? "";
+    const initEnd = overrides.proposal_end_date ?? nextClass?.end_date ?? "";
+    setStartDate(initStart);
+    setEndDate(initEnd);
     setCoordinators(overrides.proposal_coordinators ?? "");
+    // tenta casar com uma turma existente
+    const match = classes.find((c) => c.start_date === initStart && (c.end_date || "") === (initEnd || ""));
+    setSelectedClassId(match?.id ?? "manual");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
+
+  const handleClassChange = (id: string) => {
+    setSelectedClassId(id);
+    if (id === "manual") return;
+    const c = classes.find((x) => x.id === id);
+    if (!c) return;
+    const s = c.start_date || "";
+    const e = c.end_date || "";
+    setStartDate(s);
+    setEndDate(e);
+    save({ proposal_start_date: s || null, proposal_end_date: e || null });
+  };
 
   // Gera lista de dias entre startDate e endDate
   const courseDays = useMemo(() => {
@@ -106,6 +125,30 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
             Baixar PDF
           </Button>
         </div>
+        {classes.length > 0 && (
+          <div className="mb-3">
+            <Label className="text-xs">Turma</Label>
+            <Select value={selectedClassId} onValueChange={handleClassChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma turma cadastrada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">✏️ Datas personalizadas (manual)</SelectItem>
+                {classes
+                  .filter((c) => c.start_date)
+                  .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {formatClassDateRange(c.start_date, c.end_date)} — {classStatusLabel(c.status)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Escolha uma turma da aba <strong>Turmas</strong> para preencher as datas automaticamente.
+            </p>
+          </div>
+        )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label className="text-xs">Valor (R$)</Label>
@@ -125,6 +168,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
+                setSelectedClassId("manual");
                 save({ proposal_start_date: e.target.value || null });
               }}
             />
@@ -136,6 +180,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
+                setSelectedClassId("manual");
                 save({ proposal_end_date: e.target.value || null });
               }}
             />
@@ -164,12 +209,25 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           {/* PAGE 1 — Capa */}
           <section className="proposal-page relative overflow-hidden" style={pageStyle}>
             <img src={doctorImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#003d2a]/85 via-[#003d2a]/40 to-transparent" />
             <div className="absolute inset-y-0 left-0 w-[18mm] bg-[#003d2a]" />
-            <div className="absolute bottom-[25mm] left-[28mm] w-[105mm] rounded-3xl bg-[#0d6b4f]/95 p-8 backdrop-blur-sm">
-              <h1 className="text-[34px] font-bold leading-tight text-white">{course.name}</h1>
-              <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#0d6b4f] px-4 py-2 ring-1 ring-white/30">
-                <img src={nexusLogo} alt="Nexus" className="h-6 w-6 rounded object-cover" />
-                <span className="text-base font-semibold text-white">nexus</span>
+            {/* Marca d'água da logo no canto superior */}
+            <img
+              src={nexusBrand}
+              alt=""
+              className="absolute right-[15mm] top-[15mm] h-[28mm] w-auto opacity-95"
+              crossOrigin="anonymous"
+            />
+            <div className="absolute bottom-[25mm] left-[28mm] w-[120mm] rounded-3xl bg-[#0d6b4f]/95 p-8 backdrop-blur-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#bfe3d0]">
+                Proposta de curso
+              </div>
+              <h1 className="mt-3 text-[36px] font-bold leading-[1.1] text-white">{course.name}</h1>
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 ring-1 ring-white/30">
+                <MapPin className="h-3.5 w-3.5 text-white" />
+                <span className="text-xs font-medium text-white">
+                  Unidade {unitLabel(course.unit)}
+                </span>
               </div>
             </div>
           </section>
@@ -178,10 +236,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           <section className="proposal-page relative" style={pageStyle}>
             <div className="grid h-full grid-cols-[1fr_70mm]">
               <div className="flex flex-col justify-center p-[20mm]">
-                <div className="mb-10 flex items-center gap-3">
-                  <img src={nexusLogo} alt="Nexus" className="h-12 w-12 rounded-lg object-cover" />
-                  <span className="text-3xl font-light tracking-tight text-[#0a3d2e]">nexus</span>
-                </div>
+                <img src={nexusBrand} alt="Nexus" className="mb-8 h-[22mm] w-auto" crossOrigin="anonymous" />
                 <h2 className="text-[26px] font-bold leading-tight text-[#0d6b4f]">
                   Nexus: Sua jornada para a excelência em ultrassonografia começa aqui.
                 </h2>
@@ -220,10 +275,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           {/* PAGE 4 — Por que escolher */}
           <section className="proposal-page relative bg-white" style={pageStyle}>
             <div className="p-[20mm]">
-              <div className="mb-4 flex items-center gap-3">
-                <img src={nexusLogo} alt="Nexus" className="h-10 w-10 rounded-lg object-cover" />
-                <span className="text-2xl font-light text-[#0a3d2e]">nexus</span>
-              </div>
+              <img src={nexusBrand} alt="Nexus" className="mb-6 h-[18mm] w-auto" crossOrigin="anonymous" />
               <h2 className="text-[30px] font-bold text-[#0d6b4f]">Por que escolher a Nexus?</h2>
               <div className="mt-2 h-1 w-16 bg-[#0d6b4f]" />
               <ul className="mt-10 space-y-5 text-[13px] leading-relaxed text-neutral-800">
@@ -361,9 +413,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               </div>
               <span className="text-2xl font-bold">(61) 9904-2880</span>
             </div>
-            <div className="mt-24 flex flex-col items-center gap-3">
-              <img src={nexusLogo} alt="Nexus" className="h-16 w-16 rounded-xl object-cover ring-2 ring-white/40" />
-              <span className="text-3xl font-light">nexus</span>
+            <div className="mt-20 rounded-2xl bg-white/10 px-10 py-6 ring-1 ring-white/30 backdrop-blur-sm">
+              <img src={nexusBrand} alt="Nexus" className="h-[28mm] w-auto brightness-0 invert" crossOrigin="anonymous" />
             </div>
             <div className="mt-6 flex items-center gap-2 text-sm opacity-90">
               <MapPin className="h-4 w-4" />
