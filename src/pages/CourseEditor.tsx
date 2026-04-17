@@ -81,9 +81,14 @@ const CourseEditor = () => {
   };
 
   const handleCoverUpload = async (file: File) => {
+    if (!user) {
+      toast({ title: "Faça login para enviar capa", variant: "destructive" });
+      return;
+    }
     setUploading(true);
     const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    // RLS exige que o arquivo fique dentro da pasta do próprio usuário
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage.from("course-covers").upload(path, file);
     if (error) {
       toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
