@@ -14,16 +14,201 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      course_classes: {
+        Row: {
+          course_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["class_status"]
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["class_status"]
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["class_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_classes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_modules: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number
+          title: string
+          workload_hours: number | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          title: string
+          workload_hours?: number | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          title?: string
+          workload_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          highlights: string | null
+          id: string
+          installments: number | null
+          modality: string | null
+          name: string
+          payment_methods: string | null
+          price: number | null
+          slug: string | null
+          type: Database["public"]["Enums"]["course_type"]
+          updated_at: string
+          workload_hours: number | null
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          highlights?: string | null
+          id?: string
+          installments?: number | null
+          modality?: string | null
+          name: string
+          payment_methods?: string | null
+          price?: number | null
+          slug?: string | null
+          type?: Database["public"]["Enums"]["course_type"]
+          updated_at?: string
+          workload_hours?: number | null
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          highlights?: string | null
+          id?: string
+          installments?: number | null
+          modality?: string | null
+          name?: string
+          payment_methods?: string | null
+          price?: number | null
+          slug?: string | null
+          type?: Database["public"]["Enums"]["course_type"]
+          updated_at?: string
+          workload_hours?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "member"
+      class_status: "atual" | "proxima" | "encerrada"
+      course_type: "pos_graduacao" | "modular"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +335,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "member"],
+      class_status: ["atual", "proxima", "encerrada"],
+      course_type: ["pos_graduacao", "modular"],
+    },
   },
 } as const
