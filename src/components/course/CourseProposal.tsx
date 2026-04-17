@@ -209,12 +209,25 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           {/* PAGE 1 — Capa */}
           <section className="proposal-page relative overflow-hidden" style={pageStyle}>
             <img src={doctorImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#003d2a]/85 via-[#003d2a]/40 to-transparent" />
             <div className="absolute inset-y-0 left-0 w-[18mm] bg-[#003d2a]" />
-            <div className="absolute bottom-[25mm] left-[28mm] w-[105mm] rounded-3xl bg-[#0d6b4f]/95 p-8 backdrop-blur-sm">
-              <h1 className="text-[34px] font-bold leading-tight text-white">{course.name}</h1>
-              <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#0d6b4f] px-4 py-2 ring-1 ring-white/30">
-                <img src={nexusLogo} alt="Nexus" className="h-6 w-6 rounded object-cover" />
-                <span className="text-base font-semibold text-white">nexus</span>
+            {/* Marca d'água da logo no canto superior */}
+            <img
+              src={nexusBrand}
+              alt=""
+              className="absolute right-[15mm] top-[15mm] h-[28mm] w-auto opacity-95"
+              crossOrigin="anonymous"
+            />
+            <div className="absolute bottom-[25mm] left-[28mm] w-[120mm] rounded-3xl bg-[#0d6b4f]/95 p-8 backdrop-blur-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#bfe3d0]">
+                Proposta de curso
+              </div>
+              <h1 className="mt-3 text-[36px] font-bold leading-[1.1] text-white">{course.name}</h1>
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 ring-1 ring-white/30">
+                <MapPin className="h-3.5 w-3.5 text-white" />
+                <span className="text-xs font-medium text-white">
+                  Unidade {unitLabel(course.unit)}
+                </span>
               </div>
             </div>
           </section>
