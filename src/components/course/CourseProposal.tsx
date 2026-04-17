@@ -248,32 +248,33 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         >
           {/* PAGE 1 — Capa */}
           <section className="proposal-page relative overflow-hidden" style={pageStyle}>
-            <img src={doctorImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#003d2a]/90 via-[#003d2a]/55 to-[#003d2a]/10" />
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,#f3f8f5_0%,#dceee6_28%,#75b79b_62%,#0d6b4f_100%)]" />
+            <div className="absolute -left-[22mm] top-[22mm] h-[150mm] w-[150mm] rounded-full border-[18mm] border-white/18" />
+            <div className="absolute right-[-10mm] top-[-18mm] h-[120mm] w-[120mm] rounded-full bg-white/10 blur-[2px]" />
+            <div className="absolute bottom-[-28mm] right-[12mm] h-[140mm] w-[140mm] rounded-full border-[22mm] border-white/12" />
             <div className="absolute inset-y-0 left-0 w-[18mm] bg-[#003d2a]" />
-            {/* Logo Nexus oficial — canto superior direito */}
-            <div className="absolute right-[15mm] top-[15mm] overflow-hidden rounded-2xl shadow-xl">
+
+            <div className="absolute right-[15mm] top-[15mm] overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
               <img
                 src={nexusBrand}
                 alt="Nexus"
-                className="block h-[32mm] w-[32mm] object-cover"
+                className="block h-[30mm] w-[30mm] object-cover"
                 crossOrigin="anonymous"
               />
             </div>
-            <div className="absolute bottom-[25mm] left-[28mm] w-[140mm] rounded-3xl bg-[#0d6b4f]/95 p-9 backdrop-blur-sm shadow-2xl">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#bfe3d0]">
+
+            <div className="absolute bottom-[25mm] left-[28mm] w-[138mm] rounded-[10mm] bg-[#0d6b4f]/92 p-9 shadow-2xl backdrop-blur-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#d7efe4]">
                 Proposta de curso
               </div>
-              <h1 className="mt-3 text-[36px] font-bold leading-[1.1] text-white">{course.name}</h1>
+              <h1 className="mt-3 text-[36px] font-bold leading-[1.08] text-white">{course.name}</h1>
               <div className="mt-5 flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 ring-1 ring-white/30">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 ring-1 ring-white/25">
                   <MapPin className="h-3.5 w-3.5 text-white" />
-                  <span className="text-xs font-medium text-white">
-                    Unidade {unitLabel(course.unit)}
-                  </span>
+                  <span className="text-xs font-medium text-white">Unidade {unitLabel(course.unit)}</span>
                 </div>
                 {selectedClass && selectedClass.start_date && (
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 ring-1 ring-white/30">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 ring-1 ring-white/25">
                     <span className="text-xs font-semibold text-white">
                       Turma: {formatClassDateRange(selectedClass.start_date, selectedClass.end_date)}
                     </span>
