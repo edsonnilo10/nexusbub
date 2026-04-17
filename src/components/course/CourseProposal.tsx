@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CourseFull, CourseModule, CourseClass, formatBRL, unitLabel, formatClassDateRange, classStatusLabel } from "@/lib/courseHelpers";
-import nexusBrand from "@/assets/nexus-brand.png";
+import nexusBrand from "@/assets/nexus-logo-official.jpg";
 import plantImg from "@/assets/proposal-plant.jpg";
 import doctorImg from "@/assets/proposal-doctor.jpg";
 import { toast } from "@/hooks/use-toast";
