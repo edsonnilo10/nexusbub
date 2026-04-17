@@ -255,8 +255,10 @@ export type Database = {
           course_id: string
           created_at: string
           id: string
+          proposal_class_id: string | null
           proposal_coordinators: string | null
           proposal_end_date: string | null
+          proposal_installments: number | null
           proposal_price: string | null
           proposal_start_date: string | null
           updated_at: string
@@ -269,8 +271,10 @@ export type Database = {
           course_id: string
           created_at?: string
           id?: string
+          proposal_class_id?: string | null
           proposal_coordinators?: string | null
           proposal_end_date?: string | null
+          proposal_installments?: number | null
           proposal_price?: string | null
           proposal_start_date?: string | null
           updated_at?: string
@@ -283,8 +287,10 @@ export type Database = {
           course_id?: string
           created_at?: string
           id?: string
+          proposal_class_id?: string | null
           proposal_coordinators?: string | null
           proposal_end_date?: string | null
+          proposal_installments?: number | null
           proposal_price?: string | null
           proposal_start_date?: string | null
           updated_at?: string
