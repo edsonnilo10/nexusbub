@@ -1,0 +1,32 @@
+import { Link } from "react-router-dom";
+import { Stethoscope, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+
+export const AppHeader = () => {
+  const { user, signOut } = useAuth();
+
+  return (
+    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
+      <div className="container flex h-16 items-center justify-between">
+        <Link to="/" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-primary text-primary-foreground shadow-card">
+            <Stethoscope className="h-5 w-5" />
+          </div>
+          <div className="hidden sm:block">
+            <div className="text-sm font-bold leading-tight">Nexus Ultrassonografia</div>
+            <div className="text-xs text-muted-foreground">Hub de cursos</div>
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Sair</span>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+};
