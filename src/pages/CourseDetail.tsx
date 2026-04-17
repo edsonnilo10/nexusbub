@@ -10,6 +10,7 @@ import { CourseFull, CourseModule, CourseClass, courseTypeLabel, unitLabel } fro
 import { CourseInfoTab } from "@/components/course/CourseInfoTab";
 import { CourseLandingTab } from "@/components/course/CourseLandingTab";
 import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
+import { CourseClassesTab } from "@/components/course/CourseClassesTab";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -116,13 +117,17 @@ const CourseDetail = () => {
         </div>
 
         <Tabs defaultValue="info">
-          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
+          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex sm:grid-cols-none">
             <TabsTrigger value="info">Informações</TabsTrigger>
+            <TabsTrigger value="classes">Turmas</TabsTrigger>
             <TabsTrigger value="landing">Apresentação</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           </TabsList>
           <TabsContent value="info" className="mt-6">
             <CourseInfoTab course={course} modules={modules} classes={classes} />
+          </TabsContent>
+          <TabsContent value="classes" className="mt-6">
+            <CourseClassesTab course={course} classes={classes} onChange={setClasses} />
           </TabsContent>
           <TabsContent value="landing" className="mt-6">
             <CourseLandingTab course={course} modules={modules} classes={classes} />
