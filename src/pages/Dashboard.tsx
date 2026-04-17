@@ -213,6 +213,7 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+      <GlobalAssistantButton />
     </div>
   );
 };
