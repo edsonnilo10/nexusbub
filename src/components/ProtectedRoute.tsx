@@ -2,8 +2,14 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
-export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+export const ProtectedRoute = ({
+  children,
+  adminOnly = false,
+}: {
+  children: React.ReactNode;
+  adminOnly?: boolean;
+}) => {
+  const { user, loading, approved, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -14,6 +20,8 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (!approved && !isAdmin) return <Navigate to="/pending" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 };

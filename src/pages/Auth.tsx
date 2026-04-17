@@ -46,6 +46,13 @@ const Auth = () => {
     }
   };
 
+  const handleSignupSuccess = () => {
+    toast({
+      title: "Cadastro enviado!",
+      description: "Sua conta será analisada pelo administrador antes de liberar o acesso.",
+    });
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -69,7 +76,12 @@ const Auth = () => {
     if (error) {
       toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Conta criada!", description: "Você já pode entrar." });
+      handleSignupSuccess();
+      // Sign out immediately so the user doesn't auto-enter while pending approval
+      await supabase.auth.signOut();
+      setEmail("");
+      setPassword("");
+      setFullName("");
     }
   };
 
