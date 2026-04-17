@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { Stethoscope, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import nexusLogo from "@/assets/nexus-logo.jpg";
 
 export const AppHeader = () => {
   const { user, signOut } = useAuth();
@@ -10,8 +11,8 @@ export const AppHeader = () => {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-primary text-primary-foreground shadow-card">
-            <Stethoscope className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl shadow-card ring-1 ring-primary/20">
+            <img src={nexusLogo} alt="Nexus Ultrassonografia" className="h-full w-full object-cover" />
           </div>
           <div className="hidden sm:block">
             <div className="text-sm font-bold leading-tight">Nexus Ultrassonografia</div>
