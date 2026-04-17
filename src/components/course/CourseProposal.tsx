@@ -9,6 +9,7 @@ import nexusLogo from "@/assets/nexus-logo.jpg";
 import plantImg from "@/assets/proposal-plant.jpg";
 import doctorImg from "@/assets/proposal-doctor.jpg";
 import { toast } from "@/hooks/use-toast";
+import { useCourseOverrides } from "@/hooks/useCourseOverrides";
 
 interface Props {
   course: CourseFull;
@@ -27,23 +28,29 @@ const formatLong = (iso: string) => {
 export const CourseProposal = ({ course, modules, classes }: Props) => {
   const proposalRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const { overrides, loaded, save } = useCourseOverrides(course.id);
 
-  // Valores editáveis
-  const [priceValue, setPriceValue] = useState<string>(
-    course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00"
-  );
+  const defaultPrice = course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00";
   const nextClass = useMemo(
     () => classes.find((c) => c.status === "atual") || classes.find((c) => c.status === "proxima") || classes[0] || null,
     [classes]
   );
+
+  // Valores editáveis (preferem o que o usuário salvou; senão, fallback)
+  const [priceValue, setPriceValue] = useState<string>(defaultPrice);
   const [startDate, setStartDate] = useState<string>(nextClass?.start_date || "");
   const [endDate, setEndDate] = useState<string>(nextClass?.end_date || "");
   const [coordinators, setCoordinators] = useState<string>("");
 
+  // Quando overrides carregam, aplica valores salvos do usuário
   useEffect(() => {
-    setStartDate(nextClass?.start_date || "");
-    setEndDate(nextClass?.end_date || "");
-  }, [nextClass]);
+    if (!loaded) return;
+    setPriceValue(overrides.proposal_price ?? defaultPrice);
+    setStartDate(overrides.proposal_start_date ?? nextClass?.start_date ?? "");
+    setEndDate(overrides.proposal_end_date ?? nextClass?.end_date ?? "");
+    setCoordinators(overrides.proposal_coordinators ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   // Gera lista de dias entre startDate e endDate
   const courseDays = useMemo(() => {
@@ -90,7 +97,9 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-foreground">Personalize a proposta</h3>
-            <p className="text-xs text-muted-foreground">Edite o valor e as datas — depois baixe o PDF para enviar pelo WhatsApp.</p>
+            <p className="text-xs text-muted-foreground">
+              Edite o valor e as datas — suas alterações são <strong>salvas automaticamente</strong> só na sua conta.
+            </p>
           </div>
           <Button onClick={handleDownload} disabled={downloading} size="lg" className="shrink-0">
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -102,23 +111,43 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
             <Label className="text-xs">Valor (R$)</Label>
             <Input
               value={priceValue}
-              onChange={(e) => setPriceValue(e.target.value)}
+              onChange={(e) => {
+                setPriceValue(e.target.value);
+                save({ proposal_price: e.target.value });
+              }}
               placeholder="3.990,00"
             />
           </div>
           <div>
             <Label className="text-xs">Data início</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                save({ proposal_start_date: e.target.value || null });
+              }}
+            />
           </div>
           <div>
             <Label className="text-xs">Data fim</Label>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                save({ proposal_end_date: e.target.value || null });
+              }}
+            />
           </div>
           <div>
             <Label className="text-xs">Coordenadores (opcional)</Label>
             <Input
               value={coordinators}
-              onChange={(e) => setCoordinators(e.target.value)}
+              onChange={(e) => {
+                setCoordinators(e.target.value);
+                save({ proposal_coordinators: e.target.value });
+              }}
               placeholder="Dr. Fulano | Dra. Ciclana"
             />
           </div>
