@@ -9,6 +9,7 @@ import nexusLogo from "@/assets/nexus-logo.jpg";
 import plantImg from "@/assets/proposal-plant.jpg";
 import doctorImg from "@/assets/proposal-doctor.jpg";
 import { toast } from "@/hooks/use-toast";
+import { useCourseOverrides } from "@/hooks/useCourseOverrides";
 
 interface Props {
   course: CourseFull;
@@ -27,23 +28,29 @@ const formatLong = (iso: string) => {
 export const CourseProposal = ({ course, modules, classes }: Props) => {
   const proposalRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const { overrides, loaded, save } = useCourseOverrides(course.id);
 
-  // Valores editáveis
-  const [priceValue, setPriceValue] = useState<string>(
-    course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00"
-  );
+  const defaultPrice = course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00";
   const nextClass = useMemo(
     () => classes.find((c) => c.status === "atual") || classes.find((c) => c.status === "proxima") || classes[0] || null,
     [classes]
   );
+
+  // Valores editáveis (preferem o que o usuário salvou; senão, fallback)
+  const [priceValue, setPriceValue] = useState<string>(defaultPrice);
   const [startDate, setStartDate] = useState<string>(nextClass?.start_date || "");
   const [endDate, setEndDate] = useState<string>(nextClass?.end_date || "");
   const [coordinators, setCoordinators] = useState<string>("");
 
+  // Quando overrides carregam, aplica valores salvos do usuário
   useEffect(() => {
-    setStartDate(nextClass?.start_date || "");
-    setEndDate(nextClass?.end_date || "");
-  }, [nextClass]);
+    if (!loaded) return;
+    setPriceValue(overrides.proposal_price ?? defaultPrice);
+    setStartDate(overrides.proposal_start_date ?? nextClass?.start_date ?? "");
+    setEndDate(overrides.proposal_end_date ?? nextClass?.end_date ?? "");
+    setCoordinators(overrides.proposal_coordinators ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   // Gera lista de dias entre startDate e endDate
   const courseDays = useMemo(() => {
