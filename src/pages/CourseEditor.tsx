@@ -24,6 +24,7 @@ const CourseEditor = () => {
   const navigate = useNavigate();
   const isNew = !id || id === "new";
 
+  const { user } = useAuth();
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
