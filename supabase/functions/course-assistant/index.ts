@@ -160,12 +160,21 @@ ${ctx.join("\n")}`;
     const data = await aiResp.json();
     const fullText: string = data.choices?.[0]?.message?.content ?? "";
 
-    let internal = fullText;
+    // Limpa marcadores que a IA às vezes inclui literalmente
+    const stripMarkers = (s: string) =>
+      s
+        .replace(/^\s*\[?Primeira parte[^\]\n]*\]?\s*\n?/i, "")
+        .replace(/^\s*\[?Segunda parte[^\]\n]*\]?\s*\n?/i, "")
+        .replace(/^\s*\[?Resposta interna[^\]\n]*\]?\s*\n?/i, "")
+        .replace(/^\s*\[?Mensagem (pronta )?para[^\]\n]*\]?\s*\n?/i, "")
+        .trim();
+
+    let internal = stripMarkers(fullText);
     let whatsapp = "";
     if (fullText.includes("---WHATSAPP---")) {
       const [a, b] = fullText.split("---WHATSAPP---");
-      internal = a.trim();
-      whatsapp = (b || "").trim();
+      internal = stripMarkers(a);
+      whatsapp = stripMarkers(b || "");
     }
 
     return new Response(JSON.stringify({ internal, whatsapp }), {
