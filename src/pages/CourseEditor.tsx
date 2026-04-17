@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { slugify, CourseModule, CourseClass, CourseUnit, ClassStatus } from "@/lib/courseHelpers";
 
 interface ModuleDraft { id?: string; title: string; description: string; workload_hours: string; }
@@ -23,6 +24,7 @@ const CourseEditor = () => {
   const navigate = useNavigate();
   const isNew = !id || id === "new";
 
+  const { user } = useAuth();
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -81,9 +83,14 @@ const CourseEditor = () => {
   };
 
   const handleCoverUpload = async (file: File) => {
+    if (!user) {
+      toast({ title: "Faça login para enviar capa", variant: "destructive" });
+      return;
+    }
     setUploading(true);
     const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    // RLS exige que o arquivo fique dentro da pasta do próprio usuário
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage.from("course-covers").upload(path, file);
     if (error) {
       toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
