@@ -10,6 +10,8 @@ export interface CourseOverrides {
   proposal_start_date: string | null;
   proposal_end_date: string | null;
   proposal_coordinators: string | null;
+  proposal_installments: number | null;
+  proposal_class_id: string | null;
 }
 
 const EMPTY: CourseOverrides = {
@@ -20,6 +22,8 @@ const EMPTY: CourseOverrides = {
   proposal_start_date: null,
   proposal_end_date: null,
   proposal_coordinators: null,
+  proposal_installments: null,
+  proposal_class_id: null,
 };
 
 /**
