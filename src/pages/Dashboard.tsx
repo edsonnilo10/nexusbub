@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CourseFull, CourseClass, CourseUnit, formatBRL, formatDateShort, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GlobalAssistantButton } from "@/components/GlobalAssistantButton";
 
 type CourseWithClass = CourseFull & { next_class?: CourseClass | null };
 
