@@ -1,16 +1,30 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, LogOut } from "lucide-react";
+import { Clock, LogOut, Loader2 } from "lucide-react";
 import nexusLogo from "@/assets/nexus-logo.jpg";
 import { useEffect } from "react";
+import { Navigate } from "react-router-dom";
 
 const PendingApproval = () => {
-  const { user, signOut } = useAuth();
+  const { user, loading, approved, isAdmin, signOut } = useAuth();
 
   useEffect(() => {
     document.title = "Aguardando aprovação | Nexus Ultrassonografia";
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Se não está logado, manda pro login
+  if (!user) return <Navigate to="/auth" replace />;
+  // Se já foi aprovado ou é admin, manda pra home
+  if (approved || isAdmin) return <Navigate to="/" replace />;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero p-4">
