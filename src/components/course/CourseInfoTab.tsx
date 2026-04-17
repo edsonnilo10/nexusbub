@@ -1,19 +1,16 @@
 import { Clock, Calendar, MapPin, Tag, CreditCard, GraduationCap, BookOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CourseFull, CourseModule, CourseClass, formatBRL, formatDate, courseTypeLabel } from "@/lib/courseHelpers";
+import {
+  CourseFull, CourseModule, CourseClass, formatBRL, formatDate, courseTypeLabel,
+  classStatusLabel, classStatusVariant,
+} from "@/lib/courseHelpers";
 
 interface Props {
   course: CourseFull;
   modules: CourseModule[];
   classes: CourseClass[];
 }
-
-const statusLabel: Record<string, string> = {
-  atual: "Turma em andamento",
-  proxima: "Próxima turma",
-  encerrada: "Encerrada",
-};
 
 export const CourseInfoTab = ({ course, modules, classes }: Props) => {
   const sortedModules = [...modules].sort((a, b) => a.order_index - b.order_index);
@@ -101,11 +98,8 @@ export const CourseInfoTab = ({ course, modules, classes }: Props) => {
             ) : (
               sortedClasses.map((c) => (
                 <div key={c.id} className="rounded-lg border p-3">
-                  <Badge
-                    variant={c.status === "atual" ? "default" : c.status === "proxima" ? "secondary" : "outline"}
-                    className="mb-2"
-                  >
-                    {statusLabel[c.status]}
+                  <Badge variant={classStatusVariant(c.status)} className="mb-2">
+                    {classStatusLabel(c.status)}
                   </Badge>
                   <div className="text-sm font-medium">
                     {formatDate(c.start_date)}

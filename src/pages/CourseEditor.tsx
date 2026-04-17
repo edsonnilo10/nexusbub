@@ -10,10 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { slugify, CourseModule, CourseClass, CourseUnit } from "@/lib/courseHelpers";
+import { slugify, CourseModule, CourseClass, CourseUnit, ClassStatus } from "@/lib/courseHelpers";
 
 interface ModuleDraft { id?: string; title: string; description: string; workload_hours: string; }
-interface ClassDraft { id?: string; start_date: string; end_date: string; status: "atual" | "proxima" | "encerrada"; location: string; }
+interface ClassDraft { id?: string; start_date: string; end_date: string; status: ClassStatus; location: string; }
 
 const emptyModule = (): ModuleDraft => ({ title: "", description: "", workload_hours: "" });
 const emptyClass = (): ClassDraft => ({ start_date: "", end_date: "", status: "proxima", location: "" });
@@ -293,11 +293,12 @@ const CourseEditor = () => {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Status</Label>
-                    <Select value={c.status} onValueChange={(v) => { const n = [...classes]; n[i].status = v as any; setClasses(n); }}>
+                    <Select value={c.status} onValueChange={(v) => { const n = [...classes]; n[i].status = v as ClassStatus; setClasses(n); }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="atual">Atual</SelectItem>
-                        <SelectItem value="proxima">Próxima</SelectItem>
+                        <SelectItem value="atual">Em andamento</SelectItem>
+                        <SelectItem value="proxima">Confirmada</SelectItem>
+                        <SelectItem value="aguardando_confirmacao">Aguardando confirmação</SelectItem>
                         <SelectItem value="encerrada">Encerrada</SelectItem>
                       </SelectContent>
                     </Select>

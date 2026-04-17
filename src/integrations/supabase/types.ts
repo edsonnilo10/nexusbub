@@ -210,7 +210,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
-      class_status: "atual" | "proxima" | "encerrada"
+      class_status: "atual" | "proxima" | "encerrada" | "aguardando_confirmacao"
       course_type: "pos_graduacao" | "modular"
       course_unit: "sao_paulo" | "brasilia"
     }
@@ -341,7 +341,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
-      class_status: ["atual", "proxima", "encerrada"],
+      class_status: ["atual", "proxima", "encerrada", "aguardando_confirmacao"],
       course_type: ["pos_graduacao", "modular"],
       course_unit: ["sao_paulo", "brasilia"],
     },
