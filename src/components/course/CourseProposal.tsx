@@ -413,9 +413,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               </div>
               <span className="text-2xl font-bold">(61) 9904-2880</span>
             </div>
-            <div className="mt-24 flex flex-col items-center gap-3">
-              <img src={nexusLogo} alt="Nexus" className="h-16 w-16 rounded-xl object-cover ring-2 ring-white/40" />
-              <span className="text-3xl font-light">nexus</span>
+            <div className="mt-20 rounded-2xl bg-white/10 px-10 py-6 ring-1 ring-white/30 backdrop-blur-sm">
+              <img src={nexusBrand} alt="Nexus" className="h-[28mm] w-auto brightness-0 invert" crossOrigin="anonymous" />
             </div>
             <div className="mt-6 flex items-center gap-2 text-sm opacity-90">
               <MapPin className="h-4 w-4" />
