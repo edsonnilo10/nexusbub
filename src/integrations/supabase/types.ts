@@ -177,6 +177,59 @@ export type Database = {
         }
         Relationships: []
       }
+      user_course_overrides: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          proposal_coordinators: string | null
+          proposal_end_date: string | null
+          proposal_price: string | null
+          proposal_start_date: string | null
+          updated_at: string
+          user_id: string
+          wa_followup: string | null
+          wa_full: string | null
+          wa_short: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          proposal_coordinators?: string | null
+          proposal_end_date?: string | null
+          proposal_price?: string | null
+          proposal_start_date?: string | null
+          updated_at?: string
+          user_id: string
+          wa_followup?: string | null
+          wa_full?: string | null
+          wa_short?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          proposal_coordinators?: string | null
+          proposal_end_date?: string | null
+          proposal_price?: string | null
+          proposal_start_date?: string | null
+          updated_at?: string
+          user_id?: string
+          wa_followup?: string | null
+          wa_full?: string | null
+          wa_short?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_course_overrides_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
