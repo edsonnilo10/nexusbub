@@ -12,6 +12,7 @@ import { CourseFull, CourseClass, CourseUnit, formatBRL, formatDateShort, course
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GlobalAssistantButton } from "@/components/GlobalAssistantButton";
+import nexusLogo from "@/assets/nexus-logo.jpg";
 
 type CourseWithClass = CourseFull & { next_class?: CourseClass | null };
 
@@ -167,8 +168,18 @@ const Dashboard = () => {
                         className="h-full w-full object-cover transition-transform group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-primary-foreground/60">
-                        <Stethoscope className="h-12 w-12" />
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-primary-foreground">
+                        <img
+                          src={nexusLogo}
+                          alt="Nexus"
+                          className="h-14 w-14 rounded-lg object-cover shadow-card ring-2 ring-primary-foreground/30 transition-transform group-hover:scale-110"
+                        />
+                        <div className="text-[11px] font-semibold uppercase tracking-wider opacity-90">
+                          {courseTypeLabel(course.type)}
+                        </div>
+                        <div className="line-clamp-2 text-xs font-medium leading-tight opacity-95">
+                          {course.name}
+                        </div>
                       </div>
                     )}
                     <Badge
