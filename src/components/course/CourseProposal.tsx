@@ -64,7 +64,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     setDownloading(true);
     try {
       const html2pdf = (await import("html2pdf.js")).default;
-      await html2pdf()
+      await (html2pdf() as any)
         .set({
           margin: 0,
           filename: `Proposta_${course.name.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
