@@ -326,7 +326,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           {/* PAGE 4 — Por que escolher */}
           <section className="proposal-page relative bg-white" style={pageStyle}>
             <div className="p-[20mm]">
-              <img src={nexusBrand} alt="Nexus" className="mb-6 h-[18mm] w-auto" crossOrigin="anonymous" />
+              <img src={nexusBrand} alt="Nexus" className="mb-6 h-[14mm] w-[14mm] rounded-lg object-cover shadow-md" crossOrigin="anonymous" />
               <h2 className="text-[30px] font-bold text-[#0d6b4f]">Por que escolher a Nexus?</h2>
               <div className="mt-2 h-1 w-16 bg-[#0d6b4f]" />
               <ul className="mt-10 space-y-5 text-[13px] leading-relaxed text-neutral-800">
@@ -464,8 +464,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               </div>
               <span className="text-2xl font-bold">(61) 9904-2880</span>
             </div>
-            <div className="mt-20 rounded-2xl bg-white/10 px-10 py-6 ring-1 ring-white/30 backdrop-blur-sm">
-              <img src={nexusBrand} alt="Nexus" className="h-[28mm] w-auto brightness-0 invert" crossOrigin="anonymous" />
+            <div className="mt-20 overflow-hidden rounded-2xl shadow-xl ring-2 ring-white/40">
+              <img src={nexusBrand} alt="Nexus" className="block h-[36mm] w-[36mm] object-cover" crossOrigin="anonymous" />
             </div>
             <div className="mt-6 flex items-center gap-2 text-sm opacity-90">
               <MapPin className="h-4 w-4" />
