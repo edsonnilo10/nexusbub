@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import nexusLogo from "@/assets/nexus-logo.jpg";
 
 export const AppHeader = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
@@ -20,7 +20,15 @@ export const AppHeader = () => {
           </div>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {isAdmin && (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/admin/approvals">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">Aprovações</span>
+              </Link>
+            </Button>
+          )}
           <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
           <Button variant="ghost" size="sm" onClick={signOut}>
             <LogOut className="h-4 w-4" />
