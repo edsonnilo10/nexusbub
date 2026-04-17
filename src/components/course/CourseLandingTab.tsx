@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { Download, Copy, Maximize2, Stethoscope, Clock, Calendar, GraduationCap } from "lucide-react";
+import { Download, Copy, Maximize2, Stethoscope, Clock, Calendar, GraduationCap, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CourseFull, CourseModule, CourseClass, formatBRL, formatDate, courseTypeLabel } from "@/lib/courseHelpers";
+import { CourseFull, CourseModule, CourseClass, formatBRL, formatDate, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -89,8 +89,13 @@ export const CourseLandingTab = ({ course, modules, classes }: Props) => {
               <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-accent blur-3xl" />
             </div>
             <div className="relative mx-auto max-w-3xl">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-1.5 text-xs font-medium uppercase tracking-wider backdrop-blur">
-                <Stethoscope className="h-3.5 w-3.5" /> Nexus Ultrassonografia
+              <div className="mb-6 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-1.5 text-xs font-medium uppercase tracking-wider backdrop-blur">
+                  <Stethoscope className="h-3.5 w-3.5" /> Nexus Ultrassonografia
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-accent-foreground">
+                  <MapPin className="h-3.5 w-3.5" /> Unidade {unitLabel(course.unit)}
+                </span>
               </div>
               <div className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent">
                 {courseTypeLabel(course.type)}
