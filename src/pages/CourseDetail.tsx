@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Trash2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { CourseInfoTab } from "@/components/course/CourseInfoTab";
 import { CourseLandingTab } from "@/components/course/CourseLandingTab";
 import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
 import { CourseClassesTab } from "@/components/course/CourseClassesTab";
+import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
