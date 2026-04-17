@@ -125,6 +125,30 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
             Baixar PDF
           </Button>
         </div>
+        {classes.length > 0 && (
+          <div className="mb-3">
+            <Label className="text-xs">Turma</Label>
+            <Select value={selectedClassId} onValueChange={handleClassChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma turma cadastrada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">✏️ Datas personalizadas (manual)</SelectItem>
+                {classes
+                  .filter((c) => c.start_date)
+                  .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {formatClassDateRange(c.start_date, c.end_date)} — {classStatusLabel(c.status)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Escolha uma turma da aba <strong>Turmas</strong> para preencher as datas automaticamente.
+            </p>
+          </div>
+        )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label className="text-xs">Valor (R$)</Label>
@@ -144,6 +168,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
+                setSelectedClassId("manual");
                 save({ proposal_start_date: e.target.value || null });
               }}
             />
@@ -155,6 +180,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
+                setSelectedClassId("manual");
                 save({ proposal_end_date: e.target.value || null });
               }}
             />
