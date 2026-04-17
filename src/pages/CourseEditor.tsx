@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { slugify, CourseModule, CourseClass, CourseUnit, ClassStatus } from "@/lib/courseHelpers";
 
 interface ModuleDraft { id?: string; title: string; description: string; workload_hours: string; }
