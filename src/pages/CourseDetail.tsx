@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Trash2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { CourseInfoTab } from "@/components/course/CourseInfoTab";
 import { CourseLandingTab } from "@/components/course/CourseLandingTab";
 import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
 import { CourseClassesTab } from "@/components/course/CourseClassesTab";
+import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -116,13 +117,19 @@ const CourseDetail = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="info">
-          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex sm:grid-cols-none">
+        <Tabs defaultValue="assistant">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex sm:grid-cols-none">
+            <TabsTrigger value="assistant" className="gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> Assistente IA
+            </TabsTrigger>
             <TabsTrigger value="info">Informações</TabsTrigger>
             <TabsTrigger value="classes">Turmas</TabsTrigger>
             <TabsTrigger value="landing">Apresentação</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           </TabsList>
+          <TabsContent value="assistant" className="mt-6">
+            <CourseAssistant course={course} />
+          </TabsContent>
           <TabsContent value="info" className="mt-6">
             <CourseInfoTab course={course} modules={modules} classes={classes} />
           </TabsContent>

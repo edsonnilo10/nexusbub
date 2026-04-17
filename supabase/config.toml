@@ -2,3 +2,6 @@ project_id = "gstetvmsgjsbgilharjb"
 
 [functions.extract-course]
 verify_jwt = false
+
+[functions.course-assistant]
+verify_jwt = false

@@ -30,6 +30,14 @@ const nextClass = (classes: CourseClass[]): CourseClass | null => {
          ordered[0] || null;
 };
 
+/** Ano de referência: pega da próxima turma; se não houver, garante mínimo 2026 */
+const referenceYear = (classes: CourseClass[]): number => {
+  const cls = nextClass(classes);
+  const fromClass = parseDate(cls?.start_date)?.getFullYear();
+  if (fromClass) return fromClass;
+  return Math.max(2026, new Date().getFullYear());
+};
+
 const statusEmoji = (status: ClassStatus | string): string => {
   switch (status) {
     case "atual": return "🟢";
@@ -72,7 +80,7 @@ const splitToBullets = (text: string): string[] => {
 /** Mensagem completa no padrão Nexus */
 export const fullMessage = (course: CourseFull, modules: CourseModule[], classes: CourseClass[]): string => {
   const cls = nextClass(classes);
-  const year = parseDate(cls?.start_date)?.getFullYear() || new Date().getFullYear() + 1;
+  const year = referenceYear(classes);
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
@@ -148,7 +156,7 @@ export const fullMessage = (course: CourseFull, modules: CourseModule[], classes
 /** Mensagem curta */
 export const shortMessage = (course: CourseFull, classes: CourseClass[]): string => {
   const cls = nextClass(classes);
-  const year = parseDate(cls?.start_date)?.getFullYear() || new Date().getFullYear() + 1;
+  const year = referenceYear(classes);
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
