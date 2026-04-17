@@ -30,6 +30,14 @@ const nextClass = (classes: CourseClass[]): CourseClass | null => {
          ordered[0] || null;
 };
 
+/** Ano de referência: pega da próxima turma; se não houver, garante mínimo 2026 */
+const referenceYear = (classes: CourseClass[]): number => {
+  const cls = nextClass(classes);
+  const fromClass = parseDate(cls?.start_date)?.getFullYear();
+  if (fromClass) return fromClass;
+  return Math.max(2026, new Date().getFullYear());
+};
+
 const statusEmoji = (status: ClassStatus | string): string => {
   switch (status) {
     case "atual": return "🟢";
