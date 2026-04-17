@@ -130,6 +130,7 @@
   .bg-gradient-primary { background: var(--gradient-primary); }
   .bg-gradient-hero { background: var(--gradient-hero); }
   .bg-gradient-subtle { background: var(--gradient-subtle); }
+  .bg-gradient-ai { background: var(--gradient-ai); }
   .shadow-elegant { box-shadow: var(--shadow-lg); }
   .shadow-glow { box-shadow: var(--shadow-glow); }
   .shadow-card { box-shadow: var(--shadow-md); }
