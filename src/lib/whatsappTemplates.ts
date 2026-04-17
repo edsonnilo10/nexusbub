@@ -80,7 +80,7 @@ const splitToBullets = (text: string): string[] => {
 /** Mensagem completa no padrão Nexus */
 export const fullMessage = (course: CourseFull, modules: CourseModule[], classes: CourseClass[]): string => {
   const cls = nextClass(classes);
-  const year = parseDate(cls?.start_date)?.getFullYear() || new Date().getFullYear() + 1;
+  const year = referenceYear(classes);
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
