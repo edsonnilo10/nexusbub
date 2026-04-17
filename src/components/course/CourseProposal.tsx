@@ -275,10 +275,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           {/* PAGE 4 — Por que escolher */}
           <section className="proposal-page relative bg-white" style={pageStyle}>
             <div className="p-[20mm]">
-              <div className="mb-4 flex items-center gap-3">
-                <img src={nexusLogo} alt="Nexus" className="h-10 w-10 rounded-lg object-cover" />
-                <span className="text-2xl font-light text-[#0a3d2e]">nexus</span>
-              </div>
+              <img src={nexusBrand} alt="Nexus" className="mb-6 h-[18mm] w-auto" crossOrigin="anonymous" />
               <h2 className="text-[30px] font-bold text-[#0d6b4f]">Por que escolher a Nexus?</h2>
               <div className="mt-2 h-1 w-16 bg-[#0d6b4f]" />
               <ul className="mt-10 space-y-5 text-[13px] leading-relaxed text-neutral-800">
