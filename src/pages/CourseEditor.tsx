@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { slugify, CourseModule, CourseClass } from "@/lib/courseHelpers";
+import { slugify, CourseModule, CourseClass, CourseUnit } from "@/lib/courseHelpers";
 
 interface ModuleDraft { id?: string; title: string; description: string; workload_hours: string; }
 interface ClassDraft { id?: string; start_date: string; end_date: string; status: "atual" | "proxima" | "encerrada"; location: string; }
@@ -29,6 +29,7 @@ const CourseEditor = () => {
 
   const [name, setName] = useState("");
   const [type, setType] = useState<"pos_graduacao" | "modular">("modular");
+  const [unit, setUnit] = useState<CourseUnit>("sao_paulo");
   const [description, setDescription] = useState("");
   const [highlights, setHighlights] = useState("");
   const [workloadHours, setWorkloadHours] = useState("");
@@ -57,6 +58,7 @@ const CourseEditor = () => {
     }
     setName(c.name);
     setType(c.type as any);
+    setUnit(((c as any).unit as CourseUnit) || "sao_paulo");
     setDescription(c.description || "");
     setHighlights(c.highlights || "");
     setWorkloadHours(c.workload_hours?.toString() || "");
@@ -104,6 +106,7 @@ const CourseEditor = () => {
       name: name.trim(),
       slug: slugify(name),
       type,
+      unit,
       description: description.trim() || null,
       highlights: highlights.trim() || null,
       workload_hours: workloadHours ? parseInt(workloadHours) : null,
@@ -198,7 +201,17 @@ const CourseEditor = () => {
                 <Label>Nome do curso *</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Unidade</Label>
+                  <Select value={unit} onValueChange={(v) => setUnit(v as CourseUnit)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sao_paulo">São Paulo</SelectItem>
+                      <SelectItem value="brasilia">Brasília</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Tipo</Label>
                   <Select value={type} onValueChange={(v) => setType(v as any)}>

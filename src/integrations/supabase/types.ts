@@ -108,6 +108,7 @@ export type Database = {
           price: number | null
           slug: string | null
           type: Database["public"]["Enums"]["course_type"]
+          unit: Database["public"]["Enums"]["course_unit"]
           updated_at: string
           workload_hours: number | null
         }
@@ -125,6 +126,7 @@ export type Database = {
           price?: number | null
           slug?: string | null
           type?: Database["public"]["Enums"]["course_type"]
+          unit?: Database["public"]["Enums"]["course_unit"]
           updated_at?: string
           workload_hours?: number | null
         }
@@ -142,6 +144,7 @@ export type Database = {
           price?: number | null
           slug?: string | null
           type?: Database["public"]["Enums"]["course_type"]
+          unit?: Database["public"]["Enums"]["course_unit"]
           updated_at?: string
           workload_hours?: number | null
         }
@@ -209,6 +212,7 @@ export type Database = {
       app_role: "admin" | "member"
       class_status: "atual" | "proxima" | "encerrada"
       course_type: "pos_graduacao" | "modular"
+      course_unit: "sao_paulo" | "brasilia"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -339,6 +343,7 @@ export const Constants = {
       app_role: ["admin", "member"],
       class_status: ["atual", "proxima", "encerrada"],
       course_type: ["pos_graduacao", "modular"],
+      course_unit: ["sao_paulo", "brasilia"],
     },
   },
 } as const

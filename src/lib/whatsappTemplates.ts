@@ -1,4 +1,4 @@
-import { CourseFull, CourseModule, CourseClass, formatBRL, formatDateShort, courseTypeLabel } from "./courseHelpers";
+import { CourseFull, CourseModule, CourseClass, formatBRL, formatDateShort, courseTypeLabel, unitLabel } from "./courseHelpers";
 
 const nextClass = (classes: CourseClass[]): CourseClass | null => {
   const ordered = [...classes].sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
@@ -11,7 +11,7 @@ export const shortMessage = (course: CourseFull, classes: CourseClass[]): string
   const cls = nextClass(classes);
   const lines = [
     `🩺 *${course.name}*`,
-    `_${courseTypeLabel(course.type)} • Nexus Ultrassonografia_`,
+    `_${courseTypeLabel(course.type)} • Nexus ${unitLabel(course.unit)}_`,
     "",
   ];
   if (course.workload_hours) lines.push(`⏱ Carga horária: *${course.workload_hours}h*`);
@@ -30,7 +30,7 @@ export const fullMessage = (course: CourseFull, modules: CourseModule[], classes
   const cls = nextClass(classes);
   const lines = [
     `🩺 *${course.name}*`,
-    `_${courseTypeLabel(course.type)} • Nexus Ultrassonografia_`,
+    `_${courseTypeLabel(course.type)} • Nexus ${unitLabel(course.unit)}_`,
     "",
   ];
   if (course.description) lines.push(course.description, "");
@@ -73,7 +73,7 @@ export const followUpMessage = (course: CourseFull, classes: CourseClass[]): str
   const lines = [
     `Olá! 👋`,
     "",
-    `Passando para reforçar a oportunidade do *${course.name}* aqui na Nexus Ultrassonografia.`,
+    `Passando para reforçar a oportunidade do *${course.name}* na nossa unidade de *${unitLabel(course.unit)}* — Nexus Ultrassonografia.`,
     "",
   ];
   if (cls?.start_date) {

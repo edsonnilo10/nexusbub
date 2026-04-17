@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, Upload, Clock, Calendar, Tag, Stethoscope } from "lucide-react";
+import { Plus, Search, Upload, Clock, Calendar, Tag, Stethoscope, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CourseFull, CourseClass, formatBRL, formatDateShort, courseTypeLabel } from "@/lib/courseHelpers";
+import { CourseFull, CourseClass, CourseUnit, formatBRL, formatDateShort, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,7 +19,8 @@ const Dashboard = () => {
   const [courses, setCourses] = useState<CourseWithClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "pos_graduacao" | "modular">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "pos_graduacao" | "modular">("all");
+  const [unitFilter, setUnitFilter] = useState<"all" | CourseUnit>("all");
 
   useEffect(() => {
     loadCourses();
@@ -46,7 +47,7 @@ const Dashboard = () => {
     const merged: CourseWithClass[] = (courseData || []).map((c) => {
       const cls = (classData || []).filter((cl) => cl.course_id === c.id);
       const next = cls.find((x) => x.status === "atual") || cls.find((x) => x.status === "proxima") || cls[0] || null;
-      return { ...c, next_class: next as CourseClass | null };
+      return { ...(c as CourseFull), next_class: next as CourseClass | null };
     });
 
     setCourses(merged);
@@ -55,18 +56,25 @@ const Dashboard = () => {
 
   const filtered = useMemo(() => {
     return courses.filter((c) => {
-      if (filter !== "all" && c.type !== filter) return false;
+      if (unitFilter !== "all" && c.unit !== unitFilter) return false;
+      if (typeFilter !== "all" && c.type !== typeFilter) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [courses, search, filter]);
+  }, [courses, search, typeFilter, unitFilter]);
+
+  const counts = useMemo(() => ({
+    all: courses.length,
+    sao_paulo: courses.filter((c) => c.unit === "sao_paulo").length,
+    brasilia: courses.filter((c) => c.unit === "brasilia").length,
+  }), [courses]);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <AppHeader />
 
       <main className="container py-8">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Cursos</h1>
             <p className="mt-1 text-muted-foreground">
@@ -75,13 +83,28 @@ const Dashboard = () => {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate("/import")}>
-              <Upload className="h-4 w-4" /> Importar planilha
+              <Upload className="h-4 w-4" /> Importar arquivos
             </Button>
             <Button onClick={() => navigate("/courses/new")}>
               <Plus className="h-4 w-4" /> Novo curso
             </Button>
           </div>
         </div>
+
+        {/* Unit tabs */}
+        <Tabs value={unitFilter} onValueChange={(v) => setUnitFilter(v as any)} className="mb-5">
+          <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+            <TabsTrigger value="all" className="gap-2">
+              Todos <Badge variant="secondary" className="text-[10px]">{counts.all}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="sao_paulo" className="gap-2">
+              <MapPin className="h-3.5 w-3.5" /> São Paulo <Badge variant="secondary" className="text-[10px]">{counts.sao_paulo}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="brasilia" className="gap-2">
+              <MapPin className="h-3.5 w-3.5" /> Brasília <Badge variant="secondary" className="text-[10px]">{counts.brasilia}</Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
@@ -93,10 +116,10 @@ const Dashboard = () => {
               className="pl-10"
             />
           </div>
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
             <TabsList>
               <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="pos_graduacao">Pós-graduação</TabsTrigger>
+              <TabsTrigger value="pos_graduacao">Pós</TabsTrigger>
               <TabsTrigger value="modular">Modular</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -115,13 +138,13 @@ const Dashboard = () => {
               <h3 className="text-lg font-semibold">Nenhum curso encontrado</h3>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                 {courses.length === 0
-                  ? "Cadastre seu primeiro curso ou importe sua planilha existente."
+                  ? "Cadastre seu primeiro curso ou importe seus arquivos (PDF, imagem ou planilha)."
                   : "Tente ajustar os filtros ou a busca."}
               </p>
               {courses.length === 0 && (
                 <div className="mt-6 flex gap-2">
                   <Button variant="outline" onClick={() => navigate("/import")}>
-                    <Upload className="h-4 w-4" /> Importar planilha
+                    <Upload className="h-4 w-4" /> Importar arquivos
                   </Button>
                   <Button onClick={() => navigate("/courses/new")}>
                     <Plus className="h-4 w-4" /> Novo curso
@@ -152,6 +175,12 @@ const Dashboard = () => {
                       variant={course.type === "pos_graduacao" ? "default" : "secondary"}
                     >
                       {courseTypeLabel(course.type)}
+                    </Badge>
+                    <Badge
+                      className="absolute right-3 top-3 gap-1 bg-background/95 text-foreground backdrop-blur"
+                      variant="outline"
+                    >
+                      <MapPin className="h-3 w-3" /> {unitLabel(course.unit)}
                     </Badge>
                   </div>
                   <CardContent className="p-5">

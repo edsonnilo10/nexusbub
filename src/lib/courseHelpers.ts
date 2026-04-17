@@ -31,6 +31,14 @@ export const courseTypeLabel = (type: string): string => {
   return type === "pos_graduacao" ? "Pós-graduação" : "Curso modular";
 };
 
+export type CourseUnit = "sao_paulo" | "brasilia";
+
+export const unitLabel = (unit: CourseUnit | string): string =>
+  unit === "brasilia" ? "Brasília" : "São Paulo";
+
+export const unitShort = (unit: CourseUnit | string): string =>
+  unit === "brasilia" ? "BSB" : "SP";
+
 export const slugify = (text: string): string => {
   return text
     .toLowerCase()
@@ -47,6 +55,7 @@ export interface CourseFull {
   name: string;
   slug: string | null;
   type: "pos_graduacao" | "modular";
+  unit: CourseUnit;
   description: string | null;
   cover_url: string | null;
   workload_hours: number | null;

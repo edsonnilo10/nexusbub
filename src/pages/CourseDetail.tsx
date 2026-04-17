@@ -6,7 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { CourseFull, CourseModule, CourseClass, courseTypeLabel } from "@/lib/courseHelpers";
+import { CourseFull, CourseModule, CourseClass, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
 import { CourseInfoTab } from "@/components/course/CourseInfoTab";
 import { CourseLandingTab } from "@/components/course/CourseLandingTab";
 import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
@@ -79,9 +79,14 @@ const CourseDetail = () => {
 
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Badge className="mb-2" variant={course.type === "pos_graduacao" ? "default" : "secondary"}>
-              {courseTypeLabel(course.type)}
-            </Badge>
+            <div className="mb-2 flex flex-wrap gap-2">
+              <Badge variant={course.type === "pos_graduacao" ? "default" : "secondary"}>
+                {courseTypeLabel(course.type)}
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                📍 {unitLabel(course.unit)}
+              </Badge>
+            </div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{course.name}</h1>
           </div>
           <div className="flex gap-2">
