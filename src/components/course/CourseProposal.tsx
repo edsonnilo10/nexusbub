@@ -392,7 +392,19 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                 </div>
               )}
 
-              {courseDays.length > 0 && (
+              {selectedClass && selectedClass.start_date ? (
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <div className="rounded-full bg-[#0d6b4f] px-6 py-2 text-sm font-bold uppercase tracking-wide text-white shadow-md">
+                    Turma {classStatusLabel(selectedClass.status)}
+                  </div>
+                  <div className="rounded-full bg-[#bfe3d0] px-6 py-2 text-sm font-bold text-[#0d6b4f]">
+                    {formatClassDateRange(selectedClass.start_date, selectedClass.end_date)}
+                  </div>
+                  {selectedClass.location && (
+                    <div className="text-xs text-neutral-600">📍 {selectedClass.location}</div>
+                  )}
+                </div>
+              ) : courseDays.length > 0 && (
                 <div className="mt-6 flex justify-center">
                   <div className="rounded-full bg-[#bfe3d0] px-6 py-2 text-sm font-bold text-[#0d6b4f]">
                     {formatLong(courseDays[0])}
