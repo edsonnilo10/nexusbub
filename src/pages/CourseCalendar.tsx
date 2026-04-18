@@ -118,52 +118,58 @@ const CourseCalendar = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <AppHeader />
-      <main className="container py-8">
-        <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate("/")}>
+      <main className="container px-3 py-4 sm:px-6 sm:py-8">
+        <Button variant="ghost" size="sm" className="mb-3" onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-              <CalendarDays className="h-7 w-7 text-primary" />
-              Calendário de cursos
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              {events.length} turma(s) cadastrada(s) entre as duas unidades.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Tabs value={view} onValueChange={(v) => setView(v as any)}>
-              <TabsList>
-                <TabsTrigger value="grid" className="gap-2"><LayoutGrid className="h-3.5 w-3.5" />Mês</TabsTrigger>
-                <TabsTrigger value="timeline" className="gap-2"><List className="h-3.5 w-3.5" />Timeline</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+        <div className="mb-4 space-y-1">
+          <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-3xl">
+            <CalendarDays className="h-5 w-5 text-primary sm:h-7 sm:w-7" />
+            Calendário de cursos
+          </h1>
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            {events.length} turma(s) cadastrada(s) entre as duas unidades.
+          </p>
         </div>
 
-        {/* Unit tabs */}
-        <Tabs value={unitFilter} onValueChange={(v) => setUnitFilter(v as any)} className="mb-6">
-          <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
-            <TabsTrigger value="all" className="gap-2">
-              Todos <Badge variant="secondary" className="text-[10px]">{counts.all}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="sao_paulo" className="gap-2">
-              <MapPin className="h-3.5 w-3.5" /> São Paulo <Badge variant="secondary" className="text-[10px]">{counts.sao_paulo}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="brasilia" className="gap-2">
-              <MapPin className="h-3.5 w-3.5" /> Brasília <Badge variant="secondary" className="text-[10px]">{counts.brasilia}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Toolbar: view + unit filter */}
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Tabs value={unitFilter} onValueChange={(v) => setUnitFilter(v as any)} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+              <TabsTrigger value="all" className="gap-1 px-2 text-xs sm:text-sm">
+                Todos <Badge variant="secondary" className="text-[10px]">{counts.all}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="sao_paulo" className="gap-1 px-2 text-xs sm:text-sm">
+                <MapPin className="h-3 w-3" />
+                <span className="hidden xs:inline sm:inline">SP</span>
+                <Badge variant="secondary" className="text-[10px]">{counts.sao_paulo}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="brasilia" className="gap-1 px-2 text-xs sm:text-sm">
+                <MapPin className="h-3 w-3" />
+                <span className="hidden xs:inline sm:inline">BSB</span>
+                <Badge variant="secondary" className="text-[10px]">{counts.brasilia}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Tabs value={view} onValueChange={(v) => setView(v as any)} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
+              <TabsTrigger value="grid" className="gap-1.5 text-xs sm:text-sm">
+                <LayoutGrid className="h-3.5 w-3.5" />Mês
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="gap-1.5 text-xs sm:text-sm">
+                <List className="h-3.5 w-3.5" />Timeline
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         {/* Legenda de status */}
-        <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-muted-foreground sm:text-xs">
           {(["atual", "proxima", "aguardando_confirmacao", "encerrada"] as ClassStatus[]).map((s) => (
             <div key={s} className="flex items-center gap-1.5">
-              <span className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT[s]}`} />
+              <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s]}`} />
               {classStatusLabel(s)}
             </div>
           ))}
