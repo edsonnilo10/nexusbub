@@ -146,17 +146,17 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {/* Painel de edição */}
-      <Card className="border-primary/20 bg-primary/5 p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
+      <Card className="border-primary/20 bg-primary/5 p-4 sm:p-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h3 className="text-base font-semibold text-foreground">Personalize a proposta</h3>
             <p className="text-xs text-muted-foreground">
               Edite o valor e as datas — suas alterações são <strong>salvas automaticamente</strong> só na sua conta.
             </p>
           </div>
-          <Button onClick={handleDownload} disabled={downloading} size="lg" className="shrink-0">
+          <Button onClick={handleDownload} disabled={downloading} className="w-full sm:w-auto sm:shrink-0">
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Baixar PDF
           </Button>
