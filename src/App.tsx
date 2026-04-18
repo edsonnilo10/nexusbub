@@ -35,7 +35,7 @@ const App = () => (
             <Route path="/courses/:id" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
             <Route path="/courses/:id/edit" element={<ProtectedRoute><CourseEditor /></ProtectedRoute>} />
             <Route path="/import" element={<ProtectedRoute><ImportCourses /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><CourseCalendar /></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
