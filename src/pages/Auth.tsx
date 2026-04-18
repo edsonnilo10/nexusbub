@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import nexusLogo from "@/assets/nexus-logo.jpg";
 
 const emailSchema = z.string().trim().email("E-mail inválido").max(255);
@@ -151,6 +152,16 @@ const Auth = () => {
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Entrar
                   </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotEmail(email);
+                      setForgotOpen(true);
+                    }}
+                    className="block w-full text-center text-sm text-primary underline-offset-4 hover:underline"
+                  >
+                    Esqueci minha senha
+                  </button>
                 </form>
               </TabsContent>
 
