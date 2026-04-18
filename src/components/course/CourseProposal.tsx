@@ -29,10 +29,25 @@ const TOTAL_PAGES = 8;
 const sanitizeProposalFileName = (courseName: string) =>
   `Proposta_${courseName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
 
+// Converte uma URL (asset do Vite, etc) em data URL base64.
+// Usado para inlinar o logo Nexus dentro do clone, garantindo que apareça
+// no PDF mesmo no mobile (sem depender de carregamento assíncrono da <img>).
+const urlToDataUrl = async (url: string): Promise<string> => {
+  const res = await fetch(url, { cache: "force-cache" });
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 const renderProposalPage = async (
   html2canvas: typeof import("html2canvas").default,
   page: HTMLElement,
-  foreignObjectRendering: boolean
+  foreignObjectRendering: boolean,
+  logoDataUrl: string | null
 ): Promise<HTMLCanvasElement> => {
   // TÉCNICA DO CLONE FIXO: copia o elemento e fixa fora de qualquer container
   // com scroll/overflow, garantindo captura íntegra no mobile (iOS/Safari).
@@ -53,16 +68,21 @@ const renderProposalPage = async (
   });
   document.body.appendChild(clone);
 
-  // Aguarda TODAS as imagens dentro do clone carregarem (inclui o logo Nexus,
-  // que precisa ser re-baixado pelo navegador no novo nó clonado).
+  // Substitui TODOS os <img> do clone pela versão base64 do logo Nexus.
+  // Isso elimina a corrida com o carregamento assíncrono no mobile.
   const cloneImages = Array.from(clone.querySelectorAll("img")) as HTMLImageElement[];
+  if (logoDataUrl) {
+    cloneImages.forEach((img) => {
+      if (img.crossOrigin) img.removeAttribute("crossorigin");
+      img.src = logoDataUrl;
+    });
+  }
+
+  // Aguarda decodificação das imagens inline + repaint
   await Promise.all(
     cloneImages.map(
       (img) =>
         new Promise<void>((resolve) => {
-          // Remove crossOrigin para evitar bloqueio quando o asset não envia
-          // cabeçalhos CORS (assets do Vite são same-origin, não precisam).
-          if (img.crossOrigin) img.removeAttribute("crossorigin");
           if (img.complete && img.naturalWidth > 0) {
             resolve();
             return;
@@ -70,17 +90,11 @@ const renderProposalPage = async (
           const done = () => resolve();
           img.addEventListener("load", done, { once: true });
           img.addEventListener("error", done, { once: true });
-          // força reload caso o navegador tenha pulado
-          const src = img.src;
-          img.src = "";
-          img.src = src;
-          // timeout de segurança
-          setTimeout(done, 2000);
+          setTimeout(done, 1500);
         })
     )
   );
-  // Repaint extra para fontes/layout
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
   const scale = Math.min(2, window.devicePixelRatio || 2);
   try {
@@ -218,6 +232,14 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           )
       );
 
+      // Pré-carrega o logo Nexus como base64 (uma única vez) para inlinar nos clones
+      let logoDataUrl: string | null = null;
+      try {
+        logoDataUrl = await urlToDataUrl(nexusBrand);
+      } catch {
+        logoDataUrl = null;
+      }
+
       const pages = Array.from(
         proposalDocRef.current.querySelectorAll<HTMLElement>(".proposal-page")
       );
@@ -230,9 +252,9 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
       for (let i = 0; i < pages.length; i++) {
         let canvas: HTMLCanvasElement;
         try {
-          canvas = await renderProposalPage(html2canvas, pages[i], true);
+          canvas = await renderProposalPage(html2canvas, pages[i], true, logoDataUrl);
         } catch {
-          canvas = await renderProposalPage(html2canvas, pages[i], false);
+          canvas = await renderProposalPage(html2canvas, pages[i], false, logoDataUrl);
         }
         // JPEG 0.95 alivia memória do mobile (evita "branco" silencioso)
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
