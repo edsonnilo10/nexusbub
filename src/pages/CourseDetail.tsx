@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
 import { CourseClassesTab } from "@/components/course/CourseClassesTab";
 import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
+import { CourseEnrollmentsTab } from "@/components/course/CourseEnrollmentsTab";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -128,6 +129,9 @@ const CourseDetail = () => {
             </TabsTrigger>
             <TabsTrigger value="info">Informações</TabsTrigger>
             <TabsTrigger value="classes">Turmas</TabsTrigger>
+            <TabsTrigger value="enrollments" className="gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Matrículas
+            </TabsTrigger>
             <TabsTrigger value="landing">Apresentação</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           </TabsList>
@@ -142,6 +146,9 @@ const CourseDetail = () => {
           </TabsContent>
           <TabsContent value="classes" className="mt-6">
             <CourseClassesTab course={course} classes={classes} onChange={setClasses} />
+          </TabsContent>
+          <TabsContent value="enrollments" className="mt-6">
+            <CourseEnrollmentsTab course={course} />
           </TabsContent>
           <TabsContent value="landing" className="mt-6">
             <CourseLandingTab course={course} modules={modules} classes={classes} />

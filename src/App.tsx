@@ -12,6 +12,7 @@ import AdminApprovals from "./pages/AdminApprovals.tsx";
 import CourseDetail from "./pages/CourseDetail.tsx";
 import CourseEditor from "./pages/CourseEditor.tsx";
 import ImportCourses from "./pages/ImportCourses.tsx";
+import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/courses/:id" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
             <Route path="/courses/:id/edit" element={<ProtectedRoute><CourseEditor /></ProtectedRoute>} />
             <Route path="/import" element={<ProtectedRoute><ImportCourses /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
