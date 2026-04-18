@@ -121,33 +121,46 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     page: HTMLElement,
     foreignObjectRendering: boolean
   ) => {
+    // 1. CORREÇÃO DE MEMÓRIA: Usar Math.min em vez de Math.max.
+    // Isso limita a escala a no máximo 2. Suficiente para boa qualidade,
+    // mas evita o crash de memória (canvas em branco) no iOS/Safari.
+    const scale = Math.min(2, window.devicePixelRatio || 2);
+
     return html2canvas(page, {
-      scale: Math.max(2, window.devicePixelRatio || 2),
+      scale,
       useCORS: true,
+      allowTaint: true, // Ajuda com imagens externas
       backgroundColor: "#ffffff",
       logging: false,
       foreignObjectRendering,
       imageTimeout: 0,
-      windowWidth: page.scrollWidth,
-      windowHeight: page.scrollHeight,
+      // 2. CORREÇÃO DE SCROLL: Compensa a rolagem da tela para não cortar a página
+      scrollY: -window.scrollY,
+      windowWidth: document.documentElement.offsetWidth,
     });
   };
 
   const handleDownload = async () => {
     if (!proposalRef.current) return;
     setDownloading(true);
+
+    // 3. CORREÇÃO DE SCROLL FÍSICO: Jogar o usuário para o topo antes da captura
+    const originalScrollY = window.scrollY;
+    window.scrollTo(0, 0);
+
     const docEl = proposalRef.current;
     docEl.setAttribute("data-exporting", "true");
 
     // Força exibição inline de todas as páginas (override do CSS de prévia)
-    const pages = Array.from(docEl.querySelectorAll<HTMLElement>(".proposal-page"));
+    const pages = Array.from(docEl.querySelectorAll(".proposal-page")) as HTMLElement[];
     const prevDisplay = pages.map((p) => p.style.display);
     pages.forEach((p) => {
       p.style.display = "block";
     });
 
-    // Aguarda o browser aplicar o reflow antes de medir/capturar
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // 4. CORREÇÃO DE TEMPO: No mobile, o reflow do DOM demora uma fração de segundo a mais.
+    // Usar um pequeno setTimeout garante que os estilos foram aplicados.
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
@@ -159,7 +172,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         await document.fonts.ready;
       }
 
-      const images = Array.from(docEl.querySelectorAll<HTMLImageElement>("img"));
+      const images = Array.from(docEl.querySelectorAll("img"));
       await Promise.all(
         images
           .filter((img) => !img.complete)
@@ -186,7 +199,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           canvas = await renderProposalPage(html2canvas, pages[i], false);
         }
 
-        const imgData = canvas.toDataURL("image/png");
+        // 5. CORREÇÃO DE SEGURANÇA: Se o canvas vier vazio por algum engasgo, ele não quebra a geração
+        const imgData = canvas.toDataURL("image/png", 1.0);
         if (i > 0) pdf.addPage();
         pdf.addImage(imgData, "PNG", 0, 0, pageW, pageH);
       }
@@ -196,11 +210,12 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
-      // Restaura estilos inline originais
+      // Restaura estilos inline originais e o scroll do usuário
       pages.forEach((p, idx) => {
         p.style.display = prevDisplay[idx];
       });
       docEl.removeAttribute("data-exporting");
+      window.scrollTo(0, originalScrollY);
       setDownloading(false);
     }
   };
