@@ -128,6 +128,69 @@ export type Database = {
           },
         ]
       }
+      course_enrollments: {
+        Row: {
+          class_end_date: string | null
+          class_id: string | null
+          class_label: string | null
+          class_start_date: string | null
+          contract_status: Database["public"]["Enums"]["contract_status"]
+          course_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          source_row: number | null
+          source_sheet: string | null
+          student_email: string | null
+          student_name: string
+          student_phone: string | null
+          synced_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_end_date?: string | null
+          class_id?: string | null
+          class_label?: string | null
+          class_start_date?: string | null
+          contract_status?: Database["public"]["Enums"]["contract_status"]
+          course_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          source_row?: number | null
+          source_sheet?: string | null
+          student_email?: string | null
+          student_name: string
+          student_phone?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_end_date?: string | null
+          class_id?: string | null
+          class_label?: string | null
+          class_start_date?: string | null
+          contract_status?: Database["public"]["Enums"]["contract_status"]
+          course_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          source_row?: number | null
+          source_sheet?: string | null
+          student_email?: string | null
+          student_name?: string
+          student_phone?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       course_modules: {
         Row: {
           course_id: string
@@ -250,6 +313,36 @@ export type Database = {
         }
         Relationships: []
       }
+      sheet_config: {
+        Row: {
+          created_at: string
+          id: string
+          last_sync_summary: Json | null
+          last_synced_at: string | null
+          sheet_url: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sync_summary?: Json | null
+          last_synced_at?: string | null
+          sheet_url: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sync_summary?: Json | null
+          last_synced_at?: string | null
+          sheet_url?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_course_overrides: {
         Row: {
           course_id: string
@@ -347,8 +440,10 @@ export type Database = {
     Enums: {
       app_role: "admin" | "member"
       class_status: "atual" | "proxima" | "encerrada" | "aguardando_confirmacao"
+      contract_status: "sem_contrato" | "em_contrato" | "assinado"
       course_type: "pos_graduacao" | "modular"
       course_unit: "sao_paulo" | "brasilia"
+      payment_status: "pendente" | "pago" | "isento" | "cancelado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -478,8 +573,10 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "member"],
       class_status: ["atual", "proxima", "encerrada", "aguardando_confirmacao"],
+      contract_status: ["sem_contrato", "em_contrato", "assinado"],
       course_type: ["pos_graduacao", "modular"],
       course_unit: ["sao_paulo", "brasilia"],
+      payment_status: ["pendente", "pago", "isento", "cancelado"],
     },
   },
 } as const
