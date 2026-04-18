@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { Download, Loader2, Phone, MapPin } from "lucide-react";
+import { Download, Loader2, Phone, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +24,12 @@ const formatLong = (iso: string) => {
   return `${dd}/${mm} | ${days[d.getDay()]}`;
 };
 
+const TOTAL_PAGES = 8;
+
 export const CourseProposal = ({ course, modules, classes }: Props) => {
   const proposalRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const { overrides, loaded, save } = useCourseOverrides(course.id);
 
   const defaultPrice = course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00";
@@ -133,6 +136,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   const handleDownload = async () => {
     if (!proposalRef.current) return;
     setDownloading(true);
+    const docEl = proposalRef.current;
+    docEl.setAttribute("data-exporting", "true");
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"),
@@ -143,7 +148,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         await document.fonts.ready;
       }
 
-      const images = Array.from(proposalRef.current.querySelectorAll<HTMLImageElement>("img"));
+      const images = Array.from(docEl.querySelectorAll<HTMLImageElement>("img"));
       await Promise.all(
         images
           .filter((img) => !img.complete)
@@ -156,7 +161,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           )
       );
 
-      const pages = Array.from(proposalRef.current.querySelectorAll<HTMLElement>(".proposal-page"));
+      const pages = Array.from(docEl.querySelectorAll<HTMLElement>(".proposal-page"));
       if (pages.length === 0) throw new Error("Nenhuma página encontrada");
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
@@ -181,16 +186,175 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
+      docEl.removeAttribute("data-exporting");
       setDownloading(false);
     }
   };
 
   return (
     <div className="space-y-4 sm:space-y-5">
-...
+      {/* Painel de edição */}
+      <Card className="border-primary/20 bg-primary/5 p-4 sm:p-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-foreground">Personalize a proposta</h3>
+            <p className="text-xs text-muted-foreground">
+              Edite o valor e as datas — suas alterações são <strong>salvas automaticamente</strong> só na sua conta.
+            </p>
+          </div>
+          <Button onClick={handleDownload} disabled={downloading} className="w-full sm:w-auto sm:shrink-0">
+            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Baixar PDF
+          </Button>
+        </div>
+        {classes.length > 0 && (
+          <div className="mb-3">
+            <Label className="text-xs">Turma</Label>
+            <Select value={selectedClassId} onValueChange={handleClassChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma turma cadastrada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">✏️ Datas personalizadas (manual)</SelectItem>
+                {classes
+                  .filter((c) => c.start_date)
+                  .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {formatClassDateRange(c.start_date, c.end_date)} — {classStatusLabel(c.status)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Escolha uma turma da aba <strong>Turmas</strong> para preencher as datas automaticamente.
+            </p>
+          </div>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div>
+            <Label className="text-xs">Valor total (R$)</Label>
+            <Input
+              value={priceValue}
+              onChange={(e) => {
+                setPriceValue(e.target.value);
+                save({ proposal_price: e.target.value });
+              }}
+              placeholder="3.990,00"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Parcelas (sem juros)</Label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Ex.: 1, 3, 10..."
+              value={installmentsInput}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                setInstallmentsInput(raw);
+                const n = raw === "" ? null : Math.max(1, Math.min(24, parseInt(raw)));
+                save({ proposal_installments: n });
+              }}
+            />
+            {totalPrice > 0 && installments > 1 && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {installments}x de <strong>{formatBRL(installmentValue)}</strong>
+              </p>
+            )}
+          </div>
+          <div>
+            <Label className="text-xs">Data início</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setSelectedClassId("manual");
+                save({ proposal_start_date: e.target.value || null });
+              }}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Data fim</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setSelectedClassId("manual");
+                save({ proposal_end_date: e.target.value || null });
+              }}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Coordenadores (opcional)</Label>
+            <Input
+              value={coordinators}
+              onChange={(e) => {
+                setCoordinators(e.target.value);
+                save({ proposal_coordinators: e.target.value });
+              }}
+              placeholder="Dr. Fulano | Dra. Ciclana"
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* Navegador de páginas (prévia) */}
+      <Card className="p-3 sm:p-4">
+        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-foreground">Pré-visualização</h3>
+            <p className="text-[11px] text-muted-foreground">
+              Confira página por página antes de baixar — exatamente como vai sair no PDF.
+            </p>
+          </div>
+          <div className="shrink-0 text-xs font-medium text-muted-foreground">
+            Página {currentPage} de {TOTAL_PAGES}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {Array.from({ length: TOTAL_PAGES }, (_, i) => i + 1).map((n) => (
+            <Button
+              key={n}
+              size="sm"
+              variant={currentPage === n ? "default" : "outline"}
+              className="h-8 w-8 p-0 text-xs"
+              onClick={() => setCurrentPage(n)}
+            >
+              {n}
+            </Button>
+          ))}
+          <div className="ml-auto flex gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" /> Anterior
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage((p) => Math.min(TOTAL_PAGES, p + 1))}
+              disabled={currentPage === TOTAL_PAGES}
+            >
+              Próxima <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          💡 Mesmo vendo só uma página aqui, todas as {TOTAL_PAGES} páginas são exportadas no PDF.
+        </p>
+      </Card>
+
       <div className="overflow-x-auto">
         <div
           ref={proposalRef}
+          data-active-page={currentPage}
           className="proposal-doc mx-auto bg-white text-[#0a3d2e]"
           style={{ width: "210mm", fontFamily: "Arial, Helvetica, sans-serif", textRendering: "geometricPrecision" }}
         >
@@ -583,6 +747,19 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         }
         .proposal-page:last-child {
           page-break-after: auto;
+        }
+        .proposal-doc[data-active-page="1"] .proposal-page:not(:nth-child(1)),
+        .proposal-doc[data-active-page="2"] .proposal-page:not(:nth-child(2)),
+        .proposal-doc[data-active-page="3"] .proposal-page:not(:nth-child(3)),
+        .proposal-doc[data-active-page="4"] .proposal-page:not(:nth-child(4)),
+        .proposal-doc[data-active-page="5"] .proposal-page:not(:nth-child(5)),
+        .proposal-doc[data-active-page="6"] .proposal-page:not(:nth-child(6)),
+        .proposal-doc[data-active-page="7"] .proposal-page:not(:nth-child(7)),
+        .proposal-doc[data-active-page="8"] .proposal-page:not(:nth-child(8)) {
+          display: none;
+        }
+        .proposal-doc[data-exporting="true"] .proposal-page {
+          display: block !important;
         }
       `}</style>
     </div>
