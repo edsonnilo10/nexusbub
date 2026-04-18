@@ -773,9 +773,9 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
 
   const handleDownload = async () => {
     setDownloading(true);
+    const previousExporting = proposalDocRef.current?.getAttribute("data-exporting") ?? null;
     try {
       const coverElement = proposalDocRef.current?.querySelector(".proposal-page:first-child") as HTMLElement | null;
-      const previousExporting = proposalDocRef.current?.getAttribute("data-exporting");
       proposalDocRef.current?.setAttribute("data-exporting", "true");
       const pdf = await buildProposalPdf({
         course,
