@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import PendingApproval from "./pages/PendingApproval.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import AdminApprovals from "./pages/AdminApprovals.tsx";
 import CourseDetail from "./pages/CourseDetail.tsx";
 import CourseEditor from "./pages/CourseEditor.tsx";
@@ -28,6 +29,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/pending" element={<PendingApproval />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/courses/new" element={<ProtectedRoute><CourseEditor /></ProtectedRoute>} />
             <Route path="/courses/:id" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />

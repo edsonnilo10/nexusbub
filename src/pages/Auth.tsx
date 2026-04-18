@@ -188,6 +188,33 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
+
+        <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Esqueci minha senha</DialogTitle>
+              <DialogDescription>
+                Informe seu e-mail e enviaremos um link para você criar uma nova senha.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">E-mail</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={forgotLoading}>
+                {forgotLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Enviar link de recuperação
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
