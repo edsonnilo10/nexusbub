@@ -351,6 +351,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
       <div className="overflow-x-auto">
         <div
           ref={proposalRef}
+          data-active-page={currentPage}
           className="proposal-doc mx-auto bg-white text-[#0a3d2e]"
           style={{ width: "210mm", fontFamily: "Arial, Helvetica, sans-serif", textRendering: "geometricPrecision" }}
         >
@@ -743,6 +744,19 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         }
         .proposal-page:last-child {
           page-break-after: auto;
+        }
+        .proposal-doc[data-active-page="1"] .proposal-page:not(:nth-child(1)),
+        .proposal-doc[data-active-page="2"] .proposal-page:not(:nth-child(2)),
+        .proposal-doc[data-active-page="3"] .proposal-page:not(:nth-child(3)),
+        .proposal-doc[data-active-page="4"] .proposal-page:not(:nth-child(4)),
+        .proposal-doc[data-active-page="5"] .proposal-page:not(:nth-child(5)),
+        .proposal-doc[data-active-page="6"] .proposal-page:not(:nth-child(6)),
+        .proposal-doc[data-active-page="7"] .proposal-page:not(:nth-child(7)),
+        .proposal-doc[data-active-page="8"] .proposal-page:not(:nth-child(8)) {
+          display: none;
+        }
+        .proposal-doc[data-exporting="true"] .proposal-page {
+          display: block !important;
         }
       `}</style>
     </div>
