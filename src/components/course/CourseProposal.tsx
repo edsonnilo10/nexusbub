@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import type { jsPDF } from "jspdf";
 import { Download, Loader2, Phone, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,659 +26,52 @@ const formatLong = (iso: string) => {
 
 const TOTAL_PAGES = 8;
 
-type PdfColor = readonly [number, number, number];
+const sanitizeProposalFileName = (courseName: string) =>
+  `Proposta_${courseName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
 
-interface ProposalPdfData {
-  course: CourseFull;
-  modules: CourseModule[];
-  selectedClass: CourseClass | null;
-  courseDays: string[];
-  priceValue: string;
-  installments: number;
-  totalPrice: number;
-  installmentValue: number;
-  coordinators: string;
-}
-
-const PDF_PAGE_WIDTH = 210;
-const PDF_PAGE_HEIGHT = 297;
-const MM_PER_PT = 0.352778;
-const PDF_COLORS = {
-  deepGreen: [0, 61, 42],
-  green: [13, 107, 79],
-  mint: [191, 227, 208],
-  soft: [243, 248, 245],
-  neutral: [82, 82, 82],
-  dark: [38, 38, 38],
-  white: [255, 255, 255],
-} as const satisfies Record<string, PdfColor>;
-const WHY_NEXUS_ITEMS = [
-  ["Prática Intensiva", "Realize o maior número de exames em pacientes reais, sob a supervisão de professores renomados."],
-  ["Metodologia Inovadora", "Aprenda através de casos clínicos reais e desenvolva suas habilidades de diagnóstico."],
-  ["Corpo Docente de Referência", "Conte com mestres e doutores que são referência em suas áreas de atuação."],
-  ["Tecnologia de Ponta", "Utilize equipamentos de última geração para aprimorar suas técnicas."],
-  ["Acompanhamento Individualizado", "Tenha acesso a professores e monitores sempre que precisar."],
-  ["Ambiente Acolhedor", "Sinta-se em casa em nossa escola e faça parte de uma comunidade de aprendizado."],
-] as const;
-const DIFFERENTIAL_ITEMS = [
-  ["Maior Carga Horária de Prática", "Apenas 2 alunos por máquina. Aqui você faz mais exames e ganha mais tempo de prática."],
-  ["Monitoria Especializada", "Conte com o apoio de médicos especialistas durante todo o curso."],
-  ["Turmas Reduzidas", "Atendimento personalizado para garantir seu aprendizado."],
-  ["Infraestrutura Completa", "Tudo o que você precisa para estudar, praticar e evoluir com segurança."],
-] as const;
-
-const applyPdfTextStyle = (
-  pdf: jsPDF,
-  fontSize: number,
-  fontStyle: "normal" | "bold" | "italic" | "bolditalic" = "normal",
-  color: PdfColor = PDF_COLORS.dark
-) => {
-  pdf.setFont("helvetica", fontStyle);
-  pdf.setFontSize(fontSize);
-  pdf.setTextColor(...color);
-};
-
-const writePdfParagraph = (
-  pdf: jsPDF,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  options?: {
-    fontSize?: number;
-    lineHeight?: number;
-    fontStyle?: "normal" | "bold" | "italic" | "bolditalic";
-    color?: PdfColor;
-    align?: "left" | "center" | "right" | "justify";
-  }
-) => {
-  const fontSize = options?.fontSize ?? 12;
-  const lineHeight = options?.lineHeight ?? 1.4;
-  applyPdfTextStyle(pdf, fontSize, options?.fontStyle ?? "normal", options?.color ?? PDF_COLORS.dark);
-  pdf.setLineHeightFactor(lineHeight);
-  const lines = pdf.splitTextToSize(text, maxWidth);
-  pdf.text(lines, x, y, { align: options?.align ?? "left", baseline: "top" });
-  return y + pdf.getTextDimensions(lines).h;
-};
-
-const drawPdfPill = (
-  pdf: jsPDF,
-  text: string,
-  x: number,
-  y: number,
-  options?: {
-    fontSize?: number;
-    bgColor?: PdfColor;
-    textColor?: PdfColor;
-    paddingX?: number;
-    height?: number;
-    maxWidth?: number;
-    borderColor?: PdfColor;
-  }
-) => {
-  const fontSize = options?.fontSize ?? 10;
-  const paddingX = options?.paddingX ?? 4;
-  const height = options?.height ?? 10;
-  applyPdfTextStyle(pdf, fontSize, "bold", options?.textColor ?? PDF_COLORS.white);
-  const rawWidth = pdf.getTextWidth(text) + paddingX * 2;
-  const width = Math.min(options?.maxWidth ?? rawWidth, rawWidth);
-  pdf.setFillColor(...(options?.bgColor ?? PDF_COLORS.green));
-  if (options?.borderColor) {
-    pdf.setDrawColor(...options.borderColor);
-    pdf.roundedRect(x, y, width, height, height / 2, height / 2, "FD");
-  } else {
-    pdf.roundedRect(x, y, width, height, height / 2, height / 2, "F");
-  }
-  pdf.text(text, x + width / 2, y + height / 2 + fontSize * MM_PER_PT * 0.25, { align: "center", baseline: "middle" });
-  return width;
-};
-
-const measurePdfPillWidth = (
-  pdf: jsPDF,
-  text: string,
-  options?: {
-    fontSize?: number;
-    paddingX?: number;
-    maxWidth?: number;
-  }
-) => {
-  const fontSize = options?.fontSize ?? 10;
-  const paddingX = options?.paddingX ?? 4;
-  applyPdfTextStyle(pdf, fontSize, "bold", PDF_COLORS.white);
-  const rawWidth = pdf.getTextWidth(text) + paddingX * 2;
-  return Math.min(options?.maxWidth ?? rawWidth, rawWidth);
-};
-
-const loadImageAsDataUrl = async (src: string) => {
-  try {
-    const response = await fetch(src);
-    const blob = await response.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Falha ao carregar imagem"));
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-};
-
-const renderPdfCoverFromElement = async (pdf: jsPDF, coverElement: HTMLElement) => {
-  const { default: html2canvas } = await import("html2canvas");
-  if ("fonts" in document) {
-    await document.fonts.ready;
-  }
-
-  const images = Array.from(coverElement.querySelectorAll("img"));
-  await Promise.all(
-    images
-      .filter((img) => !img.complete)
-      .map(
-        (img) =>
-          new Promise<void>((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-          })
-      )
-  );
-
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-  const canvas = await html2canvas(coverElement, {
-    scale: Math.min(2, window.devicePixelRatio || 2),
-    useCORS: true,
-    allowTaint: true,
+const renderProposalPage = async (
+  html2canvas: typeof import("html2canvas").default,
+  page: HTMLElement,
+  foreignObjectRendering: boolean
+): Promise<HTMLCanvasElement> => {
+  // TÉCNICA DO CLONE FIXO: copia o elemento e fixa fora de qualquer container
+  // com scroll/overflow, garantindo captura íntegra no mobile (iOS/Safari).
+  const clone = page.cloneNode(true) as HTMLElement;
+  Object.assign(clone.style, {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "210mm",
+    height: "297mm",
+    zIndex: "-9999",
+    display: "block",
     backgroundColor: "#ffffff",
-    logging: false,
-    foreignObjectRendering: true,
-    imageTimeout: 0,
-    scrollX: 0,
-    scrollY: -window.scrollY,
-    windowWidth: coverElement.scrollWidth,
-    windowHeight: coverElement.scrollHeight,
+    overflow: "hidden",
+    transform: "none",
+    margin: "0",
   });
+  document.body.appendChild(clone);
+  // Aguarda repaint + carregamento de fontes/imagens no clone
+  await new Promise((resolve) => setTimeout(resolve, 150));
 
-  const imgData = canvas.toDataURL("image/jpeg", 0.98);
-  pdf.addImage(imgData, "JPEG", 0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT);
+  const scale = Math.min(2, window.devicePixelRatio || 2);
+  try {
+    return await html2canvas(clone, {
+      scale,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      foreignObjectRendering,
+      scrollY: 0,
+      scrollX: 0,
+      windowWidth: clone.scrollWidth,
+      windowHeight: clone.scrollHeight,
+    });
+  } finally {
+    document.body.removeChild(clone);
+  }
 };
-
-const drawLogoBlock = (pdf: jsPDF, logoDataUrl: string | null, x: number, y: number, size: number) => {
-  if (logoDataUrl) {
-    pdf.addImage(logoDataUrl, "JPEG", x, y, size, size);
-    return;
-  }
-  pdf.setFillColor(...PDF_COLORS.white);
-  pdf.roundedRect(x, y, size, size, 4, 4, "F");
-  applyPdfTextStyle(pdf, 12, "bold", PDF_COLORS.green);
-  pdf.text("Nexus", x + size / 2, y + size / 2, { align: "center", baseline: "middle" });
-};
-
-const getModuleBullets = (description: string | null) =>
-  (description || "")
-    .trim()
-    .split(/\n+|;\s*/)
-    .map((item) => item.replace(/^[-•·*]\s*/, "").trim())
-    .filter(Boolean);
-
-const drawProposalPdfPage = (pdf: jsPDF, pageNumber: number, data: ProposalPdfData, logoDataUrl: string | null) => {
-  const { course, modules, selectedClass, courseDays, priceValue, installments, totalPrice, installmentValue, coordinators } = data;
-
-  if (pageNumber === 1) {
-    pdf.setFillColor(...PDF_COLORS.soft);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    pdf.setFillColor(...PDF_COLORS.deepGreen);
-    pdf.rect(0, 0, 18, PDF_PAGE_HEIGHT, "F");
-    pdf.setDrawColor(...PDF_COLORS.mint);
-    pdf.setLineWidth(6);
-    pdf.circle(32, 58, 26, "S");
-    pdf.circle(184, 34, 22, "S");
-    pdf.circle(176, 252, 28, "S");
-    drawLogoBlock(pdf, logoDataUrl, 165, 15, 30);
-    pdf.setFillColor(...PDF_COLORS.deepGreen);
-    pdf.roundedRect(28, 187, 148, 74, 8, 8, "F");
-    writePdfParagraph(pdf, "Proposta de curso", 36, 199, 80, {
-      fontSize: 10,
-      fontStyle: "bold",
-      color: PDF_COLORS.mint,
-    });
-    writePdfParagraph(pdf, course.name, 36, 212, 125, {
-      fontSize: 24,
-      fontStyle: "bold",
-      color: PDF_COLORS.white,
-      lineHeight: 1.15,
-    });
-    const unitText = `Unidade ${unitLabel(course.unit)}`;
-    const unitWidth = drawPdfPill(pdf, unitText, 36, 244, {
-      fontSize: 9,
-      bgColor: [255, 255, 255],
-      textColor: PDF_COLORS.deepGreen,
-      maxWidth: 58,
-    });
-    if (selectedClass?.start_date) {
-      drawPdfPill(pdf, `Turma ${formatClassDateRange(selectedClass.start_date, selectedClass.end_date)}`, 36 + unitWidth + 4, 244, {
-        fontSize: 8,
-        bgColor: [255, 255, 255],
-        textColor: PDF_COLORS.deepGreen,
-        maxWidth: 96,
-      });
-    }
-    return;
-  }
-
-  if (pageNumber === 2) {
-    pdf.setFillColor(...PDF_COLORS.white);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    pdf.setFillColor(...PDF_COLORS.mint);
-    pdf.circle(190, 28, 30, "F");
-    pdf.circle(14, 286, 36, "F");
-    pdf.setFillColor(...PDF_COLORS.green);
-    pdf.rect(150, 0, 60, PDF_PAGE_HEIGHT, "F");
-    drawLogoBlock(pdf, logoDataUrl, 22, 28, 18);
-    drawLogoBlock(pdf, logoDataUrl, 159, 111, 42);
-    writePdfParagraph(pdf, "Nexus: Sua jornada para a excelência em ultrassonografia começa aqui.", 20, 62, 112, {
-      fontSize: 20,
-      fontStyle: "bold",
-      color: PDF_COLORS.green,
-      lineHeight: 1.2,
-    });
-    writePdfParagraph(
-      pdf,
-      "Na Nexus, acreditamos que a excelência é mais do que uma palavra: é um compromisso com você. Oferecemos um ambiente acolhedor e personalizado, onde cada médico é protagonista da própria jornada de aprendizado.",
-      20,
-      108,
-      112,
-      { fontSize: 12, color: PDF_COLORS.neutral, lineHeight: 1.55 }
-    );
-    return;
-  }
-
-  if (pageNumber === 3) {
-    pdf.setFillColor(...PDF_COLORS.white);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    pdf.setFillColor(...PDF_COLORS.green);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, 8, "F");
-    pdf.setFillColor(...PDF_COLORS.mint);
-    pdf.circle(210, 297, 32, "F");
-    writePdfParagraph(pdf, "A ESCOLA", 20, 34, 100, {
-      fontSize: 28,
-      fontStyle: "bold",
-      color: PDF_COLORS.green,
-    });
-    pdf.setFillColor(...PDF_COLORS.green);
-    pdf.rect(20, 47, 16, 1.5, "F");
-    writePdfParagraph(
-      pdf,
-      "Somos uma escola de ultrassonografia diferenciada, formada por docentes qualificados, médicos atuantes e referência em suas áreas, com sólida formação acadêmica e vivência clínica real.",
-      20,
-      68,
-      145,
-      { fontSize: 12, color: PDF_COLORS.neutral, lineHeight: 1.55 }
-    );
-    writePdfParagraph(
-      pdf,
-      "Nosso compromisso com a excelência combina teoria densa, atualizada e aplicável com trocas práticas entre alunos e professores reconhecidos tanto na academia quanto na rotina médica.",
-      20,
-      110,
-      145,
-      { fontSize: 12, color: PDF_COLORS.neutral, lineHeight: 1.55 }
-    );
-    drawLogoBlock(pdf, logoDataUrl, 20, 174, 20);
-    writePdfParagraph(pdf, "Escola Nexus", 46, 179, 60, {
-      fontSize: 10,
-      fontStyle: "bold",
-      color: PDF_COLORS.green,
-    });
-    writePdfParagraph(pdf, "Ultrassonografia de excelência", 46, 188, 80, {
-      fontSize: 12,
-      fontStyle: "bold",
-      color: PDF_COLORS.neutral,
-    });
-    return;
-  }
-
-  if (pageNumber === 4) {
-    pdf.setFillColor(...PDF_COLORS.white);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    drawLogoBlock(pdf, logoDataUrl, 20, 18, 14);
-    writePdfParagraph(pdf, "Por que escolher a Nexus?", 20, 42, 130, {
-      fontSize: 24,
-      fontStyle: "bold",
-      color: PDF_COLORS.green,
-    });
-    pdf.setFillColor(...PDF_COLORS.green);
-    pdf.rect(20, 53, 16, 1.5, "F");
-    let y = 74;
-    WHY_NEXUS_ITEMS.forEach(([title, description]) => {
-      pdf.setFillColor(...PDF_COLORS.green);
-      pdf.circle(24, y + 4, 1.5, "F");
-      writePdfParagraph(pdf, `${title}:`, 30, y, 52, {
-        fontSize: 12,
-        fontStyle: "bold",
-        color: PDF_COLORS.green,
-      });
-      const titleWidth = pdf.getTextWidth(`${title}: `) + 2;
-      const paragraphBottom = writePdfParagraph(pdf, description, 30 + titleWidth, y, 132 - titleWidth, {
-        fontSize: 11,
-        color: PDF_COLORS.dark,
-        lineHeight: 1.5,
-      });
-      y = Math.max(y + 8, paragraphBottom + 9);
-    });
-    return;
-  }
-
-  if (pageNumber === 5) {
-    pdf.setFillColor(...PDF_COLORS.soft);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    writePdfParagraph(pdf, "Na Nexus, você não apenas aprende, você evolui.", 20, 28, 135, {
-      fontSize: 20,
-      fontStyle: "bold",
-      color: PDF_COLORS.green,
-      lineHeight: 1.2,
-    });
-    pdf.setFillColor(...PDF_COLORS.green);
-    pdf.rect(20, 45, 16, 1.5, "F");
-    DIFFERENTIAL_ITEMS.forEach(([title, description], index) => {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = 20 + col * 86;
-      const y = 66 + row * 62;
-      pdf.setFillColor(...PDF_COLORS.white);
-      pdf.setDrawColor(...PDF_COLORS.green);
-      pdf.setLineWidth(0.6);
-      pdf.roundedRect(x, y, 76, 50, 4, 4, "FD");
-      pdf.setFillColor(...PDF_COLORS.green);
-      pdf.rect(x, y, 2.5, 50, "F");
-      writePdfParagraph(pdf, title, x + 6, y + 7, 64, {
-        fontSize: 11,
-        fontStyle: "bold",
-        color: PDF_COLORS.green,
-        lineHeight: 1.25,
-      });
-      writePdfParagraph(pdf, description, x + 6, y + 20, 64, {
-        fontSize: 10,
-        color: PDF_COLORS.neutral,
-        lineHeight: 1.45,
-      });
-    });
-    if (course.workload_hours) {
-      drawPdfPill(pdf, `Carga horária total: ${course.workload_hours}h`, 20, 210, {
-        fontSize: 11,
-        bgColor: PDF_COLORS.green,
-        textColor: PDF_COLORS.white,
-        height: 13,
-        paddingX: 7,
-      });
-    }
-    return;
-  }
-
-  if (pageNumber === 6) {
-    pdf.setFillColor(...PDF_COLORS.soft);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    let y = writePdfParagraph(pdf, course.name, PDF_PAGE_WIDTH / 2, 20, 150, {
-      fontSize: 18,
-      fontStyle: "bold",
-      color: PDF_COLORS.green,
-      align: "center",
-      lineHeight: 1.2,
-    }) + 8;
-    if (coordinators) {
-      y = writePdfParagraph(pdf, "Coordenadores:", PDF_PAGE_WIDTH / 2, y, 120, {
-        fontSize: 10,
-        fontStyle: "bold",
-        color: PDF_COLORS.green,
-        align: "center",
-      }) + 2;
-      y = writePdfParagraph(pdf, coordinators, PDF_PAGE_WIDTH / 2, y, 140, {
-        fontSize: 10,
-        color: PDF_COLORS.neutral,
-        align: "center",
-      }) + 6;
-    }
-    if (selectedClass?.start_date) {
-      const statusText = `Turma ${classStatusLabel(selectedClass.status)}`;
-      const statusWidth = measurePdfPillWidth(pdf, statusText, {
-        fontSize: 9,
-        paddingX: 4,
-      });
-      drawPdfPill(pdf, statusText, (PDF_PAGE_WIDTH - statusWidth) / 2, y, {
-        fontSize: 9,
-        bgColor: PDF_COLORS.green,
-        textColor: PDF_COLORS.white,
-      });
-      y += 14;
-      const dateText = formatClassDateRange(selectedClass.start_date, selectedClass.end_date);
-      const dateWidth = measurePdfPillWidth(pdf, dateText, {
-        fontSize: 9,
-        paddingX: 4,
-      });
-      drawPdfPill(pdf, dateText, (PDF_PAGE_WIDTH - dateWidth) / 2, y, {
-        fontSize: 9,
-        bgColor: PDF_COLORS.mint,
-        textColor: PDF_COLORS.green,
-      });
-      y += 16;
-      if (selectedClass.location) {
-        y = writePdfParagraph(pdf, selectedClass.location, PDF_PAGE_WIDTH / 2, y, 120, {
-          fontSize: 9,
-          color: PDF_COLORS.neutral,
-          align: "center",
-        }) + 4;
-      }
-    } else if (courseDays.length > 0) {
-      const scheduleText = courseDays.length > 1
-        ? `${formatLong(courseDays[0])} até ${formatLong(courseDays[courseDays.length - 1])}`
-        : formatLong(courseDays[0]);
-      const scheduleWidth = measurePdfPillWidth(pdf, scheduleText, {
-        fontSize: 8,
-        paddingX: 4,
-        maxWidth: 160,
-      });
-      drawPdfPill(pdf, scheduleText, (PDF_PAGE_WIDTH - scheduleWidth) / 2, y, {
-        fontSize: 8,
-        bgColor: PDF_COLORS.mint,
-        textColor: PDF_COLORS.green,
-        maxWidth: 160,
-      });
-      y += 18;
-    }
-    if (modules.length === 0) {
-      pdf.setFillColor(...PDF_COLORS.white);
-      pdf.roundedRect(18, 92, 174, 26, 4, 4, "F");
-      writePdfParagraph(pdf, "Nenhum módulo cadastrado ainda. Adicione módulos na aba Informações para aparecerem aqui automaticamente.", 105, 101, 140, {
-        fontSize: 10,
-        color: PDF_COLORS.neutral,
-        align: "center",
-      });
-      return;
-    }
-    let moduleY = Math.max(y, 74);
-    let truncated = false;
-    for (let i = 0; i < modules.length; i += 1) {
-      const module = modules[i];
-      const bullets = getModuleBullets(module.description).slice(0, 4);
-      const estimatedHeight = 16 + Math.max(1, bullets.length) * 7 + (module.workload_hours ? 0 : 0);
-      if (moduleY + estimatedHeight > 272) {
-        truncated = true;
-        break;
-      }
-      pdf.setFillColor(...PDF_COLORS.white);
-      pdf.setDrawColor(...PDF_COLORS.mint);
-      pdf.roundedRect(18, moduleY, 174, estimatedHeight, 4, 4, "FD");
-      pdf.setFillColor(...PDF_COLORS.green);
-      pdf.roundedRect(18, moduleY, 174, 12, 4, 4, "F");
-      pdf.setFillColor(...PDF_COLORS.mint);
-      pdf.circle(28, moduleY + 6, 4, "F");
-      applyPdfTextStyle(pdf, 9, "bold", PDF_COLORS.green);
-      pdf.text(String(i + 1), 28, moduleY + 6.3, { align: "center", baseline: "middle" });
-      writePdfParagraph(pdf, module.title, 36, moduleY + 3.5, 112, {
-        fontSize: 9,
-        fontStyle: "bold",
-        color: PDF_COLORS.white,
-      });
-      if (module.workload_hours) {
-        drawPdfPill(pdf, `${module.workload_hours}h`, 160, moduleY + 2, {
-          fontSize: 8,
-          bgColor: [255, 255, 255],
-          textColor: PDF_COLORS.green,
-          height: 8,
-          paddingX: 3,
-          maxWidth: 24,
-        });
-      }
-      let bulletY = moduleY + 17;
-      if (bullets.length === 0) {
-        bulletY = writePdfParagraph(pdf, module.description || "Conteúdo programático prático e aplicado ao contexto clínico.", 24, bulletY, 160, {
-          fontSize: 9,
-          color: PDF_COLORS.neutral,
-          lineHeight: 1.4,
-        });
-      } else {
-        bullets.forEach((bullet) => {
-          pdf.setFillColor(...PDF_COLORS.green);
-          pdf.circle(25, bulletY + 3, 1.1, "F");
-          bulletY = writePdfParagraph(pdf, bullet, 29, bulletY, 154, {
-            fontSize: 8.8,
-            color: PDF_COLORS.neutral,
-            lineHeight: 1.35,
-          }) + 1.5;
-        });
-      }
-      moduleY += estimatedHeight + 4;
-    }
-    if (truncated) {
-      writePdfParagraph(pdf, "Conteúdo resumido para caber em uma página. A pré-visualização completa permanece disponível na tela.", 105, 276, 150, {
-        fontSize: 8,
-        color: PDF_COLORS.neutral,
-        align: "center",
-      });
-    }
-    return;
-  }
-
-  if (pageNumber === 7) {
-    pdf.setFillColor(...PDF_COLORS.white);
-    pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    pdf.setDrawColor(...PDF_COLORS.mint);
-    pdf.setLineWidth(8);
-    pdf.circle(182, 40, 22, "S");
-    pdf.setDrawColor(...PDF_COLORS.green);
-    pdf.setLineWidth(9);
-    pdf.circle(30, 250, 30, "S");
-    pdf.setDrawColor(...PDF_COLORS.green);
-    pdf.setLineWidth(0.7);
-    pdf.roundedRect(30, 75, 150, 124, 8, 8, "S");
-    writePdfParagraph(pdf, "Investimento", 105, 92, 80, {
-      fontSize: 16,
-      fontStyle: "bold",
-      color: PDF_COLORS.green,
-      align: "center",
-    });
-    pdf.setFillColor(...PDF_COLORS.green);
-    pdf.roundedRect(53, 114, 104, 42, 5, 5, "F");
-    writePdfParagraph(pdf, "Valor total", 105, 123, 80, {
-      fontSize: 8,
-      fontStyle: "bold",
-      color: PDF_COLORS.mint,
-      align: "center",
-    });
-    writePdfParagraph(pdf, `R$ ${priceValue || "--"}`, 105, 134, 90, {
-      fontSize: 28,
-      fontStyle: "bold",
-      color: PDF_COLORS.white,
-      align: "center",
-      lineHeight: 1,
-    });
-    if (installments > 1 && totalPrice > 0) {
-      pdf.setFillColor(...PDF_COLORS.soft);
-      pdf.setDrawColor(...PDF_COLORS.green);
-      pdf.roundedRect(55, 167, 100, 28, 4, 4, "FD");
-      writePdfParagraph(pdf, "Ou parcele em", 105, 174, 70, {
-        fontSize: 9,
-        fontStyle: "bold",
-        color: PDF_COLORS.green,
-        align: "center",
-      });
-      writePdfParagraph(pdf, `${installments}x de ${formatBRL(installmentValue)}`, 105, 183, 78, {
-        fontSize: 16,
-        fontStyle: "bold",
-        color: PDF_COLORS.green,
-        align: "center",
-      });
-      writePdfParagraph(pdf, "sem juros", 105, 191, 50, {
-        fontSize: 8,
-        color: PDF_COLORS.neutral,
-        align: "center",
-      });
-    }
-    if (course.payment_methods) {
-      writePdfParagraph(pdf, course.payment_methods, 105, 210, 120, {
-        fontSize: 10,
-        color: PDF_COLORS.neutral,
-        align: "center",
-      });
-    }
-    return;
-  }
-
-  pdf.setFillColor(...PDF_COLORS.deepGreen);
-  pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-  pdf.setFillColor(...PDF_COLORS.green);
-  pdf.rect(0, 176, PDF_PAGE_WIDTH, 121, "F");
-  writePdfParagraph(pdf, "Vamos juntos?", PDF_PAGE_WIDTH / 2, 72, 120, {
-    fontSize: 30,
-    fontStyle: "bold",
-    color: PDF_COLORS.white,
-    align: "center",
-  });
-  writePdfParagraph(pdf, "Fale com nossos consultores", PDF_PAGE_WIDTH / 2, 94, 120, {
-    fontSize: 14,
-    color: PDF_COLORS.white,
-    align: "center",
-  });
-  pdf.setFillColor(255, 255, 255);
-  pdf.roundedRect(38, 124, 134, 18, 9, 9, "F");
-  writePdfParagraph(pdf, "(61) 9904-2880", PDF_PAGE_WIDTH / 2, 130, 90, {
-    fontSize: 18,
-    fontStyle: "bold",
-    color: PDF_COLORS.green,
-    align: "center",
-  });
-  drawLogoBlock(pdf, logoDataUrl, 87, 180, 36);
-  writePdfParagraph(
-    pdf,
-    course.unit === "brasilia"
-      ? "SCRN 502 Bloco B - Sala 101 | Asa Norte - Brasília, DF"
-      : `Unidade ${unitLabel(course.unit)}`,
-    PDF_PAGE_WIDTH / 2,
-    230,
-    150,
-    { fontSize: 10, color: PDF_COLORS.white, align: "center" }
-  );
-};
-
-const buildProposalPdf = async (data: ProposalPdfData, coverElement?: HTMLElement | null) => {
-  const [{ default: JsPDF }, logoDataUrl] = await Promise.all([import("jspdf"), loadImageAsDataUrl(nexusBrand)]);
-  const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-  for (let page = 1; page <= TOTAL_PAGES; page += 1) {
-    if (page > 1) pdf.addPage();
-    if (page === 1 && coverElement) {
-      try {
-        await renderPdfCoverFromElement(pdf, coverElement);
-        continue;
-      } catch {
-        drawProposalPdfPage(pdf, page, data, logoDataUrl);
-        continue;
-      }
-    }
-    drawProposalPdfPage(pdf, page, data, logoDataUrl);
-  }
-  return pdf;
-};
-
-const sanitizeProposalFileName = (courseName: string) => `Proposta_${courseName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
 
 export const CourseProposal = ({ course, modules, classes }: Props) => {
   const [downloading, setDownloading] = useState(false);
@@ -772,31 +164,59 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   }, [startDate, endDate]);
 
   const handleDownload = async () => {
+    if (!proposalDocRef.current) return;
     setDownloading(true);
-    const previousExporting = proposalDocRef.current?.getAttribute("data-exporting") ?? null;
     try {
-      const coverElement = proposalDocRef.current?.querySelector(".proposal-page:first-child") as HTMLElement | null;
-      proposalDocRef.current?.setAttribute("data-exporting", "true");
-      const pdf = await buildProposalPdf({
-        course,
-        modules,
-        selectedClass,
-        courseDays,
-        priceValue,
-        installments,
-        totalPrice,
-        installmentValue,
-        coordinators,
-      }, coverElement);
+      const [{ default: html2canvas }, { default: JsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      if ("fonts" in document) {
+        await document.fonts.ready;
+      }
+
+      // Aguarda imagens da prévia carregarem
+      const images = Array.from(proposalDocRef.current.querySelectorAll("img"));
+      await Promise.all(
+        images
+          .filter((img) => !img.complete)
+          .map(
+            (img) =>
+              new Promise<void>((resolve) => {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+              })
+          )
+      );
+
+      const pages = Array.from(
+        proposalDocRef.current.querySelectorAll<HTMLElement>(".proposal-page")
+      );
+      if (pages.length === 0) throw new Error("Nenhuma página encontrada");
+
+      const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < pages.length; i++) {
+        let canvas: HTMLCanvasElement;
+        try {
+          canvas = await renderProposalPage(html2canvas, pages[i], true);
+        } catch {
+          canvas = await renderProposalPage(html2canvas, pages[i], false);
+        }
+        // JPEG 0.95 alivia memória do mobile (evita "branco" silencioso)
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH);
+      }
+
       pdf.save(sanitizeProposalFileName(course.name));
       toast({ title: "Proposta baixada", description: "PDF salvo com sucesso. Já dá pra mandar no WhatsApp." });
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
-      if (proposalDocRef.current) {
-        if (previousExporting == null) proposalDocRef.current.removeAttribute("data-exporting");
-        else proposalDocRef.current.setAttribute("data-exporting", previousExporting);
-      }
       setDownloading(false);
     }
   };
