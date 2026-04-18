@@ -30,9 +30,19 @@ const nextClass = (classes: CourseClass[]): CourseClass | null => {
          ordered[0] || null;
 };
 
-/** Ano de referência: pega da próxima turma; se não houver, garante mínimo 2026 */
-const referenceYear = (classes: CourseClass[]): number => {
-  const cls = nextClass(classes);
+/** Resolve qual turma usar: a explicitamente selecionada (se presente nas classes) ou o próximo padrão */
+const resolveClass = (classes: CourseClass[], selected?: CourseClass | null): CourseClass | null => {
+  if (selected) {
+    const found = classes.find((c) => c.id === selected.id);
+    if (found) return found;
+    return selected;
+  }
+  return nextClass(classes);
+};
+
+/** Ano de referência: pega da turma selecionada/próxima; se não houver, garante mínimo 2026 */
+const referenceYear = (classes: CourseClass[], selected?: CourseClass | null): number => {
+  const cls = resolveClass(classes, selected);
   const fromClass = parseDate(cls?.start_date)?.getFullYear();
   if (fromClass) return fromClass;
   return Math.max(2026, new Date().getFullYear());
