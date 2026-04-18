@@ -37,6 +37,8 @@ const renderProposalPage = async (
   // TÉCNICA DO CLONE FIXO: copia o elemento e fixa fora de qualquer container
   // com scroll/overflow, garantindo captura íntegra no mobile (iOS/Safari).
   const clone = page.cloneNode(true) as HTMLElement;
+  // IMPORTANTE: NÃO sobrescrever `display` para preservar o layout original
+  // (algumas páginas usam flex via Tailwind — ex.: a página de contato).
   Object.assign(clone.style, {
     position: "fixed",
     top: "0",
@@ -44,15 +46,41 @@ const renderProposalPage = async (
     width: "210mm",
     height: "297mm",
     zIndex: "-9999",
-    display: "block",
     backgroundColor: "#ffffff",
     overflow: "hidden",
     transform: "none",
     margin: "0",
   });
   document.body.appendChild(clone);
-  // Aguarda repaint + carregamento de fontes/imagens no clone
-  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  // Aguarda TODAS as imagens dentro do clone carregarem (inclui o logo Nexus,
+  // que precisa ser re-baixado pelo navegador no novo nó clonado).
+  const cloneImages = Array.from(clone.querySelectorAll("img")) as HTMLImageElement[];
+  await Promise.all(
+    cloneImages.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          // Remove crossOrigin para evitar bloqueio quando o asset não envia
+          // cabeçalhos CORS (assets do Vite são same-origin, não precisam).
+          if (img.crossOrigin) img.removeAttribute("crossorigin");
+          if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          const done = () => resolve();
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", done, { once: true });
+          // força reload caso o navegador tenha pulado
+          const src = img.src;
+          img.src = "";
+          img.src = src;
+          // timeout de segurança
+          setTimeout(done, 2000);
+        })
+    )
+  );
+  // Repaint extra para fontes/layout
+  await new Promise((resolve) => setTimeout(resolve, 200));
 
   const scale = Math.min(2, window.devicePixelRatio || 2);
   try {
