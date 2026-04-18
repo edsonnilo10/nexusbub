@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, Upload, Clock, Calendar, Tag, MapPin } from "lucide-react";
+import { Plus, Search, Upload, Clock, Calendar, Tag, MapPin, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -83,7 +83,10 @@ const Dashboard = () => {
               {courses.length} {courses.length === 1 ? "curso cadastrado" : "cursos cadastrados"}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="default" onClick={() => navigate("/calendar")} className="bg-gradient-primary shadow-elegant">
+              <CalendarDays className="h-4 w-4" /> Calendário de cursos
+            </Button>
             <Button variant="outline" onClick={() => navigate("/import")}>
               <Upload className="h-4 w-4" /> Importar arquivos
             </Button>
