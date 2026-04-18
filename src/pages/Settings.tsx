@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { MirrorModulesSection } from "@/components/settings/MirrorModulesSection";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -158,6 +159,10 @@ const Settings = () => {
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <MirrorModulesSection />
+        </div>
 
         <Card className="mt-6">
           <CardHeader>

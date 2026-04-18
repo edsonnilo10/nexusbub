@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Copy, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { CopyModulesDialog } from "@/components/course/CopyModulesDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ const CourseEditor = () => {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [modules, setModules] = useState<ModuleDraft[]>([emptyModule()]);
   const [classes, setClasses] = useState<ClassDraft[]>([emptyClass()]);
+  const [copyOpen, setCopyOpen] = useState(false);
 
   useEffect(() => {
     if (!isNew && id) loadCourse(id);
@@ -327,9 +329,14 @@ const CourseEditor = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Conteúdo programático / Módulos</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={() => setModules([...modules, emptyModule()])}>
-                <Plus className="h-4 w-4" /> Módulo
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setCopyOpen(true)}>
+                  <Copy className="h-4 w-4" /> Copiar de outro curso
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setModules([...modules, emptyModule()])}>
+                  <Plus className="h-4 w-4" /> Módulo
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {modules.map((m, i) => (
