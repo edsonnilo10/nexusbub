@@ -232,6 +232,14 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           )
       );
 
+      // Pré-carrega o logo Nexus como base64 (uma única vez) para inlinar nos clones
+      let logoDataUrl: string | null = null;
+      try {
+        logoDataUrl = await urlToDataUrl(nexusBrand);
+      } catch {
+        logoDataUrl = null;
+      }
+
       const pages = Array.from(
         proposalDocRef.current.querySelectorAll<HTMLElement>(".proposal-page")
       );
@@ -244,9 +252,9 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
       for (let i = 0; i < pages.length; i++) {
         let canvas: HTMLCanvasElement;
         try {
-          canvas = await renderProposalPage(html2canvas, pages[i], true);
+          canvas = await renderProposalPage(html2canvas, pages[i], true, logoDataUrl);
         } catch {
-          canvas = await renderProposalPage(html2canvas, pages[i], false);
+          canvas = await renderProposalPage(html2canvas, pages[i], false, logoDataUrl);
         }
         // JPEG 0.95 alivia memória do mobile (evita "branco" silencioso)
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
