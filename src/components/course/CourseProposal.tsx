@@ -136,6 +136,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   const handleDownload = async () => {
     if (!proposalRef.current) return;
     setDownloading(true);
+    const docEl = proposalRef.current;
+    docEl.setAttribute("data-exporting", "true");
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"),
@@ -146,7 +148,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         await document.fonts.ready;
       }
 
-      const images = Array.from(proposalRef.current.querySelectorAll<HTMLImageElement>("img"));
+      const images = Array.from(docEl.querySelectorAll<HTMLImageElement>("img"));
       await Promise.all(
         images
           .filter((img) => !img.complete)
@@ -159,7 +161,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           )
       );
 
-      const pages = Array.from(proposalRef.current.querySelectorAll<HTMLElement>(".proposal-page"));
+      const pages = Array.from(docEl.querySelectorAll<HTMLElement>(".proposal-page"));
       if (pages.length === 0) throw new Error("Nenhuma página encontrada");
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
@@ -184,6 +186,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
+      docEl.removeAttribute("data-exporting");
       setDownloading(false);
     }
   };
