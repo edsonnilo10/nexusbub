@@ -108,18 +108,35 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     if (!proposalRef.current) return;
     setDownloading(true);
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
-      await (html2pdf() as any)
-        .set({
-          margin: 0,
-          filename: `Proposta_${course.name.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["css", "legacy"] },
-        })
-        .from(proposalRef.current)
-        .save();
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      const pages = Array.from(
+        proposalRef.current.querySelectorAll<HTMLElement>(".proposal-page")
+      );
+      if (pages.length === 0) throw new Error("Nenhuma página encontrada");
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();   // 210
+      const pageH = pdf.internal.pageSize.getHeight();  // 297
+
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          windowWidth: pages[i].scrollWidth,
+          windowHeight: pages[i].scrollHeight,
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH, undefined, "FAST");
+      }
+
+      pdf.save(`Proposta_${course.name.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
       toast({ title: "Proposta baixada", description: "PDF salvo com sucesso. Já dá pra mandar no WhatsApp." });
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
