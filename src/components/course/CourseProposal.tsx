@@ -113,6 +113,23 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     return days;
   }, [startDate, endDate]);
 
+  const renderProposalPage = async (
+    html2canvas: typeof import("html2canvas").default,
+    page: HTMLElement,
+    foreignObjectRendering: boolean
+  ) => {
+    return html2canvas(page, {
+      scale: Math.max(2, window.devicePixelRatio || 2),
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      foreignObjectRendering,
+      imageTimeout: 0,
+      windowWidth: page.scrollWidth,
+      windowHeight: page.scrollHeight,
+    });
+  };
+
   const handleDownload = async () => {
     if (!proposalRef.current) return;
     setDownloading(true);
@@ -122,27 +139,41 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         import("jspdf"),
       ]);
 
-      const pages = Array.from(
-        proposalRef.current.querySelectorAll<HTMLElement>(".proposal-page")
+      if ("fonts" in document) {
+        await document.fonts.ready;
+      }
+
+      const images = Array.from(proposalRef.current.querySelectorAll<HTMLImageElement>("img"));
+      await Promise.all(
+        images
+          .filter((img) => !img.complete)
+          .map(
+            (img) =>
+              new Promise<void>((resolve) => {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+              })
+          )
       );
+
+      const pages = Array.from(proposalRef.current.querySelectorAll<HTMLElement>(".proposal-page"));
       if (pages.length === 0) throw new Error("Nenhuma página encontrada");
 
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();   // 210
-      const pageH = pdf.internal.pageSize.getHeight();  // 297
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
 
       for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-          windowWidth: pages[i].scrollWidth,
-          windowHeight: pages[i].scrollHeight,
-        });
-        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        let canvas: HTMLCanvasElement;
+        try {
+          canvas = await renderProposalPage(html2canvas, pages[i], true);
+        } catch {
+          canvas = await renderProposalPage(html2canvas, pages[i], false);
+        }
+
+        const imgData = canvas.toDataURL("image/png");
         if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH, undefined, "FAST");
+        pdf.addImage(imgData, "PNG", 0, 0, pageW, pageH);
       }
 
       pdf.save(`Proposta_${course.name.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
@@ -156,121 +187,12 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      {/* Painel de edição */}
-      <Card className="border-primary/20 bg-primary/5 p-4 sm:p-5">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-foreground">Personalize a proposta</h3>
-            <p className="text-xs text-muted-foreground">
-              Edite o valor e as datas — suas alterações são <strong>salvas automaticamente</strong> só na sua conta.
-            </p>
-          </div>
-          <Button onClick={handleDownload} disabled={downloading} className="w-full sm:w-auto sm:shrink-0">
-            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Baixar PDF
-          </Button>
-        </div>
-        {classes.length > 0 && (
-          <div className="mb-3">
-            <Label className="text-xs">Turma</Label>
-            <Select value={selectedClassId} onValueChange={handleClassChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma turma cadastrada" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="manual">✏️ Datas personalizadas (manual)</SelectItem>
-                {classes
-                  .filter((c) => c.start_date)
-                  .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {formatClassDateRange(c.start_date, c.end_date)} — {classStatusLabel(c.status)}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Escolha uma turma da aba <strong>Turmas</strong> para preencher as datas automaticamente.
-            </p>
-          </div>
-        )}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <Label className="text-xs">Valor total (R$)</Label>
-            <Input
-              value={priceValue}
-              onChange={(e) => {
-                setPriceValue(e.target.value);
-                save({ proposal_price: e.target.value });
-              }}
-              placeholder="3.990,00"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Parcelas (sem juros)</Label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="Ex.: 1, 3, 10..."
-              value={installmentsInput}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
-                setInstallmentsInput(raw);
-                const n = raw === "" ? null : Math.max(1, Math.min(24, parseInt(raw)));
-                save({ proposal_installments: n });
-              }}
-            />
-            {totalPrice > 0 && installments > 1 && (
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {installments}x de <strong>{formatBRL(installmentValue)}</strong>
-              </p>
-            )}
-          </div>
-          <div>
-            <Label className="text-xs">Data início</Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setSelectedClassId("manual");
-                save({ proposal_start_date: e.target.value || null });
-              }}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Data fim</Label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setSelectedClassId("manual");
-                save({ proposal_end_date: e.target.value || null });
-              }}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Coordenadores (opcional)</Label>
-            <Input
-              value={coordinators}
-              onChange={(e) => {
-                setCoordinators(e.target.value);
-                save({ proposal_coordinators: e.target.value });
-              }}
-              placeholder="Dr. Fulano | Dra. Ciclana"
-            />
-          </div>
-        </div>
-      </Card>
-
-      {/* Preview da proposta — capturada para PDF */}
+...
       <div className="overflow-x-auto">
         <div
           ref={proposalRef}
           className="proposal-doc mx-auto bg-white text-[#0a3d2e]"
-          style={{ width: "210mm", fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}
+          style={{ width: "210mm", fontFamily: "Arial, Helvetica, sans-serif", textRendering: "geometricPrecision" }}
         >
           {/* PAGE 1 — Capa */}
           <section className="proposal-page relative overflow-hidden" style={pageStyle}>
