@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import nexusLogo from "@/assets/nexus-logo.jpg";
@@ -29,6 +29,12 @@ export const AppHeader = () => {
               </Link>
             </Button>
           )}
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/settings">
+              <SettingsIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Configurações</span>
+            </Link>
+          </Button>
           <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
           <Button variant="ghost" size="sm" onClick={signOut}>
             <LogOut className="h-4 w-4" />
