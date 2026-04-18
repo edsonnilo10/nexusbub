@@ -70,9 +70,10 @@ const Auth = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
-    } else {
-      navigate("/", { replace: true });
+      const description = error.message === "Invalid login credentials"
+        ? "E-mail ou senha inválidos."
+        : error.message;
+      toast({ title: "Erro ao entrar", description, variant: "destructive" });
     }
   };
 
