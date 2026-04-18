@@ -37,7 +37,10 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
 
   // Valores editáveis (preferem o que o usuário salvou; senão, fallback)
   const [priceValue, setPriceValue] = useState<string>(defaultPrice);
-  const [installments, setInstallments] = useState<number>(course.installments || 1);
+  const [installmentsInput, setInstallmentsInput] = useState<string>(
+    course.installments ? String(course.installments) : ""
+  );
+  const installments = Math.max(1, Math.min(24, parseInt(installmentsInput) || 1));
   const [startDate, setStartDate] = useState<string>(nextClass?.start_date || "");
   const [endDate, setEndDate] = useState<string>(nextClass?.end_date || "");
   const [coordinators, setCoordinators] = useState<string>("");
@@ -47,7 +50,13 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   useEffect(() => {
     if (!loaded) return;
     setPriceValue(overrides.proposal_price ?? defaultPrice);
-    setInstallments(overrides.proposal_installments ?? course.installments ?? 1);
+    setInstallmentsInput(
+      overrides.proposal_installments != null
+        ? String(overrides.proposal_installments)
+        : course.installments
+        ? String(course.installments)
+        : ""
+    );
     const initStart = overrides.proposal_start_date ?? nextClass?.start_date ?? "";
     const initEnd = overrides.proposal_end_date ?? nextClass?.end_date ?? "";
     setStartDate(initStart);
@@ -200,13 +209,15 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           <div>
             <Label className="text-xs">Parcelas (sem juros)</Label>
             <Input
-              type="number"
-              min={1}
-              max={24}
-              value={installments}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Ex.: 1, 3, 10..."
+              value={installmentsInput}
               onChange={(e) => {
-                const n = Math.max(1, Math.min(24, parseInt(e.target.value) || 1));
-                setInstallments(n);
+                const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                setInstallmentsInput(raw);
+                const n = raw === "" ? null : Math.max(1, Math.min(24, parseInt(raw)));
                 save({ proposal_installments: n });
               }}
             />
