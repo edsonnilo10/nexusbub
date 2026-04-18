@@ -138,6 +138,17 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     setDownloading(true);
     const docEl = proposalRef.current;
     docEl.setAttribute("data-exporting", "true");
+
+    // Força exibição inline de todas as páginas (override do CSS de prévia)
+    const pages = Array.from(docEl.querySelectorAll<HTMLElement>(".proposal-page"));
+    const prevDisplay = pages.map((p) => p.style.display);
+    pages.forEach((p) => {
+      p.style.display = "block";
+    });
+
+    // Aguarda o browser aplicar o reflow antes de medir/capturar
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"),
@@ -161,7 +172,6 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           )
       );
 
-      const pages = Array.from(docEl.querySelectorAll<HTMLElement>(".proposal-page"));
       if (pages.length === 0) throw new Error("Nenhuma página encontrada");
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
@@ -186,6 +196,10 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
+      // Restaura estilos inline originais
+      pages.forEach((p, idx) => {
+        p.style.display = prevDisplay[idx];
+      });
       docEl.removeAttribute("data-exporting");
       setDownloading(false);
     }
