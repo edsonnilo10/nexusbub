@@ -29,12 +29,14 @@ export const AppHeader = () => {
               </Link>
             </Button>
           )}
-          <Button asChild variant="ghost" size="sm" className="h-9 px-2 sm:px-3">
-            <Link to="/settings">
-              <SettingsIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Configurações</span>
-            </Link>
-          </Button>
+          {isAdmin && (
+            <Button asChild variant="ghost" size="sm" className="h-9 px-2 sm:px-3">
+              <Link to="/settings">
+                <SettingsIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Configurações</span>
+              </Link>
+            </Button>
+          )}
           <span className="hidden text-sm text-muted-foreground md:inline">{user?.email}</span>
           <Button variant="ghost" size="sm" onClick={signOut} className="h-9 px-2 sm:px-3">
             <LogOut className="h-4 w-4" />
