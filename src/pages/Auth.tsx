@@ -23,10 +23,38 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user) navigate("/", { replace: true });
   }, [user, authLoading, navigate]);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      emailSchema.parse(forgotEmail);
+    } catch (err: any) {
+      toast({ title: "E-mail inválido", description: err.errors?.[0]?.message, variant: "destructive" });
+      return;
+    }
+    setForgotLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setForgotLoading(false);
+    if (error) {
+      toast({ title: "Erro ao enviar e-mail", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "E-mail enviado!",
+      description: "Verifique sua caixa de entrada para redefinir a senha.",
+    });
+    setForgotOpen(false);
+    setForgotEmail("");
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
