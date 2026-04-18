@@ -377,29 +377,49 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           </section>
 
           {/* PAGE 5 — Diferenciais */}
-          <section className="proposal-page relative bg-[#f3f8f5]" style={pageStyle}>
-            <div className="p-[20mm]">
-              <h2 className="text-[26px] font-bold leading-tight text-[#0d6b4f]">
+          <section className="proposal-page relative" style={{ ...pageStyle, backgroundColor: "#f3f8f5" }}>
+            <div style={{ padding: "20mm" }}>
+              <h2 style={{ fontSize: "26px", fontWeight: 700, lineHeight: 1.15, color: "#0d6b4f" }}>
                 Na Nexus, você não apenas aprende, você evolui.
               </h2>
-              <div className="mt-2 h-1 w-16 bg-[#0d6b4f]" />
-              <div className="mt-10 grid grid-cols-2 gap-6">
+              <div style={{ marginTop: "8px", height: "4px", width: "64px", backgroundColor: "#0d6b4f" }} />
+              <div style={{ marginTop: "40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
                 {[
                   ["Maior Carga Horária de Prática", "Apenas 2 alunos/máquina. Aqui você faz mais exames e ganha mais tempo de máquina."],
                   ["Monitoria Especializada", "Conte com o apoio de médicos especialistas durante todo o curso."],
                   ["Turmas Reduzidas", "Atendimento personalizado para garantir seu aprendizado."],
                   ["Infraestrutura Completa", "Tudo o que você precisa para estudar e praticar."],
                 ].map(([t, d]) => (
-                  <div key={t} className="rounded-2xl border-l-4 border-[#0d6b4f] bg-white p-5 shadow-sm">
-                    <h3 className="text-[15px] font-bold text-[#0d6b4f]">{t}</h3>
-                    <p className="mt-2 text-[12px] leading-relaxed text-neutral-700">{d}</p>
+                  <div
+                    key={t}
+                    style={{
+                      borderRadius: "16px",
+                      borderLeft: "4px solid #0d6b4f",
+                      backgroundColor: "#ffffff",
+                      padding: "20px",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#0d6b4f", margin: 0 }}>{t}</h3>
+                    <p style={{ marginTop: "8px", fontSize: "12px", lineHeight: 1.5, color: "#404040" }}>{d}</p>
                   </div>
                 ))}
               </div>
               {course.workload_hours && (
-                <div className="mt-10 inline-flex items-center gap-3 rounded-full bg-[#0d6b4f] px-6 py-3 text-white">
-                  <span className="text-sm font-semibold">Carga horária total:</span>
-                  <span className="text-lg font-bold">{course.workload_hours}h</span>
+                <div
+                  style={{
+                    marginTop: "40px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    borderRadius: "9999px",
+                    backgroundColor: "#0d6b4f",
+                    padding: "12px 24px",
+                    color: "#ffffff",
+                  }}
+                >
+                  <span style={{ fontSize: "14px", fontWeight: 600 }}>Carga horária total:</span>
+                  <span style={{ fontSize: "18px", fontWeight: 700 }}>{course.workload_hours}h</span>
                 </div>
               )}
             </div>
@@ -488,31 +508,108 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           </section>
 
           {/* PAGE 7 — Valor */}
-          <section className="proposal-page relative bg-white" style={pageStyle}>
-            <div className="absolute right-[10mm] top-[10mm] h-[80mm] w-[80mm] rounded-full border-[18mm] border-[#bfe3d0]/40" />
-            <div className="absolute bottom-[10mm] left-[10mm] h-[100mm] w-[100mm] rounded-full border-[20mm] border-[#0d6b4f]/30" />
-            <div className="relative flex h-full items-center justify-center p-[20mm]">
-              <div className="w-full max-w-[150mm] rounded-3xl border-2 border-[#0d6b4f] bg-white p-[18mm] text-center shadow-xl">
-                <div className="text-[18px] font-bold text-[#0d6b4f]">Investimento</div>
-                <div className="mt-5 inline-block rounded-2xl bg-gradient-to-br from-[#0d6b4f] to-[#003d2a] px-10 py-6 text-white shadow-lg">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#bfe3d0]">
+          <section className="proposal-page relative" style={{ ...pageStyle, backgroundColor: "#ffffff" }}>
+            <div
+              style={{
+                position: "absolute",
+                right: "10mm",
+                top: "10mm",
+                height: "80mm",
+                width: "80mm",
+                borderRadius: "9999px",
+                border: "18mm solid rgba(191, 227, 208, 0.4)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: "10mm",
+                left: "10mm",
+                height: "100mm",
+                width: "100mm",
+                borderRadius: "9999px",
+                border: "20mm solid rgba(13, 107, 79, 0.3)",
+              }}
+            />
+            <div
+              style={{
+                position: "relative",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20mm",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: "150mm",
+                  borderRadius: "24px",
+                  border: "2px solid #0d6b4f",
+                  backgroundColor: "#ffffff",
+                  padding: "18mm",
+                  textAlign: "center",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                }}
+              >
+                <div style={{ fontSize: "18px", fontWeight: 700, color: "#0d6b4f" }}>Investimento</div>
+                <div
+                  style={{
+                    marginTop: "20px",
+                    display: "inline-block",
+                    borderRadius: "16px",
+                    backgroundColor: "#0d6b4f",
+                    padding: "24px 40px",
+                    color: "#ffffff",
+                    boxShadow: "0 8px 20px rgba(13,107,79,0.35)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.25em",
+                      color: "#bfe3d0",
+                    }}
+                  >
                     Valor total
                   </div>
-                  <div className="mt-1 text-[44px] font-extrabold leading-none">R$ {priceValue}</div>
+                  <div style={{ marginTop: "4px", fontSize: "44px", fontWeight: 800, lineHeight: 1, color: "#ffffff" }}>
+                    R$ {priceValue || "—"}
+                  </div>
                 </div>
                 {installments > 1 && totalPrice > 0 && (
-                  <div className="mt-6 inline-block rounded-2xl border-2 border-dashed border-[#0d6b4f] bg-[#f3f8f5] px-8 py-5">
-                    <div className="text-[12px] font-semibold uppercase tracking-wider text-[#0d6b4f]">
+                  <div
+                    style={{
+                      marginTop: "24px",
+                      display: "inline-block",
+                      borderRadius: "16px",
+                      border: "2px dashed #0d6b4f",
+                      backgroundColor: "#f3f8f5",
+                      padding: "20px 32px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.1em",
+                        color: "#0d6b4f",
+                      }}
+                    >
                       Ou parcele em
                     </div>
-                    <div className="mt-1 text-[28px] font-extrabold leading-none text-[#0d6b4f]">
+                    <div style={{ marginTop: "4px", fontSize: "28px", fontWeight: 800, lineHeight: 1, color: "#0d6b4f" }}>
                       {installments}x de {formatBRL(installmentValue)}
                     </div>
-                    <div className="mt-1 text-[11px] text-neutral-600">sem juros</div>
+                    <div style={{ marginTop: "4px", fontSize: "11px", color: "#525252" }}>sem juros</div>
                   </div>
                 )}
                 {course.payment_methods && (
-                  <div className="mt-5 text-xs text-neutral-500">{course.payment_methods}</div>
+                  <div style={{ marginTop: "20px", fontSize: "12px", color: "#737373" }}>{course.payment_methods}</div>
                 )}
               </div>
             </div>
