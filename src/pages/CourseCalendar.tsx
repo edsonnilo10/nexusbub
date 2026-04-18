@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, MapPin,
+  ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, MapPin, X,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
