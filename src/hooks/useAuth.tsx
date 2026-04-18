@@ -21,35 +21,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const loadProfileFlags = async (uid: string) => {
-    const [{ data: prof }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("approved").eq("id", uid).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", uid),
-    ]);
-    setApproved(!!prof?.approved);
-    setIsAdmin(!!roles?.some((r) => r.role === "admin"));
+    try {
+      const [{ data: prof, error: profErr }, { data: roles, error: rolesErr }] = await Promise.all([
+        supabase.from("profiles").select("approved").eq("id", uid).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", uid),
+      ]);
+
+      if (profErr) throw profErr;
+      if (rolesErr) throw rolesErr;
+
+      setApproved(!!prof?.approved);
+      setIsAdmin(!!roles?.some((r) => r.role === "admin"));
+    } catch {
+      setApproved(false);
+      setIsAdmin(false);
+    }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      if (newSession?.user) {
-        // Defer Supabase calls to avoid deadlock inside the auth callback
-        setTimeout(() => loadProfileFlags(newSession.user.id), 0);
-      } else {
+    let active = true;
+
+    const applySession = async (nextSession: Session | null) => {
+      if (!active) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (!nextSession?.user) {
         setApproved(false);
         setIsAdmin(false);
+        setLoading(false);
+        return;
       }
+
+      setLoading(true);
+      await loadProfileFlags(nextSession.user.id);
+
+      if (active) {
+        setLoading(false);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setTimeout(() => {
+        void applySession(nextSession);
+      }, 0);
     });
 
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) await loadProfileFlags(s.user.id);
-      setLoading(false);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      void applySession(currentSession);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
