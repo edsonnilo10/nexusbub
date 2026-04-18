@@ -283,10 +283,12 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           </section>
 
           {/* PAGE 2 — Manifesto */}
-          <section className="proposal-page relative" style={pageStyle}>
-            <div className="grid h-full grid-cols-[1fr_70mm]">
+          <section className="proposal-page relative bg-white" style={pageStyle}>
+            <div className="absolute right-[-30mm] top-[-30mm] h-[120mm] w-[120mm] rounded-full bg-[#0d6b4f]/8" />
+            <div className="absolute bottom-[-40mm] left-[-40mm] h-[140mm] w-[140mm] rounded-full bg-[#0d6b4f]/6" />
+            <div className="relative grid h-full grid-cols-[1fr_60mm]">
               <div className="flex flex-col justify-center p-[20mm]">
-                <img src={nexusBrand} alt="Nexus" className="mb-8 h-[16mm] w-[16mm] rounded-lg object-cover shadow-md" crossOrigin="anonymous" />
+                <img src={nexusBrand} alt="Nexus" className="mb-8 h-[18mm] w-[18mm] rounded-lg object-cover shadow-md" crossOrigin="anonymous" />
                 <h2 className="text-[26px] font-bold leading-tight text-[#0d6b4f]">
                   Nexus: Sua jornada para a excelência em ultrassonografia começa aqui.
                 </h2>
@@ -296,29 +298,37 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                   protagonista da sua jornada de aprendizado.
                 </p>
               </div>
-              <img src={plantImg} alt="" className="h-full w-full object-cover" />
+              <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#0d6b4f] to-[#003d2a] p-[10mm]">
+                <img src={nexusBrand} alt="Nexus" className="h-[44mm] w-[44mm] rounded-2xl object-cover shadow-2xl ring-4 ring-white/30" crossOrigin="anonymous" />
+              </div>
             </div>
           </section>
 
           {/* PAGE 3 — A Escola */}
-          <section className="proposal-page relative" style={pageStyle}>
-            <div className="grid h-full grid-cols-[1fr_85mm]">
-              <div className="flex flex-col justify-center p-[20mm]">
-                <h2 className="text-[34px] font-bold text-[#0d6b4f]">A ESCOLA</h2>
-                <div className="mt-2 h-1 w-16 bg-[#0d6b4f]" />
-                <p className="mt-8 text-[14px] leading-relaxed text-neutral-700">
-                  Somos uma escola de ultrassonografia diferenciada, formada por docentes qualificados,
-                  médicos atuantes que são referência em suas áreas, com sólida e extensa formação
-                  acadêmica.
-                </p>
-                <p className="mt-4 text-[14px] leading-relaxed text-neutral-700">
-                  Temos um compromisso com a excelência no ensino da ultrassonografia. Por isso, além
-                  da teoria densa, detalhada e atualizada, na Nexus, o aluno médico tem a oportunidade
-                  de trocar experiências com profissionais professores reconhecidos não só na área
-                  acadêmica, mas também na clínica médica.
-                </p>
+          <section className="proposal-page relative bg-white" style={pageStyle}>
+            <div className="absolute left-0 top-0 h-[8mm] w-full bg-[#0d6b4f]" />
+            <div className="absolute bottom-0 right-0 h-[60mm] w-[60mm] rounded-tl-[60mm] bg-[#0d6b4f]/10" />
+            <div className="relative flex h-full flex-col justify-center p-[20mm]">
+              <h2 className="text-[34px] font-bold text-[#0d6b4f]">A ESCOLA</h2>
+              <div className="mt-2 h-1 w-16 bg-[#0d6b4f]" />
+              <p className="mt-8 max-w-[140mm] text-[14px] leading-relaxed text-neutral-700">
+                Somos uma escola de ultrassonografia diferenciada, formada por docentes qualificados,
+                médicos atuantes que são referência em suas áreas, com sólida e extensa formação
+                acadêmica.
+              </p>
+              <p className="mt-4 max-w-[140mm] text-[14px] leading-relaxed text-neutral-700">
+                Temos um compromisso com a excelência no ensino da ultrassonografia. Por isso, além
+                da teoria densa, detalhada e atualizada, na Nexus, o aluno médico tem a oportunidade
+                de trocar experiências com profissionais professores reconhecidos não só na área
+                acadêmica, mas também na clínica médica.
+              </p>
+              <div className="mt-12 flex items-center gap-4">
+                <img src={nexusBrand} alt="Nexus" className="h-[20mm] w-[20mm] rounded-xl object-cover shadow-md ring-2 ring-[#0d6b4f]/20" crossOrigin="anonymous" />
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#0d6b4f]">Escola Nexus</div>
+                  <div className="text-sm font-bold text-neutral-700">Ultrassonografia de Excelência</div>
+                </div>
               </div>
-              <img src={doctorImg} alt="" className="h-full w-full object-cover" />
             </div>
           </section>
 
