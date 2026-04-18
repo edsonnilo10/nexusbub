@@ -134,6 +134,22 @@ const drawPdfPill = (
   return width;
 };
 
+const measurePdfPillWidth = (
+  pdf: jsPDF,
+  text: string,
+  options?: {
+    fontSize?: number;
+    paddingX?: number;
+    maxWidth?: number;
+  }
+) => {
+  const fontSize = options?.fontSize ?? 10;
+  const paddingX = options?.paddingX ?? 4;
+  applyPdfTextStyle(pdf, fontSize, "bold", PDF_COLORS.white);
+  const rawWidth = pdf.getTextWidth(text) + paddingX * 2;
+  return Math.min(options?.maxWidth ?? rawWidth, rawWidth);
+};
+
 const loadImageAsDataUrl = async (src: string) => {
   try {
     const response = await fetch(src);
@@ -363,14 +379,13 @@ const drawProposalPdfPage = (pdf: jsPDF, pageNumber: number, data: ProposalPdfDa
   if (pageNumber === 6) {
     pdf.setFillColor(...PDF_COLORS.soft);
     pdf.rect(0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT, "F");
-    writePdfParagraph(pdf, course.name, PDF_PAGE_WIDTH / 2, 20, 150, {
+    let y = writePdfParagraph(pdf, course.name, PDF_PAGE_WIDTH / 2, 20, 150, {
       fontSize: 18,
       fontStyle: "bold",
       color: PDF_COLORS.green,
       align: "center",
       lineHeight: 1.2,
-    });
-    let y = 38;
+    }) + 8;
     if (coordinators) {
       y = writePdfParagraph(pdf, "Coordenadores:", PDF_PAGE_WIDTH / 2, y, 120, {
         fontSize: 10,
@@ -385,22 +400,21 @@ const drawProposalPdfPage = (pdf: jsPDF, pageNumber: number, data: ProposalPdfDa
       }) + 6;
     }
     if (selectedClass?.start_date) {
-      const statusWidth = drawPdfPill(pdf, `Turma ${classStatusLabel(selectedClass.status)}`, 0, y, {
+      const statusText = `Turma ${classStatusLabel(selectedClass.status)}`;
+      const statusWidth = measurePdfPillWidth(pdf, statusText, {
         fontSize: 9,
-        bgColor: PDF_COLORS.green,
-        textColor: PDF_COLORS.white,
+        paddingX: 4,
       });
-      drawPdfPill(pdf, `Turma ${classStatusLabel(selectedClass.status)}`, (PDF_PAGE_WIDTH - statusWidth) / 2, y, {
+      drawPdfPill(pdf, statusText, (PDF_PAGE_WIDTH - statusWidth) / 2, y, {
         fontSize: 9,
         bgColor: PDF_COLORS.green,
         textColor: PDF_COLORS.white,
       });
       y += 14;
       const dateText = formatClassDateRange(selectedClass.start_date, selectedClass.end_date);
-      const dateWidth = drawPdfPill(pdf, dateText, 0, y, {
+      const dateWidth = measurePdfPillWidth(pdf, dateText, {
         fontSize: 9,
-        bgColor: PDF_COLORS.mint,
-        textColor: PDF_COLORS.green,
+        paddingX: 4,
       });
       drawPdfPill(pdf, dateText, (PDF_PAGE_WIDTH - dateWidth) / 2, y, {
         fontSize: 9,
@@ -419,10 +433,9 @@ const drawProposalPdfPage = (pdf: jsPDF, pageNumber: number, data: ProposalPdfDa
       const scheduleText = courseDays.length > 1
         ? `${formatLong(courseDays[0])} até ${formatLong(courseDays[courseDays.length - 1])}`
         : formatLong(courseDays[0]);
-      const scheduleWidth = drawPdfPill(pdf, scheduleText, 0, y, {
+      const scheduleWidth = measurePdfPillWidth(pdf, scheduleText, {
         fontSize: 8,
-        bgColor: PDF_COLORS.mint,
-        textColor: PDF_COLORS.green,
+        paddingX: 4,
         maxWidth: 160,
       });
       drawPdfPill(pdf, scheduleText, (PDF_PAGE_WIDTH - scheduleWidth) / 2, y, {
