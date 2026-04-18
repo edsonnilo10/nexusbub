@@ -417,25 +417,25 @@ const Timeline = ({ events }: { events: CalendarEvent[] }) => {
                 className={`cursor-pointer border-l-4 transition-shadow hover:shadow-elegant ${STATUS_BORDER[e.status]}`}
                 onClick={() => navigate(`/courses/${e.courseId}`)}
               >
-                <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex-1 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${STATUS_DOT[e.status]}`} />
-                      <h4 className="font-semibold">{e.courseName}</h4>
+                <CardContent className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <div className="flex items-start gap-2">
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[e.status]}`} />
+                      <h4 className="text-sm font-semibold leading-snug sm:text-base">{e.courseName}</h4>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground sm:text-sm">
                       {formatClassDateRange(e.startStr, e.endStr)}
                       {e.location && ` · ${e.location}`}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="gap-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className="gap-1 text-[10px] sm:text-xs">
                       <MapPin className="h-3 w-3" />{unitLabel(e.unit)}
                     </Badge>
-                    <Badge variant={e.type === "pos_graduacao" ? "default" : "secondary"}>
+                    <Badge variant={e.type === "pos_graduacao" ? "default" : "secondary"} className="text-[10px] sm:text-xs">
                       {courseTypeLabel(e.type)}
                     </Badge>
-                    <Badge variant="outline">{classStatusLabel(e.status)}</Badge>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs">{classStatusLabel(e.status)}</Badge>
                   </div>
                 </CardContent>
               </Card>
