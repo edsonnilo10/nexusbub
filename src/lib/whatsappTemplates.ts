@@ -30,9 +30,19 @@ const nextClass = (classes: CourseClass[]): CourseClass | null => {
          ordered[0] || null;
 };
 
-/** Ano de referência: pega da próxima turma; se não houver, garante mínimo 2026 */
-const referenceYear = (classes: CourseClass[]): number => {
-  const cls = nextClass(classes);
+/** Resolve qual turma usar: a explicitamente selecionada (se presente nas classes) ou o próximo padrão */
+const resolveClass = (classes: CourseClass[], selected?: CourseClass | null): CourseClass | null => {
+  if (selected) {
+    const found = classes.find((c) => c.id === selected.id);
+    if (found) return found;
+    return selected;
+  }
+  return nextClass(classes);
+};
+
+/** Ano de referência: pega da turma selecionada/próxima; se não houver, garante mínimo 2026 */
+const referenceYear = (classes: CourseClass[], selected?: CourseClass | null): number => {
+  const cls = resolveClass(classes, selected);
   const fromClass = parseDate(cls?.start_date)?.getFullYear();
   if (fromClass) return fromClass;
   return Math.max(2026, new Date().getFullYear());
@@ -77,10 +87,26 @@ const splitToBullets = (text: string): string[] => {
     .map((s) => (s.endsWith(".") ? s : s + "."));
 };
 
+/** Bloco curto destacando a turma selecionada (data + status + local) */
+const selectedClassBlock = (course: CourseFull, cls: CourseClass | null): string => {
+  if (!cls || !cls.start_date) return "";
+  const range = formatClassDateRange(cls.start_date, cls.end_date);
+  const lines: string[] = [];
+  lines.push(`🗓️ *Turma indicada:* ${range}`);
+  lines.push(`${statusEmoji(cls.status)} _${classStatusLabel(cls.status)}_`);
+  lines.push(`📍 ${locationFor(course, cls)}`);
+  return lines.join("\n");
+};
+
 /** Mensagem completa no padrão Nexus */
-export const fullMessage = (course: CourseFull, modules: CourseModule[], classes: CourseClass[]): string => {
-  const cls = nextClass(classes);
-  const year = referenceYear(classes);
+export const fullMessage = (
+  course: CourseFull,
+  modules: CourseModule[],
+  classes: CourseClass[],
+  selectedClass?: CourseClass | null,
+): string => {
+  const cls = resolveClass(classes, selectedClass);
+  const year = referenceYear(classes, selectedClass);
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
@@ -97,6 +123,15 @@ export const fullMessage = (course: CourseFull, modules: CourseModule[], classes
     `A Escola NEXUS apresenta uma imersão de *${wl}* projetada para transformar sua atuação clínica, unindo embasamento teórico robusto a uma carga prática intensiva com pacientes reais.`
   );
   lines.push("");
+
+  // Se há turma selecionada, destaca ela primeiro
+  if (selectedClass) {
+    const block = selectedClassBlock(course, cls);
+    if (block) {
+      lines.push(block);
+      lines.push("");
+    }
+  }
 
   // Bloco de TURMAS (todas as futuras, com status)
   lines.push(classesBlock(classes));
@@ -154,9 +189,13 @@ export const fullMessage = (course: CourseFull, modules: CourseModule[], classes
 };
 
 /** Mensagem curta */
-export const shortMessage = (course: CourseFull, classes: CourseClass[]): string => {
-  const cls = nextClass(classes);
-  const year = referenceYear(classes);
+export const shortMessage = (
+  course: CourseFull,
+  classes: CourseClass[],
+  selectedClass?: CourseClass | null,
+): string => {
+  const cls = resolveClass(classes, selectedClass);
+  const year = referenceYear(classes, selectedClass);
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
@@ -168,14 +207,21 @@ export const shortMessage = (course: CourseFull, classes: CourseClass[]): string
     lines.push("");
   }
 
-  // Apenas as próximas (sem encerradas)
-  const upcoming = upcomingClasses(classes);
-  if (upcoming.length > 0) {
-    lines.push("🗓️ *Próximas turmas:*");
-    upcoming.slice(0, 3).forEach((c) => {
-      lines.push(`${statusEmoji(c.status)} ${formatClassDateRange(c.start_date, c.end_date)} _(${classStatusLabel(c.status)})_`);
-    });
+  // Se uma turma foi selecionada, destaca ela
+  if (selectedClass && cls?.start_date) {
+    lines.push(`🗓️ *Turma indicada:* ${formatClassDateRange(cls.start_date, cls.end_date)}`);
+    lines.push(`${statusEmoji(cls.status)} _${classStatusLabel(cls.status)}_`);
     lines.push("");
+  } else {
+    // Apenas as próximas (sem encerradas)
+    const upcoming = upcomingClasses(classes);
+    if (upcoming.length > 0) {
+      lines.push("🗓️ *Próximas turmas:*");
+      upcoming.slice(0, 3).forEach((c) => {
+        lines.push(`${statusEmoji(c.status)} ${formatClassDateRange(c.start_date, c.end_date)} _(${classStatusLabel(c.status)})_`);
+      });
+      lines.push("");
+    }
   }
 
   lines.push(`📍 *Local:* ${locationFor(course, cls)}`);
@@ -198,8 +244,12 @@ export const shortMessage = (course: CourseFull, classes: CourseClass[]): string
 };
 
 /** Follow-up */
-export const followUpMessage = (course: CourseFull, classes: CourseClass[]): string => {
-  const cls = nextClass(classes);
+export const followUpMessage = (
+  course: CourseFull,
+  classes: CourseClass[],
+  selectedClass?: CourseClass | null,
+): string => {
+  const cls = resolveClass(classes, selectedClass);
   const range = cls?.start_date ? formatClassDateRange(cls.start_date, cls.end_date) : null;
   const lines = [
     `Olá! 👋`,
@@ -208,10 +258,78 @@ export const followUpMessage = (course: CourseFull, classes: CourseClass[]): str
     "",
   ];
   if (range && cls) {
-    lines.push(`🗓️ *Próxima turma:* ${range}`);
+    const label = selectedClass ? "Turma indicada" : "Próxima turma";
+    lines.push(`🗓️ *${label}:* ${range}`);
     lines.push(`${statusEmoji(cls.status)} _${classStatusLabel(cls.status)}_`);
+    lines.push(`📍 ${locationFor(course, cls)}`);
     lines.push("");
   }
   lines.push(`Posso tirar alguma dúvida ou te enviar o conteúdo programático completo? 😊`);
   return lines.join("\n");
 };
+
+/** Conteúdo programático detalhado por módulo (ideal para pós-graduações) */
+export const programaticContentMessage = (
+  course: CourseFull,
+  modules: CourseModule[],
+  classes: CourseClass[],
+  selectedClass?: CourseClass | null,
+): string => {
+  const cls = resolveClass(classes, selectedClass);
+  const year = referenceYear(classes, selectedClass);
+  const isPos = course.type === "pos_graduacao";
+  const lines: string[] = [];
+
+  lines.push(`📚 *CONTEÚDO PROGRAMÁTICO*`);
+  lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
+  lines.push("");
+
+  if (isPos) {
+    lines.push(`Conforme solicitado, segue o *conteúdo programático completo* da nossa pós-graduação 👇`);
+  } else {
+    lines.push(`Segue o *conteúdo programático completo* do curso 👇`);
+  }
+  lines.push("");
+
+  if (course.workload_hours) {
+    lines.push(`🕒 *Carga horária total:* ${course.workload_hours} horas`);
+  }
+  if (course.modality) {
+    lines.push(`🎯 *Modalidade:* ${course.modality}`);
+  }
+  if (cls?.start_date) {
+    const label = selectedClass ? "Turma indicada" : "Próxima turma";
+    lines.push(`🗓️ *${label}:* ${formatClassDateRange(cls.start_date, cls.end_date)}`);
+    lines.push(`📍 ${locationFor(course, cls)}`);
+  }
+  lines.push("");
+
+  if (modules.length === 0) {
+    lines.push(`_Conteúdo programático em fase de atualização. Posso te enviar assim que estiver disponível._`);
+  } else {
+    const sorted = [...modules].sort((a, b) => a.order_index - b.order_index);
+    sorted.forEach((m, idx) => {
+      const wlm = m.workload_hours ? ` _(${m.workload_hours}h)_` : "";
+      lines.push(`*${idx + 1}. ${m.title}*${wlm}`);
+      if (m.description) {
+        const topics = m.description
+          .split(/\n+|;/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        topics.forEach((t) => lines.push(`   • ${t.replace(/^[-•·▪️*]+\s*/, "")}`));
+      }
+      lines.push("");
+    });
+  }
+
+  if (isPos) {
+    lines.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`);
+    lines.push("");
+    lines.push(`Qualquer dúvida sobre algum módulo específico, é só me chamar! 😊`);
+  } else {
+    lines.push(`Qualquer dúvida sobre o conteúdo, é só me chamar! 😊`);
+  }
+
+  return lines.join("\n");
+};
+
