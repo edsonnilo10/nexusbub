@@ -684,6 +684,7 @@ const sanitizeProposalFileName = (courseName: string) => `Proposta_${courseName.
 export const CourseProposal = ({ course, modules, classes }: Props) => {
   const [downloading, setDownloading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const proposalDocRef = useRef<HTMLDivElement | null>(null);
   const { overrides, loaded, save } = useCourseOverrides(course.id);
 
   const defaultPrice = course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00";
@@ -773,6 +774,9 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   const handleDownload = async () => {
     setDownloading(true);
     try {
+      const coverElement = proposalDocRef.current?.querySelector(".proposal-page:first-child") as HTMLElement | null;
+      const previousExporting = proposalDocRef.current?.getAttribute("data-exporting");
+      proposalDocRef.current?.setAttribute("data-exporting", "true");
       const pdf = await buildProposalPdf({
         course,
         modules,
@@ -783,12 +787,16 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         totalPrice,
         installmentValue,
         coordinators,
-      });
+      }, coverElement);
       pdf.save(sanitizeProposalFileName(course.name));
       toast({ title: "Proposta baixada", description: "PDF salvo com sucesso. Já dá pra mandar no WhatsApp." });
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
+      if (proposalDocRef.current) {
+        if (previousExporting == null) proposalDocRef.current.removeAttribute("data-exporting");
+        else proposalDocRef.current.setAttribute("data-exporting", previousExporting);
+      }
       setDownloading(false);
     }
   };
@@ -955,6 +963,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
 
       <div className="overflow-x-auto">
         <div
+          ref={proposalDocRef}
           data-active-page={currentPage}
           className="proposal-doc mx-auto bg-white text-[#0a3d2e]"
           style={{ width: "210mm", fontFamily: "Arial, Helvetica, sans-serif", textRendering: "geometricPrecision" }}
