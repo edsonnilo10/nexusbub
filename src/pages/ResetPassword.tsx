@@ -15,19 +15,12 @@ const passwordSchema = z.string().min(6, "Mínimo 6 caracteres").max(72);
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
   useEffect(() => {
-    // Supabase recovery link triggers a PASSWORD_RECOVERY event after creating a session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
-    });
-    // If the user lands here with an existing recovery session, allow updating
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
+    // Keep listener alive so Supabase processes the recovery hash silently
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {});
     return () => subscription.unsubscribe();
   }, []);
 
@@ -69,11 +62,7 @@ const ResetPassword = () => {
         <Card className="shadow-elegant">
           <CardHeader>
             <CardTitle>Nova senha</CardTitle>
-            <CardDescription>
-              {ready
-                ? "Digite e confirme sua nova senha."
-                : "Validando link de recuperação..."}
-            </CardDescription>
+            <CardDescription>Digite e confirme sua nova senha.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +75,6 @@ const ResetPassword = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  disabled={!ready}
                 />
               </div>
               <div className="space-y-2">
@@ -98,10 +86,9 @@ const ResetPassword = () => {
                   onChange={(e) => setConfirm(e.target.value)}
                   required
                   minLength={6}
-                  disabled={!ready}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading || !ready}>
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar nova senha
               </Button>
