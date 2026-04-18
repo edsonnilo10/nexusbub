@@ -24,7 +24,54 @@ const formatLong = (iso: string) => {
   return `${dd}/${mm} | ${days[d.getDay()]}`;
 };
 
-const sanitizeProposalFileName = (courseName: string) => `Proposta_${courseName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+const TOTAL_PAGES = 8;
+
+const sanitizeProposalFileName = (courseName: string) =>
+  `Proposta_${courseName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+
+const renderProposalPage = async (
+  html2canvas: typeof import("html2canvas").default,
+  page: HTMLElement,
+  foreignObjectRendering: boolean
+): Promise<HTMLCanvasElement> => {
+  // TÉCNICA DO CLONE FIXO: copia o elemento e fixa fora de qualquer container
+  // com scroll/overflow, garantindo captura íntegra no mobile (iOS/Safari).
+  const clone = page.cloneNode(true) as HTMLElement;
+  Object.assign(clone.style, {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "210mm",
+    height: "297mm",
+    zIndex: "-9999",
+    display: "block",
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+    transform: "none",
+    margin: "0",
+  });
+  document.body.appendChild(clone);
+  // Aguarda repaint + carregamento de fontes/imagens no clone
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  const scale = Math.min(2, window.devicePixelRatio || 2);
+  try {
+    return await html2canvas(clone, {
+      scale,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      foreignObjectRendering,
+      scrollY: 0,
+      scrollX: 0,
+      windowWidth: clone.scrollWidth,
+      windowHeight: clone.scrollHeight,
+    });
+  } finally {
+    document.body.removeChild(clone);
+  }
+};
 
 export const CourseProposal = ({ course, modules, classes }: Props) => {
   const [downloading, setDownloading] = useState(false);
@@ -117,31 +164,59 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   }, [startDate, endDate]);
 
   const handleDownload = async () => {
+    if (!proposalDocRef.current) return;
     setDownloading(true);
-    const previousExporting = proposalDocRef.current?.getAttribute("data-exporting") ?? null;
     try {
-      const coverElement = proposalDocRef.current?.querySelector(".proposal-page:first-child") as HTMLElement | null;
-      proposalDocRef.current?.setAttribute("data-exporting", "true");
-      const pdf = await buildProposalPdf({
-        course,
-        modules,
-        selectedClass,
-        courseDays,
-        priceValue,
-        installments,
-        totalPrice,
-        installmentValue,
-        coordinators,
-      }, coverElement);
+      const [{ default: html2canvas }, { default: JsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      if ("fonts" in document) {
+        await document.fonts.ready;
+      }
+
+      // Aguarda imagens da prévia carregarem
+      const images = Array.from(proposalDocRef.current.querySelectorAll("img"));
+      await Promise.all(
+        images
+          .filter((img) => !img.complete)
+          .map(
+            (img) =>
+              new Promise<void>((resolve) => {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+              })
+          )
+      );
+
+      const pages = Array.from(
+        proposalDocRef.current.querySelectorAll<HTMLElement>(".proposal-page")
+      );
+      if (pages.length === 0) throw new Error("Nenhuma página encontrada");
+
+      const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < pages.length; i++) {
+        let canvas: HTMLCanvasElement;
+        try {
+          canvas = await renderProposalPage(html2canvas, pages[i], true);
+        } catch {
+          canvas = await renderProposalPage(html2canvas, pages[i], false);
+        }
+        // JPEG 0.95 alivia memória do mobile (evita "branco" silencioso)
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, 0, pageW, pageH);
+      }
+
       pdf.save(sanitizeProposalFileName(course.name));
       toast({ title: "Proposta baixada", description: "PDF salvo com sucesso. Já dá pra mandar no WhatsApp." });
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
-      if (proposalDocRef.current) {
-        if (previousExporting == null) proposalDocRef.current.removeAttribute("data-exporting");
-        else proposalDocRef.current.setAttribute("data-exporting", previousExporting);
-      }
       setDownloading(false);
     }
   };
