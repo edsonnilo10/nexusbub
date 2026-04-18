@@ -278,18 +278,18 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               />
             </div>
 
-            <div className="absolute bottom-[25mm] left-[28mm] w-[138mm] rounded-[10mm] bg-[#0d6b4f]/92 p-9 shadow-2xl backdrop-blur-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#d7efe4]">
+            <div className="absolute bottom-[25mm] left-[28mm] w-[138mm] rounded-[10mm] bg-[#003d2a] p-9 shadow-2xl">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#a8d9c5]">
                 Proposta de curso
               </div>
               <h1 className="mt-3 text-[36px] font-bold leading-[1.08] text-white">{course.name}</h1>
               <div className="mt-5 flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 ring-1 ring-white/25">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 ring-1 ring-white/40">
                   <MapPin className="h-3.5 w-3.5 text-white" />
-                  <span className="text-xs font-medium text-white">Unidade {unitLabel(course.unit)}</span>
+                  <span className="text-xs font-semibold text-white">Unidade {unitLabel(course.unit)}</span>
                 </div>
                 {selectedClass && selectedClass.start_date && (
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 ring-1 ring-white/25">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 ring-1 ring-white/40">
                     <span className="text-xs font-semibold text-white">
                       Turma: {formatClassDateRange(selectedClass.start_date, selectedClass.end_date)}
                     </span>
