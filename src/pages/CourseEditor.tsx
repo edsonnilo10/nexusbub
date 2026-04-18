@@ -368,6 +368,20 @@ const CourseEditor = () => {
           </div>
         </div>
       </main>
+
+      <CopyModulesDialog
+        open={copyOpen}
+        onOpenChange={setCopyOpen}
+        targetCourseId={isNew ? null : id!}
+        targetCourseName={name}
+        onCopied={(mods) => {
+          setModules(mods.map((m) => ({
+            title: m.title,
+            description: m.description || "",
+            workload_hours: m.workload_hours?.toString() || "",
+          })));
+        }}
+      />
     </div>
   );
 };
