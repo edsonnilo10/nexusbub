@@ -17,8 +17,9 @@ const upcomingClasses = (classes: CourseClass[]): CourseClass[] => {
 };
 
 const allFutureOrCurrent = (classes: CourseClass[]): CourseClass[] => {
+  const today = new Date().toISOString().slice(0, 10);
   return [...classes]
-    .filter((c) => c.status !== "encerrada")
+    .filter((c) => c.status !== "encerrada" && (!c.end_date || c.end_date >= today) && (!c.start_date || c.start_date >= today || c.status === "atual"))
     .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
 };
 
@@ -124,22 +125,23 @@ export const fullMessage = (
   );
   lines.push("");
 
-  // Se há turma selecionada, destaca ela primeiro
-  if (selectedClass) {
+  // Se há turma selecionada, mostra SOMENTE ela. Caso contrário, lista todas as próximas.
+  if (selectedClass && cls) {
     const block = selectedClassBlock(course, cls);
     if (block) {
       lines.push(block);
       lines.push("");
     }
+  } else {
+    lines.push(classesBlock(classes));
+    lines.push("");
   }
 
-  // Bloco de TURMAS (todas as futuras, com status)
-  lines.push(classesBlock(classes));
-  lines.push("");
-
-  // Local padrão
-  lines.push(`📍 *Local:* ${locationFor(course, cls)}`);
-  lines.push("");
+  // Local padrão (somente quando não há turma selecionada — senão já vem no bloco acima)
+  if (!selectedClass) {
+    lines.push(`📍 *Local:* ${locationFor(course, cls)}`);
+    lines.push("");
+  }
 
   // Módulos
   if (modules.length > 0) {
@@ -297,9 +299,9 @@ export const programaticContentMessage = (
   if (course.modality) {
     lines.push(`🎯 *Modalidade:* ${course.modality}`);
   }
-  if (cls?.start_date) {
-    const label = selectedClass ? "Turma indicada" : "Próxima turma";
-    lines.push(`🗓️ *${label}:* ${formatClassDateRange(cls.start_date, cls.end_date)}`);
+  // Mostra turma APENAS se foi explicitamente selecionada
+  if (selectedClass && cls?.start_date) {
+    lines.push(`🗓️ *Turma indicada:* ${formatClassDateRange(cls.start_date, cls.end_date)}`);
     lines.push(`📍 ${locationFor(course, cls)}`);
   }
   lines.push("");
