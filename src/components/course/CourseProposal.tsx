@@ -414,29 +414,49 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                 </div>
               )}
 
-              <div className="mt-8 space-y-4">
+              <div className="mt-8 space-y-3">
                 {modules.length === 0 ? (
                   <div className="rounded-xl bg-white p-6 text-center text-sm text-neutral-500">
                     Nenhum módulo cadastrado ainda. Adicione módulos na aba "Informações" para
                     aparecerem aqui automaticamente.
                   </div>
                 ) : (
-                  modules.map((m, i) => (
-                    <div key={m.id} className="grid grid-cols-[80mm_1fr] gap-2">
-                      <div className="rounded-tl-xl rounded-tr-xl bg-[#0d6b4f] px-4 py-2 text-center text-sm font-bold text-white">
-                        Módulo {i + 1}
+                  modules.map((m, i) => {
+                    // Parse description as bullet points if it contains line breaks or semicolons
+                    const desc = (m.description || "").trim();
+                    const bullets = desc
+                      ? desc
+                          .split(/\n+|;\s*/)
+                          .map((s) => s.replace(/^[-•·*]\s*/, "").trim())
+                          .filter(Boolean)
+                      : [];
+
+                    return (
+                      <div key={m.id} className="overflow-hidden rounded-xl border border-[#0d6b4f]/20 bg-white shadow-sm">
+                        <div className="flex items-center gap-3 bg-[#0d6b4f] px-4 py-2.5 text-white">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold">
+                            {i + 1}
+                          </div>
+                          <div className="flex-1 text-sm font-bold leading-snug">{m.title}</div>
+                          {m.workload_hours ? (
+                            <div className="shrink-0 rounded-full bg-white/15 px-3 py-0.5 text-[11px] font-semibold">
+                              {m.workload_hours}h
+                            </div>
+                          ) : null}
+                        </div>
+                        {bullets.length > 0 && (
+                          <ul className="space-y-1.5 px-5 py-3 text-[12px] leading-relaxed text-neutral-700">
+                            {bullets.map((b, idx) => (
+                              <li key={idx} className="flex gap-2">
+                                <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#0d6b4f]" />
+                                <span>{b}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
-                      <div className="rounded-tl-xl rounded-tr-xl bg-[#0d6b4f] px-4 py-2 text-sm font-bold text-white">
-                        {m.title}
-                      </div>
-                      <div className="rounded-bl-xl bg-white px-4 py-3 text-sm font-semibold text-[#0d6b4f]">
-                        {m.workload_hours ? `${m.workload_hours}h` : "—"}
-                      </div>
-                      <div className="rounded-br-xl bg-white px-4 py-3 text-[12px] leading-relaxed text-neutral-700">
-                        {m.description || "Conteúdo programático detalhado será apresentado no curso."}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
