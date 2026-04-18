@@ -17,8 +17,9 @@ const upcomingClasses = (classes: CourseClass[]): CourseClass[] => {
 };
 
 const allFutureOrCurrent = (classes: CourseClass[]): CourseClass[] => {
+  const today = new Date().toISOString().slice(0, 10);
   return [...classes]
-    .filter((c) => c.status !== "encerrada")
+    .filter((c) => c.status !== "encerrada" && (!c.end_date || c.end_date >= today) && (!c.start_date || c.start_date >= today || c.status === "atual"))
     .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
 };
 
