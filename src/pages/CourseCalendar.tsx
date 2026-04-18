@@ -227,17 +227,22 @@ const MonthGrid = ({
   const today = new Date();
   const isToday = (day: number) => sameDay(new Date(year, month, day), today);
 
+  const [openDay, setOpenDay] = useState<number | null>(null);
+  const dayDialogEvents = openDay ? (byDay.get(openDay) || []) : [];
+  const dayDialogDate = openDay ? new Date(year, month, openDay) : null;
+
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <Button variant="outline" size="sm" onClick={() => setCursor(new Date(year, month - 1, 1))}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setCursor(new Date(year, month - 1, 1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-lg font-semibold">{MONTHS_PT[month]} {year}</h2>
-        <div className="flex gap-2">
+        <h2 className="text-base font-semibold sm:text-lg">{MONTHS_PT[month]} {year}</h2>
+        <div className="flex gap-1.5">
           <Button
             variant="ghost"
             size="sm"
+            className="h-9 px-2 text-xs sm:px-3 sm:text-sm"
             onClick={() => {
               const n = new Date();
               setCursor(new Date(n.getFullYear(), n.getMonth(), 1));
@@ -245,51 +250,73 @@ const MonthGrid = ({
           >
             Hoje
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setCursor(new Date(year, month + 1, 1))}>
+          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setCursor(new Date(year, month + 1, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       <Card>
-        <CardContent className="p-3 sm:p-4">
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
-            {WEEKDAYS_PT.map((d) => <div key={d} className="py-1">{d}</div>)}
+        <CardContent className="p-2 sm:p-4">
+          <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-medium text-muted-foreground sm:gap-1 sm:text-xs">
+            {WEEKDAYS_PT.map((d) => <div key={d} className="py-1">{d.charAt(0)}<span className="hidden sm:inline">{d.slice(1)}</span></div>)}
           </div>
           <TooltipProvider delayDuration={150}>
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
               {Array.from({ length: totalCells }).map((_, i) => {
                 const dayNum = i - startOffset + 1;
                 const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
                 const dayEvents = inMonth ? (byDay.get(dayNum) || []) : [];
+                const hasEvents = dayEvents.length > 0;
                 return (
-                  <div
+                  <button
                     key={i}
-                    className={`min-h-[78px] rounded-md border p-1 text-left text-xs sm:min-h-[96px] ${
+                    type="button"
+                    disabled={!inMonth || !hasEvents}
+                    onClick={() => inMonth && hasEvents && setOpenDay(dayNum)}
+                    className={`flex min-h-[44px] flex-col rounded-md border p-1 text-left text-xs transition-colors sm:min-h-[96px] ${
                       inMonth ? "bg-card" : "bg-muted/20 text-muted-foreground/40"
-                    } ${isToday(dayNum) ? "ring-2 ring-primary" : ""}`}
+                    } ${isToday(dayNum) ? "ring-2 ring-primary" : ""} ${
+                      hasEvents ? "hover:bg-muted/60 cursor-pointer" : "cursor-default"
+                    }`}
                   >
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className={isToday(dayNum) ? "font-bold text-primary" : ""}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[11px] sm:text-xs ${isToday(dayNum) ? "font-bold text-primary" : ""}`}>
                         {inMonth ? dayNum : ""}
                       </span>
+                      {/* desktop: counter +N */}
                       {dayEvents.length > 2 && (
-                        <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+                        <span className="hidden rounded bg-muted px-1 text-[10px] text-muted-foreground sm:inline">
                           +{dayEvents.length - 2}
                         </span>
                       )}
                     </div>
-                    <div className="space-y-1">
+
+                    {/* mobile: dots only */}
+                    {hasEvents && (
+                      <div className="mt-auto flex flex-wrap items-center justify-center gap-0.5 pt-1 sm:hidden">
+                        {dayEvents.slice(0, 3).map((e) => (
+                          <span key={e.classId} className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[e.status]}`} />
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <span className="text-[8px] leading-none text-muted-foreground">+{dayEvents.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* desktop: event chips */}
+                    <div className="mt-1 hidden space-y-1 sm:block">
                       {dayEvents.slice(0, 2).map((e) => (
                         <Tooltip key={e.classId}>
                           <TooltipTrigger asChild>
-                            <button
-                              onClick={() => navigate(`/courses/${e.courseId}`)}
+                            <span
+                              role="button"
+                              onClick={(ev) => { ev.stopPropagation(); navigate(`/courses/${e.courseId}`); }}
                               className={`flex w-full items-center gap-1 rounded border-l-2 ${STATUS_BORDER[e.status]} bg-muted/40 px-1 py-0.5 text-left text-[10px] leading-tight hover:bg-muted`}
                             >
                               <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[e.status]}`} />
                               <span className="truncate">{e.courseName}</span>
-                            </button>
+                            </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs">
                             <div className="space-y-1">
@@ -301,13 +328,47 @@ const MonthGrid = ({
                         </Tooltip>
                       ))}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           </TooltipProvider>
         </CardContent>
       </Card>
+
+      {/* Day detail dialog (mobile-friendly) */}
+      <Dialog open={openDay !== null} onOpenChange={(o) => !o && setOpenDay(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {dayDialogDate && `${dayDialogDate.getDate()} de ${MONTHS_PT[dayDialogDate.getMonth()]} ${dayDialogDate.getFullYear()}`}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {dayDialogEvents.map((e) => (
+              <button
+                key={e.classId}
+                onClick={() => { setOpenDay(null); navigate(`/courses/${e.courseId}`); }}
+                className={`w-full rounded-md border-l-4 ${STATUS_BORDER[e.status]} bg-muted/40 p-3 text-left transition-colors hover:bg-muted`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${STATUS_DOT[e.status]}`} />
+                  <p className="flex-1 text-sm font-semibold">{e.courseName}</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatClassDateRange(e.startStr, e.endStr)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <Badge variant="outline" className="gap-1 text-[10px]">
+                    <MapPin className="h-2.5 w-2.5" />{unitLabel(e.unit)}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px]">{classStatusLabel(e.status)}</Badge>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
