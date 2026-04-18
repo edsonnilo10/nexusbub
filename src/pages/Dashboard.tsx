@@ -75,43 +75,60 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <AppHeader />
 
-      <main className="container py-8">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <main className="container py-4 sm:py-8">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Cursos</h1>
-            <p className="mt-1 text-muted-foreground">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Cursos</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground sm:mt-1">
               {courses.length} {courses.length === 1 ? "curso cadastrado" : "cursos cadastrados"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="default" onClick={() => navigate("/calendar")} className="bg-gradient-primary shadow-elegant">
+          {/* Mobile: calendário em destaque + 2 ações compactas. Desktop: tudo lado a lado */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              variant="default"
+              onClick={() => navigate("/calendar")}
+              className="bg-gradient-primary shadow-elegant"
+            >
               <CalendarDays className="h-4 w-4" /> Calendário de cursos
             </Button>
-            <Button variant="outline" onClick={() => navigate("/import")}>
-              <Upload className="h-4 w-4" /> Importar arquivos
-            </Button>
-            <Button onClick={() => navigate("/courses/new")}>
-              <Plus className="h-4 w-4" /> Novo curso
-            </Button>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+              <Button variant="outline" onClick={() => navigate("/import")} className="w-full sm:w-auto">
+                <Upload className="h-4 w-4" />
+                <span className="sm:hidden">Importar</span>
+                <span className="hidden sm:inline">Importar arquivos</span>
+              </Button>
+              <Button onClick={() => navigate("/courses/new")} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4" />
+                <span className="sm:hidden">Novo</span>
+                <span className="hidden sm:inline">Novo curso</span>
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Unit tabs */}
-        <Tabs value={unitFilter} onValueChange={(v) => setUnitFilter(v as any)} className="mb-5">
+        <Tabs value={unitFilter} onValueChange={(v) => setUnitFilter(v as any)} className="mb-3 sm:mb-5">
           <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
-            <TabsTrigger value="all" className="gap-2">
+            <TabsTrigger value="all" className="gap-1 px-2 text-xs sm:gap-2 sm:text-sm">
               Todos <Badge variant="secondary" className="text-[10px]">{counts.all}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="sao_paulo" className="gap-2">
-              <MapPin className="h-3.5 w-3.5" /> São Paulo <Badge variant="secondary" className="text-[10px]">{counts.sao_paulo}</Badge>
+            <TabsTrigger value="sao_paulo" className="gap-1 px-2 text-xs sm:gap-2 sm:text-sm">
+              <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden xs:inline sm:inline">São Paulo</span>
+              <span className="xs:hidden sm:hidden">SP</span>
+              <Badge variant="secondary" className="text-[10px]">{counts.sao_paulo}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="brasilia" className="gap-2">
-              <MapPin className="h-3.5 w-3.5" /> Brasília <Badge variant="secondary" className="text-[10px]">{counts.brasilia}</Badge>
+            <TabsTrigger value="brasilia" className="gap-1 px-2 text-xs sm:gap-2 sm:text-sm">
+              <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden xs:inline sm:inline">Brasília</span>
+              <span className="xs:hidden sm:hidden">BSB</span>
+              <Badge variant="secondary" className="text-[10px]">{counts.brasilia}</Badge>
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+        <div className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -121,19 +138,19 @@ const Dashboard = () => {
               className="pl-10"
             />
           </div>
-          <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-            <TabsList>
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="pos_graduacao">Pós</TabsTrigger>
-              <TabsTrigger value="modular">Modular</TabsTrigger>
+          <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+              <TabsTrigger value="all" className="text-xs sm:text-sm">Todos</TabsTrigger>
+              <TabsTrigger value="pos_graduacao" className="text-xs sm:text-sm">Pós</TabsTrigger>
+              <TabsTrigger value="modular" className="text-xs sm:text-sm">Modular</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-72" />
+              <Skeleton key={i} className="h-64 sm:h-72" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -159,7 +176,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((course) => (
               <Link key={course.id} to={`/courses/${course.id}`}>
                 <Card className="group h-full overflow-hidden transition-all hover:-translate-y-1 hover:shadow-elegant">
@@ -171,51 +188,51 @@ const Dashboard = () => {
                         className="h-full w-full object-cover transition-transform group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-primary-foreground">
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 px-3 text-center text-primary-foreground sm:gap-2 sm:px-4">
                         <img
                           src={nexusLogo}
                           alt="Nexus"
-                          className="h-14 w-14 rounded-lg object-cover shadow-card ring-2 ring-primary-foreground/30 transition-transform group-hover:scale-110"
+                          className="h-10 w-10 rounded-lg object-cover shadow-card ring-2 ring-primary-foreground/30 transition-transform group-hover:scale-110 sm:h-14 sm:w-14"
                         />
-                        <div className="text-[11px] font-semibold uppercase tracking-wider opacity-90">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider opacity-90 sm:text-[11px]">
                           {courseTypeLabel(course.type)}
                         </div>
-                        <div className="line-clamp-2 text-xs font-medium leading-tight opacity-95">
+                        <div className="line-clamp-2 text-[11px] font-medium leading-tight opacity-95 sm:text-xs">
                           {course.name}
                         </div>
                       </div>
                     )}
                     <Badge
-                      className="absolute left-3 top-3"
+                      className="absolute left-2 top-2 text-[10px] sm:left-3 sm:top-3 sm:text-xs"
                       variant={course.type === "pos_graduacao" ? "default" : "secondary"}
                     >
                       {courseTypeLabel(course.type)}
                     </Badge>
                     <Badge
-                      className="absolute right-3 top-3 gap-1 bg-background/95 text-foreground backdrop-blur"
+                      className="absolute right-2 top-2 gap-1 bg-background/95 text-[10px] text-foreground backdrop-blur sm:right-3 sm:top-3 sm:text-xs"
                       variant="outline"
                     >
                       <MapPin className="h-3 w-3" /> {unitLabel(course.unit)}
                     </Badge>
                   </div>
-                  <CardContent className="p-5">
-                    <h3 className="line-clamp-2 text-lg font-semibold leading-tight">{course.name}</h3>
-                    <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                  <CardContent className="p-3 sm:p-5">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-tight sm:text-lg">{course.name}</h3>
+                    <div className="mt-2 space-y-1.5 text-xs text-muted-foreground sm:mt-4 sm:space-y-2 sm:text-sm">
                       {course.workload_hours && (
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-accent" />
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-accent sm:h-4 sm:w-4" />
                           <span>{course.workload_hours}h de carga horária</span>
                         </div>
                       )}
                       {course.next_class?.start_date && (
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-accent" />
+                          <Calendar className="h-3.5 w-3.5 shrink-0 text-accent sm:h-4 sm:w-4" />
                           <span>Próxima: {formatDateShort(course.next_class.start_date)}</span>
                         </div>
                       )}
                       {course.price != null && (
                         <div className="flex items-center gap-2">
-                          <Tag className="h-4 w-4 text-accent" />
+                          <Tag className="h-3.5 w-3.5 shrink-0 text-accent sm:h-4 sm:w-4" />
                           <span className="font-semibold text-foreground">{formatBRL(course.price)}</span>
                         </div>
                       )}
