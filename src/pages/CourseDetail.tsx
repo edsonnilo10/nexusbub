@@ -76,13 +76,13 @@ const CourseDetail = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <AppHeader />
-      <main className="container py-8">
-        <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate("/")}>
+      <main className="container py-4 sm:py-8">
+        <Button variant="ghost" size="sm" className="mb-3 sm:mb-4" onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4" /> Voltar para cursos
         </Button>
 
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <div className="mb-2 flex flex-wrap gap-2">
               <Badge variant={course.type === "pos_graduacao" ? "default" : "secondary"}>
                 {courseTypeLabel(course.type)}
@@ -91,15 +91,15 @@ const CourseDetail = () => {
                 📍 {unitLabel(course.unit)}
               </Badge>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{course.name}</h1>
+            <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-4xl">{course.name}</h1>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate(`/courses/${course.id}/edit`)}>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button variant="outline" onClick={() => navigate(`/courses/${course.id}/edit`)} className="flex-1 sm:flex-none">
               <Edit className="h-4 w-4" /> Editar
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                <Button variant="ghost" size="icon" className="shrink-0"><Trash2 className="h-4 w-4 text-destructive" /></Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -120,40 +120,44 @@ const CourseDetail = () => {
         </div>
 
         <Tabs defaultValue="assistant">
-          <TabsList className="flex w-full flex-wrap gap-1 sm:w-auto sm:inline-flex">
-            <TabsTrigger value="assistant" className="gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" /> Assistente IA
-            </TabsTrigger>
-            <TabsTrigger value="proposal" className="gap-1.5">
-              <FileText className="h-3.5 w-3.5" /> Proposta
-            </TabsTrigger>
-            <TabsTrigger value="info">Informações</TabsTrigger>
-            <TabsTrigger value="classes">Turmas</TabsTrigger>
-            <TabsTrigger value="enrollments" className="gap-1.5">
-              <Users className="h-3.5 w-3.5" /> Matrículas
-            </TabsTrigger>
-            <TabsTrigger value="landing">Apresentação</TabsTrigger>
-            <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-          </TabsList>
-          <TabsContent value="assistant" className="mt-6">
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 rounded-xl p-1 sm:min-w-0">
+              <TabsTrigger value="assistant" className="shrink-0 gap-1.5 text-xs sm:text-sm">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="sm:hidden">IA</span>
+                <span className="hidden sm:inline">Assistente IA</span>
+              </TabsTrigger>
+              <TabsTrigger value="proposal" className="shrink-0 gap-1.5 text-xs sm:text-sm">
+                <FileText className="h-3.5 w-3.5" /> Proposta
+              </TabsTrigger>
+              <TabsTrigger value="info" className="shrink-0 text-xs sm:text-sm">Info</TabsTrigger>
+              <TabsTrigger value="classes" className="shrink-0 text-xs sm:text-sm">Turmas</TabsTrigger>
+              <TabsTrigger value="enrollments" className="shrink-0 gap-1.5 text-xs sm:text-sm">
+                <Users className="h-3.5 w-3.5" /> Matrículas
+              </TabsTrigger>
+              <TabsTrigger value="landing" className="shrink-0 text-xs sm:text-sm">Apresentação</TabsTrigger>
+              <TabsTrigger value="whatsapp" className="shrink-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="assistant" className="mt-4 sm:mt-6">
             <CourseAssistant course={course} />
           </TabsContent>
-          <TabsContent value="proposal" className="mt-6">
+          <TabsContent value="proposal" className="mt-4 sm:mt-6">
             <CourseProposal course={course} modules={modules} classes={classes} />
           </TabsContent>
-          <TabsContent value="info" className="mt-6">
+          <TabsContent value="info" className="mt-4 sm:mt-6">
             <CourseInfoTab course={course} modules={modules} classes={classes} />
           </TabsContent>
-          <TabsContent value="classes" className="mt-6">
+          <TabsContent value="classes" className="mt-4 sm:mt-6">
             <CourseClassesTab course={course} classes={classes} onChange={setClasses} />
           </TabsContent>
-          <TabsContent value="enrollments" className="mt-6">
+          <TabsContent value="enrollments" className="mt-4 sm:mt-6">
             <CourseEnrollmentsTab course={course} />
           </TabsContent>
-          <TabsContent value="landing" className="mt-6">
+          <TabsContent value="landing" className="mt-4 sm:mt-6">
             <CourseLandingTab course={course} modules={modules} classes={classes} />
           </TabsContent>
-          <TabsContent value="whatsapp" className="mt-6">
+          <TabsContent value="whatsapp" className="mt-4 sm:mt-6">
             <CourseWhatsAppTab course={course} modules={modules} classes={classes} />
           </TabsContent>
         </Tabs>
