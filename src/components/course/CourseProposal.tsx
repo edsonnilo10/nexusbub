@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import type { jsPDF } from "jspdf";
 import { Download, Loader2, Phone, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -163,6 +163,45 @@ const loadImageAsDataUrl = async (src: string) => {
   } catch {
     return null;
   }
+};
+
+const renderPdfCoverFromElement = async (pdf: jsPDF, coverElement: HTMLElement) => {
+  const { default: html2canvas } = await import("html2canvas");
+  if ("fonts" in document) {
+    await document.fonts.ready;
+  }
+
+  const images = Array.from(coverElement.querySelectorAll("img"));
+  await Promise.all(
+    images
+      .filter((img) => !img.complete)
+      .map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          })
+      )
+  );
+
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  const canvas = await html2canvas(coverElement, {
+    scale: Math.min(2, window.devicePixelRatio || 2),
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+    foreignObjectRendering: true,
+    imageTimeout: 0,
+    scrollX: 0,
+    scrollY: -window.scrollY,
+    windowWidth: coverElement.scrollWidth,
+    windowHeight: coverElement.scrollHeight,
+  });
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.98);
+  pdf.addImage(imgData, "JPEG", 0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT);
 };
 
 const drawLogoBlock = (pdf: jsPDF, logoDataUrl: string | null, x: number, y: number, size: number) => {
@@ -621,11 +660,20 @@ const drawProposalPdfPage = (pdf: jsPDF, pageNumber: number, data: ProposalPdfDa
   );
 };
 
-const buildProposalPdf = async (data: ProposalPdfData) => {
+const buildProposalPdf = async (data: ProposalPdfData, coverElement?: HTMLElement | null) => {
   const [{ default: JsPDF }, logoDataUrl] = await Promise.all([import("jspdf"), loadImageAsDataUrl(nexusBrand)]);
   const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
   for (let page = 1; page <= TOTAL_PAGES; page += 1) {
     if (page > 1) pdf.addPage();
+    if (page === 1 && coverElement) {
+      try {
+        await renderPdfCoverFromElement(pdf, coverElement);
+        continue;
+      } catch {
+        drawProposalPdfPage(pdf, page, data, logoDataUrl);
+        continue;
+      }
+    }
     drawProposalPdfPage(pdf, page, data, logoDataUrl);
   }
   return pdf;
