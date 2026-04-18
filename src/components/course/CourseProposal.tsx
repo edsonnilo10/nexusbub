@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { Download, Loader2, Phone, MapPin } from "lucide-react";
+import { Download, Loader2, Phone, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +24,12 @@ const formatLong = (iso: string) => {
   return `${dd}/${mm} | ${days[d.getDay()]}`;
 };
 
+const TOTAL_PAGES = 8;
+
 export const CourseProposal = ({ course, modules, classes }: Props) => {
   const proposalRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const { overrides, loaded, save } = useCourseOverrides(course.id);
 
   const defaultPrice = course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00";
