@@ -894,7 +894,6 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
 
       <div className="overflow-x-auto">
         <div
-          ref={proposalRef}
           data-active-page={currentPage}
           className="proposal-doc mx-auto bg-white text-[#0a3d2e]"
           style={{ width: "210mm", fontFamily: "Arial, Helvetica, sans-serif", textRendering: "geometricPrecision" }}
