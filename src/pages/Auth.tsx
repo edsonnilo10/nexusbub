@@ -105,7 +105,12 @@ const Auth = () => {
     });
     setLoading(false);
     if (error) {
-      toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
+      const description = /password/i.test(error.message)
+        ? "Senha não atende aos requisitos de segurança. Use uma senha forte e que não tenha sido vazada em outros sites."
+        : /already registered|already exists/i.test(error.message)
+        ? "Este e-mail já está cadastrado. Tente entrar ou recuperar a senha."
+        : "Não foi possível concluir o cadastro. Tente novamente em instantes.";
+      toast({ title: "Erro ao cadastrar", description, variant: "destructive" });
     } else {
       handleSignupSuccess();
       // Sign out immediately so the user doesn't auto-enter while pending approval
