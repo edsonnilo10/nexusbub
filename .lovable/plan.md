@@ -1,39 +1,52 @@
 
-Vou aplicar exatamente a estratégia que você passou: clone fixo no body + JPEG, mantendo a página 1 (capa) também via DOM para preservar a fidelidade visual que já está OK, e as páginas 2–8 continuando via render vetorial nativo do jsPDF (que já está estável e sem branco).
 
-Espera — relendo seu pedido, você quer que **todas as 8 páginas** voltem a ser capturadas via `html2canvas` usando a Técnica do Clone Fixo + JPEG, abandonando o vetorial. Isso garante 1:1 com a prévia em todas as páginas, não só na capa.
+## Diagnóstico de segurança
+
+Rodei scan completo (Supabase linter + scanner de segurança + revisão manual). Resultado: **app já tem uma base sólida** (RLS em todas as tabelas, ProtectedRoute funcionando, RBAC com tabela `user_roles` + função `has_role`, edge functions exigindo JWT + aprovação, sem chaves secretas no front, sem `dangerouslySetInnerHTML` com input de usuário, validação Zod nos formulários de auth). Mas encontrei **3 brechas reais** que vou fechar.
+
+### Vulnerabilidades encontradas
+
+| # | Severidade | Onde | Problema |
+|---|---|---|---|
+| 1 | ⚠️ Média | Tabela `course_enrollments` (RLS) | Policies só checam `auth.uid() = user_id`, sem `is_approved()`. Usuário não-aprovado pode ler/gravar dados sensíveis de alunos (email, telefone, status pagamento) se o `user_id` bater. Inconsistente com as outras tabelas. |
+| 2 | ⚠️ Baixa | Bucket `course-covers` (Storage) | Bucket público permite **listagem** de todos os arquivos (não só leitura individual). Qualquer um consegue enumerar capas de cursos. |
+| 3 | ℹ️ Info | `src/pages/NotFound.tsx` | `console.error` logando rota acessada — vaza padrão de navegação no console em produção. |
+
+### Itens já OK (verificados, não precisam mexer)
+- ✅ Todas as rotas privadas usam `<ProtectedRoute>`; `adminOnly` aplicado em `/settings` e `/admin/approvals`
+- ✅ RBAC: roles em tabela separada (`user_roles`) com `has_role()` SECURITY DEFINER — sem risco de escalada
+- ✅ RLS habilitado em todas as 10 tabelas; nenhuma policy `USING (true)`
+- ✅ Edge functions (`course-assistant`, `extract-course`, `sync-sheet`) validam JWT + checam aprovação
+- ✅ Nenhuma `SERVICE_ROLE_KEY` ou chave secreta no código cliente
+- ✅ Validação Zod em login/cadastro/reset
+- ✅ Único `dangerouslySetInnerHTML` (em `chart.tsx`) é CSS gerado a partir de config interna, sem input de usuário
+- ✅ Sessão no `localStorage` é o padrão do Supabase JS (cookies HttpOnly não são viáveis com SDK SPA — trade-off aceito pela arquitetura)
+
+---
 
 ## O que vou alterar
 
-Arquivo único: `src/components/course/CourseProposal.tsx`
+### 1. Migration SQL — corrige RLS de `course_enrollments` + listagem do bucket
+- Substituir as 4 policies de `course_enrollments` por versões que exigem **`auth.uid() = user_id` AND `is_approved(auth.uid())`**
+- Restringir a policy SELECT pública do bucket `course-covers`: trocar por leitura pública apenas de objetos individuais (mantendo `<img src>` funcionando) e bloqueando `list()` anônimo — vou criar policy que permite SELECT só com `name IS NOT NULL` mantendo uso de URLs públicas, mas autenticando a listagem
 
-1. **Substituir `renderProposalPage`** pela versão com Clone Fixo:
-   - `cloneNode(true)` da página
-   - Anexa no `document.body` com `position: fixed`, `top:0`, `left:0`, `width:210mm`, `height:297mm`, `zIndex:-9999`, `display:block`, `backgroundColor:#fff`, `overflow:hidden`, `transform:none`
-   - Aguarda 150ms para reflow/fontes
-   - Chama `html2canvas` com `scrollX:0`, `scrollY:0`, `windowWidth/Height` baseados no clone
-   - Remove o clone no `finally`
+### 2. `src/pages/NotFound.tsx`
+- Remover `console.error` que loga a rota acessada
 
-2. **Substituir `handleDownload`** pela versão simplificada:
-   - Não mexe mais em `data-exporting`, não força `display:block` nas páginas reais, não rola a tela
-   - Só itera as 8 `.proposal-page`, clona, renderiza, exporta como **JPEG 0.95**, adiciona ao PDF
-   - Aguarda `document.fonts.ready` e imagens
-   - Toast de sucesso/erro, restaura só o `setDownloading(false)`
+### 3. Tratamento genérico de erros (boas práticas — já está razoável, vou reforçar)
+- Revisar 2-3 toasts onde o `error.message` cru do Postgres pode vazar nomes de coluna; trocar por mensagens genéricas amigáveis nos pontos críticos (auth e mutations sensíveis)
 
-3. **Remover** todo o código vetorial nativo das páginas 2–8 que foi adicionado antes (helpers `writePdfParagraph`, `drawPdfPill`, `measurePdfPillWidth`, `loadImageAsDataUrl`, interface `ProposalPdfData`, e a montagem manual via `pdf.text/roundedRect/circle`). Isso simplifica o arquivo e elimina o desalinhamento visual das páginas internas.
+### 4. Habilitar HIBP (proteção contra senhas vazadas)
+- Ativar via `configure_auth` (`password_hibp_enabled: true`) — bloqueia cadastro/troca com senhas comprometidas
 
-4. **Manter intactos**:
-   - JSX da prévia (8 `.proposal-page`)
-   - `useCourseOverrides` e edição inline de campos
-   - Navegação entre páginas no preview
-   - `proposalRef` apontando para o container das 8 páginas
+### Não vou mexer (e por quê)
+- **Cookies HttpOnly**: Supabase JS SDK em SPA usa `localStorage` por design. Migrar exigiria SSR (Next.js) — fora do escopo. O token é JWT de curta duração com refresh automático, padrão da indústria para SPAs.
+- **`console.error` nas edge functions**: rodam no servidor, não vazam para o cliente — são essenciais para debug.
+- **Policy "Admins manage roles"** do `user_roles`: o scan marcou como warn mas a policy RESTRICTIVE complementar já bloqueia escalada. Confirmado seguro.
 
-## Riscos conhecidos (e como mitigo)
+---
 
-- **Memória no iOS com 8 páginas**: o JPEG 0.95 + clone descartado a cada iteração resolve isso (era o motivo do branco anterior).
-- **Fontes/imagens não carregadas no clone**: `document.fonts.ready` + 150ms de espera pós-append.
-- **Ícones SVG/lucide dentro das páginas**: `html2canvas` lida bem com SVG inline; sem mudanças necessárias.
+## Resumo final que você verá
 
-## Resultado esperado
+Após aplicar, vou te entregar uma tabela com: **vulnerabilidade encontrada → correção aplicada → impacto**. Tudo em uma migration SQL + 1 edição em `NotFound.tsx` + 1 chamada de configure_auth.
 
-PDF com 8 páginas, todas idênticas à pré-visualização (incluindo capa, módulos, investimento, datas), sem branco no celular e arquivo leve o suficiente para mandar no WhatsApp.
