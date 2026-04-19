@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogOut, ShieldCheck, Settings as SettingsIcon } from "lucide-react";
+import { LogOut, ShieldCheck, Settings as SettingsIcon, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import nexusLogo from "@/assets/nexus-logo.jpg";
@@ -21,6 +21,12 @@ export const AppHeader = () => {
         </Link>
 
         <div className="flex items-center gap-0.5 sm:gap-2">
+          <Button asChild variant="ghost" size="sm" className="h-9 px-2 sm:px-3">
+            <Link to="/dashboard">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+          </Button>
           {isAdmin && (
             <Button asChild variant="ghost" size="sm" className="h-9 px-2 sm:px-3">
               <Link to="/admin/approvals">

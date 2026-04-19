@@ -15,7 +15,7 @@ import CourseEditor from "./pages/CourseEditor.tsx";
 import ImportCourses from "./pages/ImportCourses.tsx";
 import Settings from "./pages/Settings.tsx";
 import CourseCalendar from "./pages/CourseCalendar.tsx";
-import Dashboard from "./pages/Dashboard.tsx";
+import GlobalDashboard from "./pages/GlobalDashboard.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -38,7 +38,7 @@ const App = () => (
             <Route path="/import" element={<ProtectedRoute><ImportCourses /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><CourseCalendar /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><GlobalDashboard /></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
