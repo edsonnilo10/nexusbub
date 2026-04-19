@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText, Users } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText, Users, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { CourseClassesTab } from "@/components/course/CourseClassesTab";
 import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
 import { CourseEnrollmentsTab } from "@/components/course/CourseEnrollmentsTab";
+import { CourseOperationsTab } from "@/components/course/CourseOperationsTab";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -127,6 +128,9 @@ const CourseDetail = () => {
                 <span className="sm:hidden">IA</span>
                 <span className="hidden sm:inline">Assistente IA</span>
               </TabsTrigger>
+              <TabsTrigger value="operations" className="shrink-0 gap-1.5 text-xs sm:text-sm">
+                <Activity className="h-3.5 w-3.5" /> Operação
+              </TabsTrigger>
               <TabsTrigger value="proposal" className="shrink-0 gap-1.5 text-xs sm:text-sm">
                 <FileText className="h-3.5 w-3.5" /> Proposta
               </TabsTrigger>
@@ -141,6 +145,9 @@ const CourseDetail = () => {
           </div>
           <TabsContent value="assistant" className="mt-4 sm:mt-6">
             <CourseAssistant course={course} />
+          </TabsContent>
+          <TabsContent value="operations" className="mt-4 sm:mt-6">
+            <CourseOperationsTab course={course} />
           </TabsContent>
           <TabsContent value="proposal" className="mt-4 sm:mt-6">
             <CourseProposal course={course} modules={modules} classes={classes} />
