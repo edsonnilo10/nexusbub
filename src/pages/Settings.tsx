@@ -57,10 +57,10 @@ const Settings = () => {
 
   const sync = async () => {
     setSyncing(true);
-    const { data, error } = await supabase.functions.invoke("sync-sheet", { body: {} });
+    const { data, error } = await supabase.functions.invoke("sync-google-sheets", { body: {} });
     setSyncing(false);
     if (error) {
-      toast({ title: "Erro ao sincronizar", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao sincronizar", description: "Falha ao chamar a sincronização. Tente novamente.", variant: "destructive" });
       return;
     }
     if (data?.error) {
@@ -69,9 +69,12 @@ const Settings = () => {
     }
     setLastSync(data.synced_at);
     setLastSummary(data);
+    const processed = data.processed || {};
+    const totalRows = Object.values(processed).reduce((acc: number, p: any) => acc + (p.inserted || 0), 0);
+    const tabsOk = Object.keys(processed).length;
     toast({
       title: "Sincronização concluída",
-      description: `${data.cursosAtualizados} curso(s) · ${data.alunosNovos} novo(s) · ${data.alunosAtualizados} atualizado(s)`,
+      description: `${tabsOk} aba(s) processada(s) · ${totalRows} registro(s) atualizado(s)`,
     });
   };
 
@@ -92,8 +95,9 @@ const Settings = () => {
               Sincronização com Google Sheets
             </CardTitle>
             <CardDescription>
-              Cole o link da planilha que controla as turmas, matrículas, pagamentos e contratos.
-              A planilha precisa estar compartilhada como <strong>"qualquer pessoa com o link pode visualizar"</strong>.
+              Cole o link da planilha. Lemos via Service Account do Google, então a planilha pode ser
+              <strong> privada</strong> — basta compartilhá-la como Leitor com o e-mail da Service Account.
+              Sincronização automática roda a cada 1 hora.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -130,26 +134,37 @@ const Settings = () => {
                 </div>
 
                 {lastSync && (
-                  <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
                     <div className="flex items-center gap-2 font-medium">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
                       Última sincronização: {new Date(lastSync).toLocaleString("pt-BR")}
                     </div>
-                    {lastSummary && (
-                      <div className="mt-2 flex flex-wrap gap-2 text-muted-foreground">
-                        <Badge variant="secondary">{lastSummary.cursosAtualizados ?? 0} curso(s)</Badge>
-                        <Badge variant="secondary">{lastSummary.alunosNovos ?? 0} novo(s)</Badge>
-                        <Badge variant="secondary">{lastSummary.alunosAtualizados ?? 0} atualizado(s)</Badge>
-                        {lastSummary.abasIgnoradas?.length > 0 && (
-                          <Badge variant="outline">{lastSummary.abasIgnoradas.length} aba(s) ignorada(s)</Badge>
-                        )}
+                    {lastSummary?.processed && (
+                      <div className="space-y-1">
+                        {Object.entries(lastSummary.processed).map(([key, val]: [string, any]) => (
+                          <div key={key} className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{key}</span>
+                            <Badge variant="secondary">{val.inserted ?? 0} registro(s)</Badge>
+                            {val.errors?.length > 0 && (
+                              <Badge variant="destructive">{val.errors.length} erro(s)</Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">→ {val.tab_title}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    {lastSummary?.errors?.length > 0 && (
-                      <details className="mt-2 text-xs text-destructive">
-                        <summary className="cursor-pointer">Ver {lastSummary.errors.length} erro(s)</summary>
+                    {lastSummary?.missing_tabs?.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Abas não encontradas: {lastSummary.missing_tabs.join(", ")}
+                      </div>
+                    )}
+                    {lastSummary?.processed && Object.values(lastSummary.processed).some((p: any) => p.errors?.length > 0) && (
+                      <details className="text-xs text-destructive">
+                        <summary className="cursor-pointer">Ver erros detalhados</summary>
                         <ul className="mt-1 list-disc pl-4">
-                          {lastSummary.errors.map((e: string, i: number) => <li key={i}>{e}</li>)}
+                          {Object.entries(lastSummary.processed).flatMap(([key, val]: [string, any]) =>
+                            (val.errors || []).map((e: string, i: number) => <li key={`${key}-${i}`}><strong>{key}:</strong> {e}</li>)
+                          )}
                         </ul>
                       </details>
                     )}
@@ -168,19 +183,24 @@ const Settings = () => {
           <CardHeader>
             <CardTitle className="text-base">Dicas de estrutura</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              Cada aba pode ser de um curso (nomeie a aba com o nome do curso) ou pode ter uma coluna <strong>Curso</strong> em cada linha.
-            </p>
-            <p>Colunas reconhecidas (qualquer ordem, ignora maiúsculas e acentos):</p>
-            <ul className="list-disc pl-5">
-              <li><strong>Aluno</strong> (ou Nome, Participante) — obrigatório</li>
-              <li><strong>Curso</strong> — opcional se a aba for um curso</li>
-              <li><strong>Início</strong> e <strong>Fim</strong> — datas da turma (dd/mm/aaaa)</li>
-              <li><strong>Pagamento</strong> — Pago, Pendente, Isento, Cancelado</li>
-              <li><strong>Contrato</strong> — Assinado, Em contrato, Sem contrato</li>
-              <li>Email, Telefone, Observações — opcionais</li>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>A planilha deve ter as seguintes 5 abas (nomes flexíveis, ignoramos acentos/maiúsculas):</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>São Paulo</strong> — matrículas por turma SP. Colunas: Curso, Turma, Início, Fim, Alunos.</li>
+              <li><strong>Brasília</strong> — matrículas por turma DF. Mesmas colunas.</li>
+              <li><strong>GR base</strong> — alunos pagos. Importamos só linhas com Status iniciando em <code>1.PAGO</code>. Colunas: Aluno, Curso, Turma, Status, Contrato, Valor, Data Pagamento.</li>
+              <li><strong>Calendário SP</strong> e <strong>Calendário DF</strong> — eventos. Colunas: Curso, Turma/Evento, Início, Fim, Local, Coordenador.</li>
             </ul>
+            <p className="pt-2 border-t">
+              <strong>Setup do Google Cloud (uma vez só):</strong>
+            </p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Acesse <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-primary underline">console.cloud.google.com</a> → crie ou selecione um projeto.</li>
+              <li>Em <em>APIs & Services → Library</em>, ative a <strong>Google Sheets API</strong>.</li>
+              <li>Em <em>IAM & Admin → Service Accounts</em>, crie uma Service Account → na aba <em>Keys</em>, "Add Key" → "Create new key" → JSON. Baixe o arquivo.</li>
+              <li>O JSON tem um campo <code>client_email</code> (algo como <code>nome@projeto.iam.gserviceaccount.com</code>). Abra sua planilha → botão <strong>Compartilhar</strong> → cole esse e-mail como <em>Leitor</em>.</li>
+              <li>O conteúdo do JSON já foi salvo no secret <code>GOOGLE_SERVICE_ACCOUNT_JSON</code>.</li>
+            </ol>
           </CardContent>
         </Card>
       </main>
