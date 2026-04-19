@@ -87,6 +87,63 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          coordinator: string | null
+          course_id: string | null
+          course_name: string
+          created_at: string
+          end_date: string | null
+          event_label: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          source_row: number | null
+          source_sheet: string | null
+          start_date: string | null
+          synced_at: string
+          unit: Database["public"]["Enums"]["course_unit"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          coordinator?: string | null
+          course_id?: string | null
+          course_name: string
+          created_at?: string
+          end_date?: string | null
+          event_label?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          source_row?: number | null
+          source_sheet?: string | null
+          start_date?: string | null
+          synced_at?: string
+          unit: Database["public"]["Enums"]["course_unit"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          coordinator?: string | null
+          course_id?: string | null
+          course_name?: string
+          created_at?: string
+          end_date?: string | null
+          event_label?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          source_row?: number | null
+          source_sheet?: string | null
+          start_date?: string | null
+          synced_at?: string
+          unit?: Database["public"]["Enums"]["course_unit"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       course_classes: {
         Row: {
           course_id: string
@@ -283,6 +340,126 @@ export type Database = {
           unit?: Database["public"]["Enums"]["course_unit"]
           updated_at?: string
           workload_hours?: number | null
+        }
+        Relationships: []
+      }
+      enrollments_by_class: {
+        Row: {
+          class_end_date: string | null
+          class_label: string | null
+          class_start_date: string | null
+          course_id: string | null
+          course_name: string
+          created_at: string
+          id: string
+          notes: string | null
+          source_row: number | null
+          source_sheet: string | null
+          student_count: number
+          synced_at: string
+          unit: Database["public"]["Enums"]["course_unit"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_end_date?: string | null
+          class_label?: string | null
+          class_start_date?: string | null
+          course_id?: string | null
+          course_name: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          source_row?: number | null
+          source_sheet?: string | null
+          student_count?: number
+          synced_at?: string
+          unit: Database["public"]["Enums"]["course_unit"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_end_date?: string | null
+          class_label?: string | null
+          class_start_date?: string | null
+          course_id?: string | null
+          course_name?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          source_row?: number | null
+          source_sheet?: string | null
+          student_count?: number
+          synced_at?: string
+          unit?: Database["public"]["Enums"]["course_unit"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      paid_students: {
+        Row: {
+          amount: number | null
+          class_label: string | null
+          class_start_date: string | null
+          contract_status: string | null
+          course_id: string | null
+          course_name: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_status: string
+          source_row: number | null
+          source_sheet: string | null
+          student_email: string | null
+          student_name: string
+          student_phone: string | null
+          synced_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          class_label?: string | null
+          class_start_date?: string | null
+          contract_status?: string | null
+          course_id?: string | null
+          course_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_status?: string
+          source_row?: number | null
+          source_sheet?: string | null
+          student_email?: string | null
+          student_name: string
+          student_phone?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          class_label?: string | null
+          class_start_date?: string | null
+          contract_status?: string | null
+          course_id?: string | null
+          course_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_status?: string
+          source_row?: number | null
+          source_sheet?: string | null
+          student_email?: string | null
+          student_name?: string
+          student_phone?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
