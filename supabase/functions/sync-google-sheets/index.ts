@@ -180,7 +180,6 @@ type WindowRow = {
   end_date: string;
   class_label: string | null;
 };
-const windowsAccum: WindowRow[] = [];
 
 const processEnrollmentsTab = async (
   supabase: any,
