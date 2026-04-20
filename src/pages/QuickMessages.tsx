@@ -12,6 +12,7 @@ import { Copy, Loader2, MessageSquare, Pencil, Plus, Sparkles, Trash2 } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { formatClassDateRange, unitLabel } from "@/lib/courseHelpers";
 
 interface ClassEvent {
   class_id: string;
