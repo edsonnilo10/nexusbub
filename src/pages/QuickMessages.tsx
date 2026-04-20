@@ -61,7 +61,8 @@ const MONTHS = [
 
 const QuickMessages = () => {
   const { user } = useAuth();
-  const { calendarEvents, loading: loadingEvents } = useSyncedData();
+  const [classEvents, setClassEvents] = useState<ClassEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   // ---------------- Custom messages ----------------
   const [messages, setMessages] = useState<QuickMessage[]>([]);
@@ -155,11 +156,32 @@ const QuickMessages = () => {
   const [outro, setOutro] = useState("Posso te ajudar com mais informações sobre algum deles?");
 
   useEffect(() => {
-    supabase
-      .from("courses")
-      .select("id,name,type,unit")
-      .order("name", { ascending: true })
-      .then(({ data }) => setCourses((data as CourseRow[]) || []));
+    (async () => {
+      setLoadingEvents(true);
+      const [{ data: coursesData }, { data: classesData }] = await Promise.all([
+        supabase.from("courses").select("id,name,type,unit").order("name", { ascending: true }),
+        supabase.from("course_classes").select("id,course_id,start_date,end_date").not("start_date", "is", null),
+      ]);
+      const cs = (coursesData as CourseRow[]) || [];
+      setCourses(cs);
+      const cmap = new Map(cs.map((c) => [c.id, c]));
+      const evts: ClassEvent[] = [];
+      for (const cl of (classesData as any[]) || []) {
+        const c = cmap.get(cl.course_id);
+        if (!c || !cl.start_date) continue;
+        evts.push({
+          class_id: cl.id,
+          course_id: cl.course_id,
+          course_name: c.name,
+          unit: c.unit,
+          type: c.type,
+          start_date: cl.start_date,
+          end_date: cl.end_date,
+        });
+      }
+      setClassEvents(evts);
+      setLoadingEvents(false);
+    })();
   }, []);
 
   const periodRange = useMemo(() => {
@@ -226,16 +248,15 @@ const QuickMessages = () => {
 
   const filteredEvents = useMemo(() => {
     const { start, end } = periodRange;
-    return calendarEvents
+    return classEvents
       .filter((e) => {
-        if (!e.start_date) return false;
         const d = new Date(e.start_date + "T00:00:00");
         if (d < start || d > end) return false;
         if (unitFilter !== "all" && e.unit !== unitFilter) return false;
         return true;
       })
-      .sort((a, b) => (a.start_date! < b.start_date! ? -1 : 1));
-  }, [calendarEvents, periodRange, unitFilter]);
+      .sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
+  }, [classEvents, periodRange, unitFilter]);
 
   const generatedMessage = useMemo(() => {
     const lines: string[] = [];
