@@ -35,10 +35,10 @@ const CourseDetail = () => {
 
   const load = async (courseId: string) => {
     setLoading(true);
-    const [{ data: c }, { data: m }, { data: cls }] = await Promise.all([
+    const [{ data: c }, { data: m }, cls] = await Promise.all([
       supabase.from("courses").select("*").eq("id", courseId).maybeSingle(),
       supabase.from("course_modules").select("*").eq("course_id", courseId),
-      supabase.from("course_classes").select("*").eq("course_id", courseId),
+      loadCourseClasses(courseId),
     ]);
     if (!c) {
       toast({ title: "Curso não encontrado", variant: "destructive" });
@@ -48,7 +48,7 @@ const CourseDetail = () => {
     document.title = `${c.name} | Nexus Ultrassonografia`;
     setCourse(c as CourseFull);
     setModules((m as CourseModule[]) || []);
-    setClasses((cls as CourseClass[]) || []);
+    setClasses(cls);
     setLoading(false);
   };
 
