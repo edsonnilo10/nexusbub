@@ -11,8 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Copy, Loader2, MessageSquare, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useSyncedData, type CalendarEvent } from "@/hooks/useSyncedData";
 import { toast } from "@/hooks/use-toast";
+
+interface ClassEvent {
+  class_id: string;
+  course_id: string;
+  course_name: string;
+  unit: "sao_paulo" | "brasilia";
+  type: "pos_graduacao" | "modular";
+  start_date: string;
+  end_date: string | null;
+}
 import { formatClassDateRange, unitLabel } from "@/lib/courseHelpers";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
