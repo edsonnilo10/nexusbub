@@ -180,6 +180,90 @@ export type Database = {
         }
         Relationships: []
       }
+      class_group_courses: {
+        Row: {
+          course_id: string
+          created_at: string
+          display_mode: Database["public"]["Enums"]["class_display_mode"]
+          end_date: string | null
+          group_id: string
+          id: string
+          notes: string | null
+          start_date: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          display_mode?: Database["public"]["Enums"]["class_display_mode"]
+          end_date?: string | null
+          group_id: string
+          id?: string
+          notes?: string | null
+          start_date?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          display_mode?: Database["public"]["Enums"]["class_display_mode"]
+          end_date?: string | null
+          group_id?: string
+          id?: string
+          notes?: string | null
+          start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_group_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_group_courses_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "class_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_groups: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          location: string | null
+          notes: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["class_status"]
+          unit: Database["public"]["Enums"]["course_unit"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["class_status"]
+          unit: Database["public"]["Enums"]["course_unit"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["class_status"]
+          unit?: Database["public"]["Enums"]["course_unit"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       course_classes: {
         Row: {
           course_id: string
@@ -215,6 +299,50 @@ export type Database = {
           {
             foreignKeyName: "course_classes_course_id_fkey"
             columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_combo_rules: {
+        Row: {
+          active: boolean
+          combo_course_id: string
+          combo_display_mode: Database["public"]["Enums"]["class_display_mode"]
+          created_at: string
+          id: string
+          individuals_display_mode: Database["public"]["Enums"]["class_display_mode"]
+          name: string
+          trigger_course_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          combo_course_id: string
+          combo_display_mode?: Database["public"]["Enums"]["class_display_mode"]
+          created_at?: string
+          id?: string
+          individuals_display_mode?: Database["public"]["Enums"]["class_display_mode"]
+          name: string
+          trigger_course_ids: string[]
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          combo_course_id?: string
+          combo_display_mode?: Database["public"]["Enums"]["class_display_mode"]
+          created_at?: string
+          id?: string
+          individuals_display_mode?: Database["public"]["Enums"]["class_display_mode"]
+          name?: string
+          trigger_course_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_combo_rules_combo_course_id_fkey"
+            columns: ["combo_course_id"]
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
@@ -679,6 +807,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
+      class_display_mode: "individual" | "combo_only" | "both"
       class_status: "atual" | "proxima" | "encerrada" | "aguardando_confirmacao"
       contract_status: "sem_contrato" | "em_contrato" | "assinado"
       course_type: "pos_graduacao" | "modular"
@@ -812,6 +941,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
+      class_display_mode: ["individual", "combo_only", "both"],
       class_status: ["atual", "proxima", "encerrada", "aguardando_confirmacao"],
       contract_status: ["sem_contrato", "em_contrato", "assinado"],
       course_type: ["pos_graduacao", "modular"],
