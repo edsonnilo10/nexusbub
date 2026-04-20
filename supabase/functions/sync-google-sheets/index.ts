@@ -171,6 +171,17 @@ const findCourse = (
 
 interface UpsertCounters { inserted: number; updated: number; errors: string[] }
 
+// Window collected from enrollment rows: per unit + dates + course
+type WindowRow = {
+  unit: "sao_paulo" | "brasilia";
+  course_id: string;
+  course_name: string;
+  start_date: string;
+  end_date: string;
+  class_label: string | null;
+};
+const windowsAccum: WindowRow[] = [];
+
 const processEnrollmentsTab = async (
   supabase: any,
   userId: string,
