@@ -9,22 +9,45 @@ const parseDate = (date: string | null | undefined): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+const classKey = (cls: CourseClass): string => [
+  cls.start_date || "",
+  cls.end_date || "",
+  cls.status,
+  cls.location || "",
+].join("|");
+
+const dedupeClasses = (classes: CourseClass[]): CourseClass[] => {
+  const seen = new Set<string>();
+  return classes.filter((cls) => {
+    const key = classKey(cls);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const sortClasses = (classes: CourseClass[]): CourseClass[] => {
+  return [...classes].sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+};
+
 const upcomingClasses = (classes: CourseClass[]): CourseClass[] => {
   const today = new Date().toISOString().slice(0, 10);
-  return [...classes]
-    .filter((c) => c.start_date && c.status !== "encerrada" && c.start_date >= today)
-    .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+  return sortClasses(
+    dedupeClasses(classes).filter((c) => c.start_date && c.status !== "encerrada" && c.start_date >= today),
+  );
 };
 
 const allFutureOrCurrent = (classes: CourseClass[]): CourseClass[] => {
   const today = new Date().toISOString().slice(0, 10);
-  return [...classes]
-    .filter((c) => c.status !== "encerrada" && (!c.end_date || c.end_date >= today) && (!c.start_date || c.start_date >= today || c.status === "atual"))
-    .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+  return sortClasses(
+    dedupeClasses(classes).filter(
+      (c) => c.status !== "encerrada" && (!c.end_date || c.end_date >= today) && (!c.start_date || c.start_date >= today || c.status === "atual"),
+    ),
+  );
 };
 
 const nextClass = (classes: CourseClass[]): CourseClass | null => {
-  const ordered = [...classes].sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+  const ordered = sortClasses(dedupeClasses(classes));
   return ordered.find((c) => c.status === "atual") ||
          ordered.find((c) => c.status === "proxima") ||
          ordered.find((c) => c.status === "aguardando_confirmacao") ||

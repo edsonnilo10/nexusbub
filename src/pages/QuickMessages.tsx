@@ -12,7 +12,7 @@ import { Copy, Loader2, MessageSquare, Pencil, Plus, Sparkles, Trash2 } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { formatClassDateRange, unitLabel } from "@/lib/courseHelpers";
+import { ClassStatus, classStatusLabel, formatClassDateRange, unitLabel } from "@/lib/courseHelpers";
 
 interface ClassEvent {
   class_id: string;
@@ -22,6 +22,7 @@ interface ClassEvent {
   type: "pos_graduacao" | "modular";
   start_date: string;
   end_date: string | null;
+  status: ClassStatus;
 }
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -58,6 +59,13 @@ const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
+
+const STATUS_EMOJI: Record<ClassStatus, string> = {
+  atual: "🟢",
+  proxima: "✅",
+  aguardando_confirmacao: "🟡",
+  encerrada: "⚪",
+};
 
 const QuickMessages = () => {
   const { user } = useAuth();
@@ -160,7 +168,7 @@ const QuickMessages = () => {
       setLoadingEvents(true);
       const [{ data: coursesData }, { data: classesData }] = await Promise.all([
         supabase.from("courses").select("id,name,type,unit").order("name", { ascending: true }),
-        supabase.from("course_classes").select("id,course_id,start_date,end_date").not("start_date", "is", null),
+        supabase.from("course_classes").select("id,course_id,start_date,end_date,status").not("start_date", "is", null),
       ]);
       const cs = (coursesData as CourseRow[]) || [];
       setCourses(cs);
@@ -177,6 +185,7 @@ const QuickMessages = () => {
           type: c.type,
           start_date: cl.start_date,
           end_date: cl.end_date,
+          status: cl.status,
         });
       }
       setClassEvents(evts);
