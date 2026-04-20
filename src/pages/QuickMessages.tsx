@@ -249,12 +249,6 @@ const QuickMessages = () => {
     }
   }, [periodKind, monthIdx, yearRef]);
 
-  const courseMap = useMemo(() => {
-    const m = new Map<string, CourseRow>();
-    courses.forEach((c) => m.set(c.id, c));
-    return m;
-  }, [courses]);
-
   const filteredEvents = useMemo(() => {
     const { start, end } = periodRange;
     return classEvents
@@ -268,24 +262,24 @@ const QuickMessages = () => {
   }, [classEvents, periodRange, unitFilter]);
 
   const generatedItems = useMemo(() => {
-    const combinedNames = [
-      "Básico de Ultrassonografia em Ginecologia e Obstetrícia",
-      "Ultrassonografia Transvaginal",
-      "CM US GIOB: Básico de Ultrassonografia em Ginecologia e Obstetrícia",
-      "CM US TRVG: Ultrassonografia Transvaginal",
-    ];
-
     const isGiob = (name: string) => name.includes("GIOB") || name.includes("Ginecologia e Obstetrícia");
     const isTrvg = (name: string) => name.includes("TRVG") || name.includes("Transvaginal");
     const isCombined = (name: string) => name.includes("GIOB + TRVG");
 
     const keyOf = (e: ClassEvent) => [e.course_id, e.start_date, e.end_date || "", e.status].join("|");
-    const base = filteredEvents.filter((e) => !isCombined(e.course_name));
+    const comboWindowKey = (e: ClassEvent) => `${e.unit}|${e.status}|${e.start_date}`;
+    const combined = filteredEvents.filter((e) => isCombined(e.course_name));
+    const combinedWindows = new Set(combined.map(comboWindowKey));
     const giobByUnitStatus = new Map<string, ClassEvent[]>();
     const trvgByUnitStatus = new Map<string, ClassEvent[]>();
-    const otherItems: Array<ClassEvent | { synthetic: true; unit: ClassEvent["unit"]; type: ClassEvent["type"]; status: ClassStatus; course_name: string; start_date: string; end_date: string | null; _sort: string; _dedupe: string; }> = [];
+    const otherItems: Array<ClassEvent | { synthetic: true; unit: ClassEvent["unit"]; type: ClassEvent["type"]; status: ClassStatus; course_name: string; start_date: string; end_date: string | null; _sort: string; _dedupe: string; }> = [...combined];
 
-    for (const e of base) {
+    for (const e of filteredEvents) {
+      if (isCombined(e.course_name)) continue;
+      if (combinedWindows.has(comboWindowKey(e)) && (isGiob(e.course_name) || (isTrvg(e.course_name) && !e.course_name.includes("Avançado")))) {
+        continue;
+      }
+
       const mapKey = `${e.unit}|${e.status}`;
       if (isGiob(e.course_name)) {
         const arr = giobByUnitStatus.get(mapKey) || [];
