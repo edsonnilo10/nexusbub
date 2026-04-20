@@ -171,6 +171,16 @@ const findCourse = (
 
 interface UpsertCounters { inserted: number; updated: number; errors: string[] }
 
+// Window collected from enrollment rows: per unit + dates + course
+type WindowRow = {
+  unit: "sao_paulo" | "brasilia";
+  course_id: string;
+  course_name: string;
+  start_date: string;
+  end_date: string;
+  class_label: string | null;
+};
+
 const processEnrollmentsTab = async (
   supabase: any,
   userId: string,
@@ -178,6 +188,7 @@ const processEnrollmentsTab = async (
   values: string[][],
   tabTitle: string,
   courses: Course[],
+  windows: WindowRow[],
 ): Promise<UpsertCounters> => {
   const c: UpsertCounters = { inserted: 0, updated: 0, errors: [] };
   if (values.length < 2) return c;
@@ -222,6 +233,18 @@ const processEnrollmentsTab = async (
       });
     if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
     else c.inserted++;
+
+    // Collect for class_groups
+    if (matched && start && end) {
+      windows.push({
+        unit,
+        course_id: matched.id,
+        course_name: matched.name,
+        start_date: start,
+        end_date: end,
+        class_label: classLabel || null,
+      });
+    }
   }
   return c;
 };
@@ -346,6 +369,171 @@ const processCalendarTab = async (
   return c;
 };
 
+// ---------- class_groups sync ----------
+type ComboRule = {
+  id: string;
+  name: string;
+  combo_course_id: string;
+  trigger_course_ids: string[];
+  combo_display_mode: "individual" | "combo_only" | "both";
+  individuals_display_mode: "individual" | "combo_only" | "both";
+  active: boolean;
+};
+
+const datesOverlap = (
+  aStart: string, aEnd: string, bStart: string, bEnd: string,
+): boolean => aStart <= bEnd && bStart <= aEnd;
+
+const syncClassGroups = async (
+  supabase: any,
+  windows: WindowRow[],
+  courses: Course[],
+): Promise<{ groups_created: number; groups_updated: number; links_upserted: number; combos_applied: number; errors: string[] }> => {
+  const stats = { groups_created: 0, groups_updated: 0, links_upserted: 0, combos_applied: 0, errors: [] as string[] };
+
+  // 1) Group windows by (unit, start, end)
+  const bucketMap = new Map<string, WindowRow[]>();
+  for (const w of windows) {
+    const key = `${w.unit}|${w.start_date}|${w.end_date}`;
+    const arr = bucketMap.get(key) || [];
+    arr.push(w);
+    bucketMap.set(key, arr);
+  }
+
+  // 2) Load existing groups + active combo rules
+  const [groupsRes, rulesRes, linksRes] = await Promise.all([
+    supabase.from("class_groups").select("id, unit, start_date, end_date"),
+    supabase.from("course_combo_rules").select("*").eq("active", true),
+    supabase.from("class_group_courses").select("group_id, course_id"),
+  ]);
+  const existingGroups = (groupsRes.data || []) as Array<{
+    id: string; unit: string; start_date: string; end_date: string;
+  }>;
+  const rules = (rulesRes.data || []) as ComboRule[];
+  const existingLinkSet = new Set(
+    ((linksRes.data || []) as Array<{ group_id: string; course_id: string }>)
+      .map((l) => `${l.group_id}|${l.course_id}`),
+  );
+
+  const groupKey = (unit: string, s: string, e: string) => `${unit}|${s}|${e}`;
+  const groupMap = new Map<string, string>();
+  for (const g of existingGroups) {
+    groupMap.set(groupKey(g.unit, g.start_date, g.end_date), g.id);
+  }
+
+  // 3) Upsert each bucket as a class_group + link courses
+  for (const [key, rows] of bucketMap.entries()) {
+    const [unit, start, end] = key.split("|");
+    let groupId = groupMap.get(key);
+
+    if (!groupId) {
+      const { data: ins, error: insErr } = await supabase
+        .from("class_groups")
+        .insert({ unit, start_date: start, end_date: end, status: "proxima" })
+        .select("id")
+        .single();
+      if (insErr || !ins) {
+        stats.errors.push(`Janela ${key}: ${insErr?.message || "erro ao criar"}`);
+        continue;
+      }
+      groupId = ins.id;
+      groupMap.set(key, groupId);
+      stats.groups_created++;
+    } else {
+      stats.groups_updated++;
+    }
+
+    // Link each unique course in this bucket
+    const uniqueCourses = Array.from(new Set(rows.map((r) => r.course_id)));
+    for (const courseId of uniqueCourses) {
+      if (existingLinkSet.has(`${groupId}|${courseId}`)) continue;
+      const { error: linkErr } = await supabase
+        .from("class_group_courses")
+        .insert({
+          group_id: groupId,
+          course_id: courseId,
+          display_mode: "individual",
+          start_date: start,
+          end_date: end,
+        });
+      if (linkErr) {
+        // ignore unique-violation noise
+        if (!String(linkErr.message).toLowerCase().includes("duplicate")) {
+          stats.errors.push(`Vínculo ${groupId}/${courseId}: ${linkErr.message}`);
+        }
+      } else {
+        stats.links_upserted++;
+        existingLinkSet.add(`${groupId}|${courseId}`);
+      }
+    }
+  }
+
+  // 4) Apply combo rules: for each rule, find groups (same unit) where all trigger
+  // courses are linked. Add the combo course + adjust display_mode.
+  for (const rule of rules) {
+    const comboCourse = courses.find((c) => c.id === rule.combo_course_id);
+    if (!comboCourse) continue;
+
+    // re-load links per group to know who's there
+    const { data: allLinks } = await supabase
+      .from("class_group_courses")
+      .select("group_id, course_id, display_mode");
+    const linksByGroup = new Map<string, Array<{ course_id: string; display_mode: string }>>();
+    for (const l of (allLinks || []) as any[]) {
+      const arr = linksByGroup.get(l.group_id) || [];
+      arr.push(l);
+      linksByGroup.set(l.group_id, arr);
+    }
+
+    for (const g of existingGroups.concat(
+      Array.from(groupMap.entries())
+        .filter(([k]) => !existingGroups.some((eg) => groupKey(eg.unit, eg.start_date, eg.end_date) === k))
+        .map(([k, id]) => {
+          const [unit, s, e] = k.split("|");
+          return { id, unit, start_date: s, end_date: e };
+        }),
+    )) {
+      if (g.unit !== comboCourse.unit) continue;
+      const links = linksByGroup.get(g.id) || [];
+      const linkedIds = new Set(links.map((l) => l.course_id));
+      const allTriggersPresent = rule.trigger_course_ids.every((tid) => linkedIds.has(tid));
+      if (!allTriggersPresent) continue;
+
+      // Add combo course if not present
+      if (!linkedIds.has(rule.combo_course_id)) {
+        const { error: comboErr } = await supabase
+          .from("class_group_courses")
+          .insert({
+            group_id: g.id,
+            course_id: rule.combo_course_id,
+            display_mode: rule.combo_display_mode,
+            start_date: g.start_date,
+            end_date: g.end_date,
+            notes: `Auto: regra "${rule.name}"`,
+          });
+        if (!comboErr) stats.combos_applied++;
+        else if (!String(comboErr.message).toLowerCase().includes("duplicate")) {
+          stats.errors.push(`Combo ${rule.name} em ${g.id}: ${comboErr.message}`);
+        }
+      }
+
+      // Update individual triggers' display_mode
+      for (const tid of rule.trigger_course_ids) {
+        const link = links.find((l) => l.course_id === tid);
+        if (link && link.display_mode !== rule.individuals_display_mode) {
+          await supabase
+            .from("class_group_courses")
+            .update({ display_mode: rule.individuals_display_mode })
+            .eq("group_id", g.id)
+            .eq("course_id", tid);
+        }
+      }
+    }
+  }
+
+  return stats;
+};
+
 // ---------- main ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -406,16 +594,18 @@ Deno.serve(async (req) => {
       missing_tabs: [] as string[],
     };
 
+    const windows: WindowRow[] = [];
+
     const targets: { key: string; aliases: string[]; handler: (v: string[][], title: string) => Promise<UpsertCounters> }[] = [
       {
         key: "São Paulo",
         aliases: ["sao paulo", "são paulo", "sp", "matriculas sp"],
-        handler: (v, t) => processEnrollmentsTab(supabase, userId, "sao_paulo", v, t, courses),
+        handler: (v, t) => processEnrollmentsTab(supabase, userId, "sao_paulo", v, t, courses, windows),
       },
       {
         key: "Brasília",
         aliases: ["brasilia", "brasília", "df", "matriculas df"],
-        handler: (v, t) => processEnrollmentsTab(supabase, userId, "brasilia", v, t, courses),
+        handler: (v, t) => processEnrollmentsTab(supabase, userId, "brasilia", v, t, courses, windows),
       },
       {
         key: "GR base",
@@ -447,6 +637,13 @@ Deno.serve(async (req) => {
       } catch (e: any) {
         result.processed[target.key] = { tab_title: tab.title, inserted: 0, updated: 0, errors: [e.message] };
       }
+    }
+
+    // Sync class_groups + apply combo rules
+    try {
+      result.class_groups = await syncClassGroups(supabase, windows, courses);
+    } catch (e: any) {
+      result.class_groups = { error: e?.message || "Erro ao sincronizar janelas" };
     }
 
     const summary = {

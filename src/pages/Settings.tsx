@@ -154,6 +154,16 @@ const Settings = () => {
                         ))}
                       </div>
                     )}
+                    {lastSummary?.class_groups && !lastSummary.class_groups.error && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t">
+                        <span className="font-medium">Janelas (turmas):</span>
+                        <Badge variant="secondary">{lastSummary.class_groups.groups_created ?? 0} nova(s)</Badge>
+                        <Badge variant="outline">{lastSummary.class_groups.links_upserted ?? 0} vínculo(s)</Badge>
+                        {lastSummary.class_groups.combos_applied > 0 && (
+                          <Badge>{lastSummary.class_groups.combos_applied} combo(s) auto</Badge>
+                        )}
+                      </div>
+                    )}
                     {lastSummary?.missing_tabs?.length > 0 && (
                       <div className="text-xs text-muted-foreground">
                         Abas não encontradas: {lastSummary.missing_tabs.join(", ")}
