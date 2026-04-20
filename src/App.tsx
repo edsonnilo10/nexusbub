@@ -16,6 +16,7 @@ import CourseEditor from "./pages/CourseEditor.tsx";
 import ImportCourses from "./pages/ImportCourses.tsx";
 import Settings from "./pages/Settings.tsx";
 import CourseCalendar from "./pages/CourseCalendar.tsx";
+import ClassGroups from "./pages/ClassGroups.tsx";
 import GlobalDashboard from "./pages/GlobalDashboard.tsx";
 import QuickMessages from "./pages/QuickMessages.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/import" element={<ProtectedRoute><ImportCourses /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><CourseCalendar /></ProtectedRoute>} />
+            <Route path="/turmas" element={<ProtectedRoute><ClassGroups /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><GlobalDashboard /></ProtectedRoute>} />
             <Route path="/mensagens" element={<ProtectedRoute><QuickMessages /></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
