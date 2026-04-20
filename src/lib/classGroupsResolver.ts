@@ -106,3 +106,55 @@ export const loadCourseClasses = async (
     (a.start_date || "").localeCompare(b.start_date || ""),
   );
 };
+
+/**
+ * Versão global: retorna CourseClass[] para TODOS os cursos a partir de
+ * class_groups + course_classes legado, respeitando display_mode e deduplicando.
+ * Usado por Calendar, Dashboard e QuickMessages.
+ */
+export const loadAllCourseClasses = async (): Promise<CourseClass[]> => {
+  const [linksRes, groupsRes, legacyRes] = await Promise.all([
+    supabase
+      .from("class_group_courses")
+      .select("group_id, course_id, display_mode, start_date, end_date, notes"),
+    supabase
+      .from("class_groups")
+      .select("id, unit, start_date, end_date, status, location, notes"),
+    supabase.from("course_classes").select("*"),
+  ]);
+
+  const groups = new Map<string, GroupRow>(
+    ((groupsRes.data || []) as GroupRow[]).map((g) => [g.id, g]),
+  );
+
+  const fromGroups: CourseClass[] = [];
+  for (const link of (linksRes.data || []) as LinkRow[]) {
+    if (link.display_mode === "combo_only") continue;
+    const g = groups.get(link.group_id);
+    if (!g) continue;
+    fromGroups.push({
+      id: link.group_id,
+      course_id: link.course_id,
+      start_date: link.start_date || g.start_date,
+      end_date: link.end_date || g.end_date,
+      status: g.status,
+      location: g.location,
+      notes: link.notes || g.notes,
+    });
+  }
+
+  const legacy = ((legacyRes.data || []) as CourseClass[]) || [];
+  const all = [...fromGroups, ...legacy];
+
+  const seen = new Set<string>();
+  const out: CourseClass[] = [];
+  for (const c of all) {
+    const key = `${c.course_id}|${c.start_date || ""}|${c.end_date || ""}|${c.status}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(c);
+  }
+  return out.sort((a, b) =>
+    (a.start_date || "").localeCompare(b.start_date || ""),
+  );
+};
