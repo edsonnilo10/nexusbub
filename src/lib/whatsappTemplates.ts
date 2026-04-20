@@ -192,7 +192,6 @@ export const fullMessage = (
   lines.push(`🕒 *CRONOGRAMA E LOGÍSTICA*`);
   lines.push("");
   if (course.workload_hours) lines.push(`*Carga Horária Total:* ${course.workload_hours} horas`);
-  if (course.modality) lines.push(`*Modalidade:* ${course.modality}`);
   lines.push("");
 
   if (course.price) {
@@ -318,9 +317,6 @@ export const programaticContentMessage = (
 
   if (course.workload_hours) {
     lines.push(`🕒 *Carga horária total:* ${course.workload_hours} horas`);
-  }
-  if (course.modality) {
-    lines.push(`🎯 *Modalidade:* ${course.modality}`);
   }
   // Mostra turma APENAS se foi explicitamente selecionada
   if (selectedClass && cls?.start_date) {
