@@ -16,6 +16,7 @@ import ImportCourses from "./pages/ImportCourses.tsx";
 import Settings from "./pages/Settings.tsx";
 import CourseCalendar from "./pages/CourseCalendar.tsx";
 import GlobalDashboard from "./pages/GlobalDashboard.tsx";
+import QuickMessages from "./pages/QuickMessages.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
