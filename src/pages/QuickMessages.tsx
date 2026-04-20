@@ -23,7 +23,6 @@ interface ClassEvent {
   start_date: string;
   end_date: string | null;
 }
-import { formatClassDateRange, unitLabel } from "@/lib/courseHelpers";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
