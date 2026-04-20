@@ -16,6 +16,7 @@ import {
   CourseClass, CourseFull, CourseUnit, ClassStatus,
   classStatusLabel, formatClassDateRange, courseTypeLabel, unitLabel,
 } from "@/lib/courseHelpers";
+import { loadAllCourseClasses } from "@/lib/classGroupsResolver";
 
 interface CalendarEvent {
   classId: string;
@@ -73,11 +74,13 @@ const CourseCalendar = () => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: courses }, { data: classes }] = await Promise.all([
+    const [{ data: courses }, classes] = await Promise.all([
       supabase.from("courses").select("id, name, type, unit"),
-      supabase.from("course_classes").select("*").not("start_date", "is", null).order("start_date"),
+      loadAllCourseClasses(),
     ]);
-    const courseMap = new Map((courses || []).map((c: any) => [c.id, c]));
+    const courseMap = new Map<string, { id: string; name: string; type: CourseFull["type"]; unit: CourseUnit }>(
+      ((courses || []) as any[]).map((c) => [c.id, c]),
+    );
     const evts: CalendarEvent[] = [];
     for (const cl of (classes || []) as CourseClass[]) {
       if (!cl.start_date) continue;

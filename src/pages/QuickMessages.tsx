@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { ClassStatus, classStatusLabel, formatClassDateRange, unitLabel } from "@/lib/courseHelpers";
+import { loadAllCourseClasses } from "@/lib/classGroupsResolver";
 
 interface ClassEvent {
   class_id: string;
@@ -166,15 +167,15 @@ const QuickMessages = () => {
   useEffect(() => {
     (async () => {
       setLoadingEvents(true);
-      const [{ data: coursesData }, { data: classesData }] = await Promise.all([
+      const [{ data: coursesData }, classesData] = await Promise.all([
         supabase.from("courses").select("id,name,type,unit").order("name", { ascending: true }),
-        supabase.from("course_classes").select("id,course_id,start_date,end_date,status").not("start_date", "is", null),
+        loadAllCourseClasses(),
       ]);
       const cs = (coursesData as CourseRow[]) || [];
       setCourses(cs);
       const cmap = new Map(cs.map((c) => [c.id, c]));
       const evts: ClassEvent[] = [];
-      for (const cl of (classesData as any[]) || []) {
+      for (const cl of classesData) {
         const c = cmap.get(cl.course_id);
         if (!c || !cl.start_date) continue;
         evts.push({

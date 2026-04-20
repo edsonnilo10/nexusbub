@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CourseFull, CourseClass, CourseUnit, formatBRL, formatDateShort, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
+import { loadAllCourseClasses } from "@/lib/classGroupsResolver";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GlobalAssistantButton } from "@/components/GlobalAssistantButton";
@@ -41,13 +42,10 @@ const Dashboard = () => {
       return;
     }
 
-    const { data: classData } = await supabase
-      .from("course_classes")
-      .select("*")
-      .order("start_date", { ascending: true });
+    const classData = await loadAllCourseClasses();
 
     const merged: CourseWithClass[] = (courseData || []).map((c) => {
-      const cls = (classData || []).filter((cl) => cl.course_id === c.id);
+      const cls = classData.filter((cl) => cl.course_id === c.id);
       const next = cls.find((x) => x.status === "atual") || cls.find((x) => x.status === "proxima") || cls[0] || null;
       return { ...(c as CourseFull), next_class: next as CourseClass | null };
     });
