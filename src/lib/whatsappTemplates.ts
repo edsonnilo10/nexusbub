@@ -192,7 +192,6 @@ export const fullMessage = (
   lines.push(`🕒 *CRONOGRAMA E LOGÍSTICA*`);
   lines.push("");
   if (course.workload_hours) lines.push(`*Carga Horária Total:* ${course.workload_hours} horas`);
-  if (course.modality) lines.push(`*Modalidade:* ${course.modality}`);
   lines.push("");
 
   if (course.price) {
