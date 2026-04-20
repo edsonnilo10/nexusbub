@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { MirrorModulesSection } from "@/components/settings/MirrorModulesSection";
+import { ComboRulesSection } from "@/components/settings/ComboRulesSection";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -174,6 +175,10 @@ const Settings = () => {
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <ComboRulesSection />
+        </div>
 
         <div className="mt-6">
           <MirrorModulesSection />
