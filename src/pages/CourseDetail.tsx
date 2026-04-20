@@ -15,6 +15,7 @@ import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
 import { CourseEnrollmentsTab } from "@/components/course/CourseEnrollmentsTab";
 import { CourseOperationsTab } from "@/components/course/CourseOperationsTab";
+import { loadCourseClasses } from "@/lib/classGroupsResolver";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
