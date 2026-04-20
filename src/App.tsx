@@ -10,6 +10,7 @@ import Auth from "./pages/Auth.tsx";
 import PendingApproval from "./pages/PendingApproval.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import AdminApprovals from "./pages/AdminApprovals.tsx";
+import AdminAudit from "./pages/AdminAudit.tsx";
 import CourseDetail from "./pages/CourseDetail.tsx";
 import CourseEditor from "./pages/CourseEditor.tsx";
 import ImportCourses from "./pages/ImportCourses.tsx";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><GlobalDashboard /></ProtectedRoute>} />
             <Route path="/mensagens" element={<ProtectedRoute><QuickMessages /></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
+            <Route path="/admin/audit" element={<ProtectedRoute adminOnly><AdminAudit /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

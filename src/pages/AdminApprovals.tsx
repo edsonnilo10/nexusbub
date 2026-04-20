@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Loader2, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Check, History, Loader2, ShieldCheck, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
@@ -64,16 +64,21 @@ const AdminApprovals = () => {
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
 
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <ShieldCheck className="h-5 w-5 text-primary" />
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Aprovações de acesso</h1>
+              <p className="text-sm text-muted-foreground">
+                Aprove ou revogue o acesso da equipe Nexus.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Aprovações de acesso</h1>
-            <p className="text-sm text-muted-foreground">
-              Aprove ou revogue o acesso da equipe Nexus.
-            </p>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => navigate("/admin/audit")}>
+            <History className="h-4 w-4" /> Histórico
+          </Button>
         </div>
 
         {loading ? (
