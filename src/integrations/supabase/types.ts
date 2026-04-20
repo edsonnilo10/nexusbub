@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_audit: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          performed_by: string | null
+          performed_by_email: string | null
+          performed_by_name: string | null
+          target_email: string | null
+          target_name: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          performed_by?: string | null
+          performed_by_email?: string | null
+          performed_by_name?: string | null
+          target_email?: string | null
+          target_name?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          performed_by?: string | null
+          performed_by_email?: string | null
+          performed_by_name?: string | null
+          target_email?: string | null
+          target_name?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       assistant_conversations: {
         Row: {
           course_id: string
