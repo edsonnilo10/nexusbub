@@ -188,6 +188,7 @@ const processEnrollmentsTab = async (
   values: string[][],
   tabTitle: string,
   courses: Course[],
+  windows: WindowRow[],
 ): Promise<UpsertCounters> => {
   const c: UpsertCounters = { inserted: 0, updated: 0, errors: [] };
   if (values.length < 2) return c;
@@ -232,6 +233,18 @@ const processEnrollmentsTab = async (
       });
     if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
     else c.inserted++;
+
+    // Collect for class_groups
+    if (matched && start && end) {
+      windows.push({
+        unit,
+        course_id: matched.id,
+        course_name: matched.name,
+        start_date: start,
+        end_date: end,
+        class_label: classLabel || null,
+      });
+    }
   }
   return c;
 };
