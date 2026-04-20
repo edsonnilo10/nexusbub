@@ -267,14 +267,14 @@ const QuickMessages = () => {
       lines.push("Nenhum curso programado neste período.");
     } else {
       // Group by unit if showing both
-      const groups: Record<string, CalendarEvent[]> = {};
+      const groups: Record<string, ClassEvent[]> = {};
       const showGrouped = unitFilter === "all" && includeUnit;
       filteredEvents.forEach((e) => {
         const key = showGrouped ? e.unit : "_all";
         (groups[key] ||= []).push(e);
       });
 
-      const renderEvent = (e: CalendarEvent) => {
+      const renderEvent = (e: ClassEvent) => {
         const course = e.course_id ? courseMap.get(e.course_id) : null;
         const tags: string[] = [];
         if (includeType && course) {
