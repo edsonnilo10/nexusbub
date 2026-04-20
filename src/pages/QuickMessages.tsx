@@ -267,34 +267,109 @@ const QuickMessages = () => {
       .sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
   }, [classEvents, periodRange, unitFilter]);
 
+  const generatedItems = useMemo(() => {
+    const combinedNames = [
+      "Básico de Ultrassonografia em Ginecologia e Obstetrícia",
+      "Ultrassonografia Transvaginal",
+      "CM US GIOB: Básico de Ultrassonografia em Ginecologia e Obstetrícia",
+      "CM US TRVG: Ultrassonografia Transvaginal",
+    ];
+
+    const isGiob = (name: string) => name.includes("GIOB") || name.includes("Ginecologia e Obstetrícia");
+    const isTrvg = (name: string) => name.includes("TRVG") || name.includes("Transvaginal");
+    const isCombined = (name: string) => name.includes("GIOB + TRVG");
+
+    const keyOf = (e: ClassEvent) => [e.course_id, e.start_date, e.end_date || "", e.status].join("|");
+    const base = filteredEvents.filter((e) => !isCombined(e.course_name));
+    const giobByUnitStatus = new Map<string, ClassEvent[]>();
+    const trvgByUnitStatus = new Map<string, ClassEvent[]>();
+    const otherItems: Array<ClassEvent | { synthetic: true; unit: ClassEvent["unit"]; type: ClassEvent["type"]; status: ClassStatus; course_name: string; start_date: string; end_date: string | null; _sort: string; _dedupe: string; }> = [];
+
+    for (const e of base) {
+      const mapKey = `${e.unit}|${e.status}`;
+      if (isGiob(e.course_name)) {
+        const arr = giobByUnitStatus.get(mapKey) || [];
+        arr.push(e);
+        giobByUnitStatus.set(mapKey, arr);
+      } else if (isTrvg(e.course_name) && !e.course_name.includes("Avançado")) {
+        const arr = trvgByUnitStatus.get(mapKey) || [];
+        arr.push(e);
+        trvgByUnitStatus.set(mapKey, arr);
+      } else {
+        otherItems.push(e);
+      }
+    }
+
+    for (const [mapKey, giobs] of giobByUnitStatus.entries()) {
+      const trvgs = [...(trvgByUnitStatus.get(mapKey) || [])];
+      for (const giob of giobs) {
+        const idx = trvgs.findIndex((trvg) => trvg.start_date >= giob.start_date);
+        if (idx >= 0) {
+          const trvg = trvgs[idx];
+          trvgs.splice(idx, 1);
+          otherItems.push({
+            synthetic: true,
+            unit: giob.unit,
+            type: giob.type,
+            status: giob.status,
+            course_name: giob.unit === "brasilia"
+              ? "CM US GIOB + TRVG: Básico em Ginecologia, Obstetrícia e Transvaginal"
+              : "Básico GIOB + TRVG (Ginecologia, Obstetrícia e Transvaginal)",
+            start_date: giob.start_date,
+            end_date: trvg.end_date || giob.end_date,
+            _sort: giob.start_date,
+            _dedupe: `${giob.unit}|${giob.start_date}|${trvg.end_date || giob.end_date}|${giob.status}|giob-trvg`,
+          });
+        } else {
+          otherItems.push(giob);
+        }
+      }
+      trvgs.forEach((trvg) => otherItems.push(trvg));
+    }
+
+    for (const [mapKey, trvgs] of trvgByUnitStatus.entries()) {
+      if (giobByUnitStatus.has(mapKey)) continue;
+      trvgs.forEach((trvg) => otherItems.push(trvg));
+    }
+
+    const seen = new Set<string>();
+    return otherItems
+      .filter((item: any) => {
+        const dedupe = item.synthetic ? item._dedupe : keyOf(item);
+        if (seen.has(dedupe)) return false;
+        seen.add(dedupe);
+        return true;
+      })
+      .sort((a: any, b: any) => ((a._sort || a.start_date) < (b._sort || b.start_date) ? -1 : 1));
+  }, [filteredEvents]);
+
   const generatedMessage = useMemo(() => {
     const lines: string[] = [];
     if (intro.trim()) lines.push(intro.trim(), "");
     lines.push(`📅 Cursos – ${periodRange.label}`, "");
 
-    if (filteredEvents.length === 0) {
+    if (generatedItems.length === 0) {
       lines.push("Nenhum curso programado neste período.");
     } else {
-      // Group by unit if showing both
-      const groups: Record<string, ClassEvent[]> = {};
+      const groups: Record<string, typeof generatedItems> = {};
       const showGrouped = unitFilter === "all" && includeUnit;
-      filteredEvents.forEach((e) => {
+      generatedItems.forEach((e) => {
         const key = showGrouped ? e.unit : "_all";
         (groups[key] ||= []).push(e);
       });
 
-      const renderEvent = (e: ClassEvent) => {
-        const course = e.course_id ? courseMap.get(e.course_id) : null;
+      const renderEvent = (e: any) => {
         const tags: string[] = [];
-        if (includeType && course) {
-          tags.push(course.type === "pos_graduacao" ? "Pós-graduação" : "Curso modular");
+        if (includeType) {
+          tags.push(e.type === "pos_graduacao" ? "Pós-graduação" : "Curso modular");
         }
         if (includeUnit && !showGrouped) {
           tags.push(unitLabel(e.unit));
         }
         const tagStr = tags.length ? ` (${tags.join(" • ")})` : "";
         const dates = formatClassDateRange(e.start_date, e.end_date);
-        return `• ${e.course_name}${tagStr}\n   🗓 ${dates}`;
+        const emoji = STATUS_EMOJI[e.status] || "📅";
+        return `• ${e.course_name}${tagStr}\n   ${emoji} ${dates}\n   _${classStatusLabel(e.status)}_`;
       };
 
       if (showGrouped) {
@@ -313,7 +388,7 @@ const QuickMessages = () => {
 
     if (outro.trim()) lines.push(outro.trim());
     return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-  }, [intro, outro, periodRange, filteredEvents, includeUnit, includeType, unitFilter, courseMap]);
+  }, [intro, outro, periodRange, generatedItems, includeUnit, includeType, unitFilter]);
 
   const saveAsCustom = async () => {
     if (!user) return;
