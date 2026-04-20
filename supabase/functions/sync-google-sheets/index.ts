@@ -594,16 +594,18 @@ Deno.serve(async (req) => {
       missing_tabs: [] as string[],
     };
 
+    const windows: WindowRow[] = [];
+
     const targets: { key: string; aliases: string[]; handler: (v: string[][], title: string) => Promise<UpsertCounters> }[] = [
       {
         key: "São Paulo",
         aliases: ["sao paulo", "são paulo", "sp", "matriculas sp"],
-        handler: (v, t) => processEnrollmentsTab(supabase, userId, "sao_paulo", v, t, courses),
+        handler: (v, t) => processEnrollmentsTab(supabase, userId, "sao_paulo", v, t, courses, windows),
       },
       {
         key: "Brasília",
         aliases: ["brasilia", "brasília", "df", "matriculas df"],
-        handler: (v, t) => processEnrollmentsTab(supabase, userId, "brasilia", v, t, courses),
+        handler: (v, t) => processEnrollmentsTab(supabase, userId, "brasilia", v, t, courses, windows),
       },
       {
         key: "GR base",
@@ -635,6 +637,13 @@ Deno.serve(async (req) => {
       } catch (e: any) {
         result.processed[target.key] = { tab_title: tab.title, inserted: 0, updated: 0, errors: [e.message] };
       }
+    }
+
+    // Sync class_groups + apply combo rules
+    try {
+      result.class_groups = await syncClassGroups(supabase, windows, courses);
+    } catch (e: any) {
+      result.class_groups = { error: e?.message || "Erro ao sincronizar janelas" };
     }
 
     const summary = {
