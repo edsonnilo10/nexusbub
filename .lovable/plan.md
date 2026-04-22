@@ -1,52 +1,62 @@
 
 
-## Diagnóstico de segurança
+## Correção das 4 vulnerabilidades do scan
 
-Rodei scan completo (Supabase linter + scanner de segurança + revisão manual). Resultado: **app já tem uma base sólida** (RLS em todas as tabelas, ProtectedRoute funcionando, RBAC com tabela `user_roles` + função `has_role`, edge functions exigindo JWT + aprovação, sem chaves secretas no front, sem `dangerouslySetInnerHTML` com input de usuário, validação Zod nos formulários de auth). Mas encontrei **3 brechas reais** que vou fechar.
+Confirmei via scan + inspeção direta no banco. As duas "errors/warns" mais sérias são reais e abrem brecha hoje. Vou fechar todas.
 
-### Vulnerabilidades encontradas
+### Diagnóstico real (já validado no banco)
 
-| # | Severidade | Onde | Problema |
+| # | Severidade | Onde | Problema confirmado |
 |---|---|---|---|
-| 1 | ⚠️ Média | Tabela `course_enrollments` (RLS) | Policies só checam `auth.uid() = user_id`, sem `is_approved()`. Usuário não-aprovado pode ler/gravar dados sensíveis de alunos (email, telefone, status pagamento) se o `user_id` bater. Inconsistente com as outras tabelas. |
-| 2 | ⚠️ Baixa | Bucket `course-covers` (Storage) | Bucket público permite **listagem** de todos os arquivos (não só leitura individual). Qualquer um consegue enumerar capas de cursos. |
-| 3 | ℹ️ Info | `src/pages/NotFound.tsx` | `console.error` logando rota acessada — vaza padrão de navegação no console em produção. |
+| 1 | 🔴 Error | `profiles` — policy `Users update own profile` | Sem `WITH CHECK` → usuário pode rodar `UPDATE profiles SET approved=true WHERE id=auth.uid()` e se auto-aprovar. **Brecha ativa.** |
+| 2 | 🟠 Warn (crítica) | `storage.objects` — bucket `course-covers` | Existem **3 policies duplicadas** (`Authenticated upload`, `Owner update`, `Owner delete`) que ignoram `is_approved()`. Como policies são OR, qualquer logado (mesmo não-aprovado) sobe arquivo na pasta `<uid>/`. |
+| 3 | 🟠 Warn | `storage.objects` — policy `Authenticated read course covers` | SELECT amplo permite `list()` de todos os arquivos do bucket. A leitura individual via URL pública continua funcionando pela policy `Public read individual course covers` (anon). |
+| 4 | 🟡 Warn | Extensão `pg_net` no schema `public` | Boa prática: mover para schema `extensions`. |
 
-### Itens já OK (verificados, não precisam mexer)
-- ✅ Todas as rotas privadas usam `<ProtectedRoute>`; `adminOnly` aplicado em `/settings` e `/admin/approvals`
-- ✅ RBAC: roles em tabela separada (`user_roles`) com `has_role()` SECURITY DEFINER — sem risco de escalada
-- ✅ RLS habilitado em todas as 10 tabelas; nenhuma policy `USING (true)`
-- ✅ Edge functions (`course-assistant`, `extract-course`, `sync-sheet`) validam JWT + checam aprovação
-- ✅ Nenhuma `SERVICE_ROLE_KEY` ou chave secreta no código cliente
-- ✅ Validação Zod em login/cadastro/reset
-- ✅ Único `dangerouslySetInnerHTML` (em `chart.tsx`) é CSS gerado a partir de config interna, sem input de usuário
-- ✅ Sessão no `localStorage` é o padrão do Supabase JS (cookies HttpOnly não são viáveis com SDK SPA — trade-off aceito pela arquitetura)
+### O que NÃO é problema (apesar do prompt sugerir)
+- **"Raw Server Error Messages Exposed"** — não apareceu no scan. As edge functions atuais (`course-assistant`, `extract-course`, `sync-google-sheets`) já retornam mensagens genéricas no catch. Não vou mexer.
+- **Coluna `role` em `profiles`** — não existe. Roles vivem em `user_roles` com policy RESTRICTIVE (já segura). O prompt do usuário superestimou.
+- **Admin-only para upload de capas** — o padrão atual do app é "qualquer aprovado pode editar curso/capa". Não vou restringir só a admins (quebraria o fluxo); vou apenas garantir que **só aprovados** consigam, removendo as policies frouxas.
 
 ---
 
-## O que vou alterar
+## Plano de execução (1 migration SQL, sem mudanças de código frontend)
 
-### 1. Migration SQL — corrige RLS de `course_enrollments` + listagem do bucket
-- Substituir as 4 policies de `course_enrollments` por versões que exigem **`auth.uid() = user_id` AND `is_approved(auth.uid())`**
-- Restringir a policy SELECT pública do bucket `course-covers`: trocar por leitura pública apenas de objetos individuais (mantendo `<img src>` funcionando) e bloqueando `list()` anônimo — vou criar policy que permite SELECT só com `name IS NOT NULL` mantendo uso de URLs públicas, mas autenticando a listagem
+### Migration única — corrige as 4 issues
 
-### 2. `src/pages/NotFound.tsx`
-- Remover `console.error` que loga a rota acessada
+**A) Fecha auto-aprovação em `profiles`**
+- Drop policy `Users update own profile`
+- Recria com `USING (auth.uid()=id)` **+** `WITH CHECK (auth.uid()=id AND approved = (SELECT approved FROM profiles WHERE id=auth.uid()))` — bloqueia mudança da coluna `approved` por não-admin
+- Mantém `Admins update all profiles` intacta (admins continuam aprovando pelo painel)
 
-### 3. Tratamento genérico de erros (boas práticas — já está razoável, vou reforçar)
-- Revisar 2-3 toasts onde o `error.message` cru do Postgres pode vazar nomes de coluna; trocar por mensagens genéricas amigáveis nos pontos críticos (auth e mutations sensíveis)
+**B) Limpa policies duplicadas do bucket `course-covers`**
+- Drop `Authenticated upload course covers`
+- Drop `Owner update course covers`
+- Drop `Owner delete course covers`
+- Sobram apenas as 3 policies que já exigem `is_approved(auth.uid())` (insert/update/delete) + a leitura
 
-### 4. Habilitar HIBP (proteção contra senhas vazadas)
-- Ativar via `configure_auth` (`password_hibp_enabled: true`) — bloqueia cadastro/troca com senhas comprometidas
+**C) Restringe listagem do bucket**
+- Drop `Authenticated read course covers` (SELECT amplo a authenticated)
+- A leitura via `<img src>` continua funcionando pela policy `Public read individual course covers` (já existente para `anon`)
+- Resultado: ninguém consegue mais `list()` o bucket; URLs públicas individuais seguem funcionando
 
-### Não vou mexer (e por quê)
-- **Cookies HttpOnly**: Supabase JS SDK em SPA usa `localStorage` por design. Migrar exigiria SSR (Next.js) — fora do escopo. O token é JWT de curta duração com refresh automático, padrão da indústria para SPAs.
-- **`console.error` nas edge functions**: rodam no servidor, não vazam para o cliente — são essenciais para debug.
-- **Policy "Admins manage roles"** do `user_roles`: o scan marcou como warn mas a policy RESTRICTIVE complementar já bloqueia escalada. Confirmado seguro.
+**D) Move extensão `pg_net` para schema `extensions`**
+- `CREATE SCHEMA IF NOT EXISTS extensions;`
+- `ALTER EXTENSION pg_net SET SCHEMA extensions;`
+
+### E) Marcar findings como resolvidos
+Após a migration aplicar, chamo `security--manage_security_finding` com `mark_as_fixed` para os 4 findings.
 
 ---
 
-## Resumo final que você verá
+## Resumo do impacto
 
-Após aplicar, vou te entregar uma tabela com: **vulnerabilidade encontrada → correção aplicada → impacto**. Tudo em uma migration SQL + 1 edição em `NotFound.tsx` + 1 chamada de configure_auth.
+| Vulnerabilidade | Antes | Depois |
+|---|---|---|
+| Auto-aprovação de perfil | Qualquer user vira aprovado sozinho | Só admin altera `approved` |
+| Upload de capa por não-aprovado | Qualquer logado sobe arquivo | Só aprovados |
+| Listagem do bucket | Qualquer logado lista tudo | Bloqueado (URLs públicas seguem) |
+| `pg_net` no public | Warn no scanner | Movido para `extensions` |
+
+**Sem mudanças no frontend** — todos os fluxos atuais (admin aprova, aprovado edita curso/capa, `<img>` carrega capa) continuam funcionando idênticos.
 
