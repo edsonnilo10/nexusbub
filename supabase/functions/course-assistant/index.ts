@@ -65,60 +65,100 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { courseId, messages } = await req.json() as { courseId: string; messages: IncomingMessage[] };
-    if (!courseId || !Array.isArray(messages)) {
-      return new Response(JSON.stringify({ error: "courseId e messages são obrigatórios" }), {
+    const { courseId, messages } = await req.json() as { courseId?: string | null; messages: IncomingMessage[] };
+    if (!Array.isArray(messages)) {
+      return new Response(JSON.stringify({ error: "messages é obrigatório" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const [{ data: course }, { data: modules }, { data: classes }] = await Promise.all([
-      admin.from("courses").select("*").eq("id", courseId).maybeSingle(),
-      admin.from("course_modules").select("*").eq("course_id", courseId).order("order_index"),
-      admin.from("course_classes").select("*").eq("course_id", courseId).order("start_date"),
-    ]);
-
-    if (!course) {
-      return new Response(JSON.stringify({ error: "Curso não encontrado" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Monta contexto rico do curso
+    // Monta contexto rico
     const ctx: string[] = [];
-    ctx.push(`# CURSO: ${course.name}`);
-    ctx.push(`Tipo: ${course.type === "pos_graduacao" ? "Pós-graduação" : "Curso modular"}`);
-    ctx.push(`Unidade: ${course.unit === "brasilia" ? "Brasília/DF" : "São Paulo/SP"}`);
-    if (course.workload_hours) ctx.push(`Carga horária total: ${course.workload_hours} horas`);
-    if (course.modality) ctx.push(`Modalidade: ${course.modality}`);
-    if (course.description) ctx.push(`\nDescrição:\n${course.description}`);
-    if (course.highlights) ctx.push(`\nDiferenciais:\n${course.highlights}`);
+    let mode: "course" | "global" = "global";
 
-    if (course.price != null) {
-      ctx.push(`\n## INVESTIMENTO`);
-      ctx.push(`Valor à vista: ${formatBRL(course.price)}`);
-      if (course.installments && course.installments > 1)
-        ctx.push(`Parcelado: ${course.installments}x de ${formatBRL(course.price / course.installments)}`);
-      if (course.payment_methods) ctx.push(`Formas de pagamento: ${course.payment_methods}`);
-    }
+    if (courseId) {
+      const [{ data: course }, { data: modules }, { data: classes }] = await Promise.all([
+        admin.from("courses").select("*").eq("id", courseId).maybeSingle(),
+        admin.from("course_modules").select("*").eq("course_id", courseId).order("order_index"),
+        admin.from("course_classes").select("*").eq("course_id", courseId).order("start_date"),
+      ]);
 
-    if (modules?.length) {
-      ctx.push(`\n## MÓDULOS / CONTEÚDO PROGRAMÁTICO`);
-      for (const m of modules) {
-        const wl = m.workload_hours ? ` (${m.workload_hours}h)` : "";
-        ctx.push(`- ${m.title}${wl}${m.description ? `: ${m.description}` : ""}`);
+      if (!course) {
+        return new Response(JSON.stringify({ error: "Curso não encontrado" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-    }
 
-    if (classes?.length) {
-      ctx.push(`\n## TURMAS 2026`);
-      for (const c of classes) {
-        ctx.push(`- ${formatRange(c.start_date, c.end_date)} — ${statusLabel(c.status)}${c.location ? ` — ${c.location}` : ""}`);
+      mode = "course";
+      ctx.push(`# CURSO: ${course.name}`);
+      ctx.push(`Tipo: ${course.type === "pos_graduacao" ? "Pós-graduação" : "Curso modular"}`);
+      ctx.push(`Unidade: ${course.unit === "brasilia" ? "Brasília/DF" : "São Paulo/SP"}`);
+      if (course.workload_hours) ctx.push(`Carga horária total: ${course.workload_hours} horas`);
+      if (course.modality) ctx.push(`Modalidade: ${course.modality}`);
+      if (course.description) ctx.push(`\nDescrição:\n${course.description}`);
+      if (course.highlights) ctx.push(`\nDiferenciais:\n${course.highlights}`);
+
+      if (course.price != null) {
+        ctx.push(`\n## INVESTIMENTO`);
+        ctx.push(`Valor à vista: ${formatBRL(course.price)}`);
+        if (course.installments && course.installments > 1)
+          ctx.push(`Parcelado: ${course.installments}x de ${formatBRL(course.price / course.installments)}`);
+        if (course.payment_methods) ctx.push(`Formas de pagamento: ${course.payment_methods}`);
+      }
+
+      if (modules?.length) {
+        ctx.push(`\n## MÓDULOS / CONTEÚDO PROGRAMÁTICO`);
+        for (const m of modules) {
+          const wl = m.workload_hours ? ` (${m.workload_hours}h)` : "";
+          ctx.push(`- ${m.title}${wl}${m.description ? `: ${m.description}` : ""}`);
+        }
+      }
+
+      if (classes?.length) {
+        ctx.push(`\n## TURMAS 2026`);
+        for (const c of classes) {
+          ctx.push(`- ${formatRange(c.start_date, c.end_date)} — ${statusLabel(c.status)}${c.location ? ` — ${c.location}` : ""}`);
+        }
+      } else {
+        ctx.push(`\n## TURMAS\nNenhuma turma cadastrada — datas a confirmar.`);
       }
     } else {
-      ctx.push(`\n## TURMAS\nNenhuma turma cadastrada — datas a confirmar.`);
+      // Modo global: catálogo + próximas turmas de todos os cursos
+      const today = new Date().toISOString().slice(0, 10);
+      const [{ data: courses }, { data: upcoming }] = await Promise.all([
+        admin.from("courses").select("id,name,type,unit,workload_hours,price,installments").order("name"),
+        admin.from("course_classes")
+          .select("course_id,start_date,end_date,status,location, courses(name,unit)")
+          .gte("start_date", today)
+          .order("start_date")
+          .limit(80),
+      ]);
+
+      ctx.push(`# CATÁLOGO COMPLETO DE CURSOS NEXUS`);
+      if (courses?.length) {
+        for (const c of courses) {
+          const tipo = c.type === "pos_graduacao" ? "Pós" : "Modular";
+          const un = c.unit === "brasilia" ? "BSB" : "SP";
+          const preco = c.price != null ? ` — ${formatBRL(c.price)}${c.installments && c.installments > 1 ? ` (${c.installments}x)` : ""}` : "";
+          const wl = c.workload_hours ? ` — ${c.workload_hours}h` : "";
+          ctx.push(`- [${tipo} • ${un}] ${c.name}${wl}${preco}`);
+        }
+      } else {
+        ctx.push("Nenhum curso cadastrado.");
+      }
+
+      ctx.push(`\n# PRÓXIMAS TURMAS 2026 (a partir de hoje)`);
+      if (upcoming?.length) {
+        for (const c of upcoming as any[]) {
+          const courseName = c.courses?.name ?? "Curso";
+          const un = c.courses?.unit === "brasilia" ? "BSB" : "SP";
+          ctx.push(`- [${un}] ${courseName} — ${formatRange(c.start_date, c.end_date)} — ${statusLabel(c.status)}${c.location ? ` — ${c.location}` : ""}`);
+        }
+      } else {
+        ctx.push("Nenhuma turma futura cadastrada.");
+      }
     }
 
     const systemPrompt = `Você é o **Copiloto de Vendas da Nexus Ultrassonografia**, um assistente de IA exclusivo para uso de Executivos de Vendas (Closers).
@@ -185,8 +225,10 @@ Sua resposta pode ter UMA ou DUAS partes, separadas pelo marcador "---WHATSAPP--
 # PERGUNTAS FORA DO ESCOPO
 Se for completamente fora (receita de bolo, política), responda educadamente que seu foco é apoiar a equipe comercial da Nexus — mas ainda assim ajude no que conseguir, em 1-2 linhas.
 
-# CONTEXTO DO CURSO (dados oficiais — fonte única da verdade)
-${ctx.join("\n")}`;
+# CONTEXTO ${mode === "course" ? "DO CURSO" : "GLOBAL (catálogo + agenda)"} — dados oficiais, fonte única da verdade
+${ctx.join("\n")}
+
+${mode === "global" ? `> Modo atual: **VISÃO GERAL**. Não há um curso específico no foco. Para perguntas amplas (agenda, catálogo, comparação, recomendação de upsell, dúvidas livres), responda direto sem seguir o template "Ficha Técnica → Pitch → NEPQ → Objeções" (que é só para o modo curso). Use o template completo apenas quando o Closer pedir explicitamente um pitch/argumentação para um curso citado.` : `> Modo atual: **CURSO ESPECÍFICO**. Use o template completo (Ficha Técnica → Pitch → NEPQ → Objeções) sempre que a pergunta envolver vender ou apresentar este curso.`}`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
