@@ -124,8 +124,10 @@ const ClassGroups = () => {
     return groups.filter((g) => {
       if (unitFilter !== "all" && g.unit !== unitFilter) return false;
       if (statusFilter !== "all" && g.status !== statusFilter) return false;
+      const cs = coursesByGroup.get(g.id) ?? [];
+      if (comboFilter === "combo" && cs.length < 2) return false;
+      if (comboFilter === "single" && cs.length >= 2) return false;
       if (q) {
-        const cs = coursesByGroup.get(g.id) ?? [];
         const hay = [
           formatClassDateRange(g.start_date, g.end_date),
           g.location ?? "",
@@ -138,7 +140,7 @@ const ClassGroups = () => {
       }
       return true;
     });
-  }, [groups, coursesByGroup, unitFilter, statusFilter, search]);
+  }, [groups, coursesByGroup, unitFilter, statusFilter, search, comboFilter]);
 
   const grouped = useMemo(() => {
     const byUnit = new Map<CourseUnit, ClassGroupRow[]>();
@@ -155,10 +157,26 @@ const ClassGroups = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (g: ClassGroupRow) => {
-    setEditingGroup(g);
+  const openDetails = (g: ClassGroupRow) => {
+    setDetailsGroup(g);
+    setDetailsOpen(true);
+  };
+
+  const openEditFromDetails = () => {
+    if (!detailsGroup) return;
+    setEditingGroup(detailsGroup);
+    setDetailsOpen(false);
     setDialogOpen(true);
   };
+
+  const comboCount = useMemo(
+    () =>
+      groups.reduce((acc, g) => {
+        const cs = coursesByGroup.get(g.id) ?? [];
+        return cs.length >= 2 ? acc + 1 : acc;
+      }, 0),
+    [groups, coursesByGroup],
+  );
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
