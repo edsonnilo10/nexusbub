@@ -225,8 +225,10 @@ Sua resposta pode ter UMA ou DUAS partes, separadas pelo marcador "---WHATSAPP--
 # PERGUNTAS FORA DO ESCOPO
 Se for completamente fora (receita de bolo, política), responda educadamente que seu foco é apoiar a equipe comercial da Nexus — mas ainda assim ajude no que conseguir, em 1-2 linhas.
 
-# CONTEXTO DO CURSO (dados oficiais — fonte única da verdade)
-${ctx.join("\n")}`;
+# CONTEXTO ${mode === "course" ? "DO CURSO" : "GLOBAL (catálogo + agenda)"} — dados oficiais, fonte única da verdade
+${ctx.join("\n")}
+
+${mode === "global" ? `> Modo atual: **VISÃO GERAL**. Não há um curso específico no foco. Para perguntas amplas (agenda, catálogo, comparação, recomendação de upsell, dúvidas livres), responda direto sem seguir o template "Ficha Técnica → Pitch → NEPQ → Objeções" (que é só para o modo curso). Use o template completo apenas quando o Closer pedir explicitamente um pitch/argumentação para um curso citado.` : `> Modo atual: **CURSO ESPECÍFICO**. Use o template completo (Ficha Técnica → Pitch → NEPQ → Objeções) sempre que a pergunta envolver vender ou apresentar este curso.`}`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
