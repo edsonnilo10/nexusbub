@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarDays, Loader2, Plus, Search, Users2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Loader2, Plus, Search, Sparkles, Users2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
@@ -25,6 +25,7 @@ import {
   type CourseUnit,
 } from "@/lib/courseHelpers";
 import { ClassGroupDialog } from "@/components/classGroups/ClassGroupDialog";
+import { ClassGroupDetailsDialog } from "@/components/classGroups/ClassGroupDetailsDialog";
 
 export interface ClassGroupRow {
   id: string;
@@ -63,6 +64,9 @@ const ClassGroups = () => {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ClassGroupRow | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsGroup, setDetailsGroup] = useState<ClassGroupRow | null>(null);
+  const [comboFilter, setComboFilter] = useState<"all" | "combo" | "single">("all");
 
   useEffect(() => {
     document.title = "Turmas | Nexus Ultrassonografia";
@@ -120,8 +124,10 @@ const ClassGroups = () => {
     return groups.filter((g) => {
       if (unitFilter !== "all" && g.unit !== unitFilter) return false;
       if (statusFilter !== "all" && g.status !== statusFilter) return false;
+      const cs = coursesByGroup.get(g.id) ?? [];
+      if (comboFilter === "combo" && cs.length < 2) return false;
+      if (comboFilter === "single" && cs.length >= 2) return false;
       if (q) {
-        const cs = coursesByGroup.get(g.id) ?? [];
         const hay = [
           formatClassDateRange(g.start_date, g.end_date),
           g.location ?? "",
@@ -134,7 +140,7 @@ const ClassGroups = () => {
       }
       return true;
     });
-  }, [groups, coursesByGroup, unitFilter, statusFilter, search]);
+  }, [groups, coursesByGroup, unitFilter, statusFilter, search, comboFilter]);
 
   const grouped = useMemo(() => {
     const byUnit = new Map<CourseUnit, ClassGroupRow[]>();
@@ -151,10 +157,26 @@ const ClassGroups = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (g: ClassGroupRow) => {
-    setEditingGroup(g);
+  const openDetails = (g: ClassGroupRow) => {
+    setDetailsGroup(g);
+    setDetailsOpen(true);
+  };
+
+  const openEditFromDetails = () => {
+    if (!detailsGroup) return;
+    setEditingGroup(detailsGroup);
+    setDetailsOpen(false);
     setDialogOpen(true);
   };
+
+  const comboCount = useMemo(
+    () =>
+      groups.reduce((acc, g) => {
+        const cs = coursesByGroup.get(g.id) ?? [];
+        return cs.length >= 2 ? acc + 1 : acc;
+      }, 0),
+    [groups, coursesByGroup],
+  );
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -211,6 +233,21 @@ const ClassGroups = () => {
                 <SelectItem value="encerrada">Encerrada</SelectItem>
               </SelectContent>
             </Select>
+            <Tabs value={comboFilter} onValueChange={(v) => setComboFilter(v as any)}>
+              <TabsList>
+                <TabsTrigger value="all">Tipo</TabsTrigger>
+                <TabsTrigger value="combo" className="gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Combos
+                  {comboCount > 0 && (
+                    <span className="ml-1 rounded-full bg-primary/15 px-1.5 text-[10px] font-medium text-primary">
+                      {comboCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="single">Únicas</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -240,29 +277,50 @@ const ClassGroups = () => {
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {list.map((g) => {
                       const cs = coursesByGroup.get(g.id) ?? [];
+                      const isCombo = cs.length >= 2;
                       return (
                         <Card
                           key={g.id}
-                          className="cursor-pointer transition hover:shadow-card"
-                          onClick={() => openEdit(g)}
+                          className={`group relative cursor-pointer overflow-hidden transition hover:shadow-card ${
+                            isCombo
+                              ? "border-primary/40 bg-gradient-to-br from-primary/5 via-card to-card hover:border-primary/60"
+                              : ""
+                          }`}
+                          onClick={() => openDetails(g)}
                         >
+                          {isCombo && (
+                            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-primary to-primary/40" />
+                          )}
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between gap-2">
-                              <CardTitle className="text-base leading-tight">
-                                {formatClassDateRange(g.start_date, g.end_date)}
+                              <CardTitle className="flex items-center gap-1.5 text-base leading-tight">
+                                {isCombo && (
+                                  <Sparkles className="h-4 w-4 shrink-0 text-primary" aria-label="Janela compartilhada" />
+                                )}
+                                <span>{formatClassDateRange(g.start_date, g.end_date)}</span>
                               </CardTitle>
                               <Badge variant={classStatusVariant(g.status)} className="shrink-0">
                                 {classStatusLabel(g.status)}
                               </Badge>
                             </div>
-                            {g.location && (
-                              <p className="text-xs text-muted-foreground">{g.location}</p>
-                            )}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {isCombo && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-primary/30 bg-primary/10 text-[10px] text-primary"
+                                >
+                                  Combo · {cs.length} cursos
+                                </Badge>
+                              )}
+                              {g.location && (
+                                <p className="text-xs text-muted-foreground">{g.location}</p>
+                              )}
+                            </div>
                           </CardHeader>
                           <CardContent className="pt-0">
                             <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Users2 className="h-3.5 w-3.5" />
-                              {cs.length} {cs.length === 1 ? "curso" : "cursos"}
+                              {cs.length} {cs.length === 1 ? "curso vinculado" : "cursos vinculados"}
                             </div>
                             {cs.length === 0 ? (
                               <p className="text-xs italic text-muted-foreground">
@@ -289,8 +347,8 @@ const ClassGroups = () => {
                                   </li>
                                 ))}
                                 {cs.length > 4 && (
-                                  <li className="text-xs text-muted-foreground">
-                                    +{cs.length - 4} mais…
+                                  <li className="text-xs font-medium text-primary">
+                                    +{cs.length - 4} {cs.length - 4 === 1 ? "curso" : "cursos"} · clique para ver
                                   </li>
                                 )}
                               </ul>
@@ -314,6 +372,14 @@ const ClassGroups = () => {
         courses={courses}
         existingCourses={editingGroup ? coursesByGroup.get(editingGroup.id) ?? [] : []}
         onSaved={load}
+      />
+
+      <ClassGroupDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        group={detailsGroup}
+        groupCourses={detailsGroup ? coursesByGroup.get(detailsGroup.id) ?? [] : []}
+        onEdit={openEditFromDetails}
       />
     </div>
   );
