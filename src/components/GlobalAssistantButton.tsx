@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles, X, Search } from "lucide-react";
+import { Sparkles, X, Search, MessageCircleQuestion, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge";
 import { CourseFull, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
 import { CourseAssistant } from "./course/CourseAssistant";
+import { OpenAssistantChat } from "./OpenAssistantChat";
 import { cn } from "@/lib/utils";
+
+type Mode = "menu" | "open" | "course";
 
 export const GlobalAssistantButton = () => {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<Mode>("menu");
   const [courses, setCourses] = useState<CourseFull[]>([]);
   const [selected, setSelected] = useState<CourseFull | null>(null);
   const [search, setSearch] = useState("");
@@ -27,6 +31,19 @@ export const GlobalAssistantButton = () => {
     !search || c.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const reset = () => {
+    setMode("menu");
+    setSelected(null);
+    setSearch("");
+  };
+
+  const subtitle =
+    mode === "open"
+      ? "Pergunta aberta — catálogo, agenda, estratégia"
+      : mode === "course" && selected
+        ? `Tirando dúvidas sobre: ${selected.name}`
+        : "Faça uma pergunta aberta ou escolha um curso";
+
   return (
     <>
       {/* Botão flutuante */}
@@ -42,7 +59,7 @@ export const GlobalAssistantButton = () => {
         <span className="hidden text-sm font-semibold sm:inline">Assistente Nexus</span>
       </button>
 
-      <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSelected(null); }}>
+      <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
           <SheetHeader className="border-b bg-gradient-ai p-5 text-primary-foreground">
             <div className="flex items-start gap-3">
@@ -52,18 +69,43 @@ export const GlobalAssistantButton = () => {
               <div className="flex-1 text-left">
                 <SheetTitle className="text-primary-foreground">Assistente Comercial Nexus</SheetTitle>
                 <SheetDescription className="text-primary-foreground/85">
-                  {selected ? `Tirando dúvidas sobre: ${selected.name}` : "Escolha um curso para começar"}
+                  {subtitle}
                 </SheetDescription>
               </div>
             </div>
           </SheetHeader>
 
-          {!selected ? (
-            <div className="flex flex-1 flex-col gap-3 overflow-hidden p-5">
+          {mode === "menu" && (
+            <div className="flex flex-1 flex-col gap-4 overflow-hidden p-5">
+              {/* Cartão: Pergunta aberta */}
+              <button
+                onClick={() => setMode("open")}
+                className="group flex items-start gap-3 rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 text-left transition-all hover:border-primary/60 hover:shadow-elegant"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-ai text-primary-foreground shadow-sm">
+                  <MessageCircleQuestion className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-sm">Pergunta aberta</h3>
+                    <Badge variant="secondary" className="text-[10px]">Novo</Badge>
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Visão geral do catálogo, agenda 2026, comparações, upsell e dúvidas livres.
+                  </p>
+                </div>
+              </button>
+
+              {/* Separador */}
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Ou foque em um curso</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  autoFocus
                   placeholder="Buscar curso..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -76,7 +118,7 @@ export const GlobalAssistantButton = () => {
                 ) : filtered.map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => setSelected(c)}
+                    onClick={() => { setSelected(c); setMode("course"); }}
                     className="flex w-full items-start justify-between gap-3 rounded-lg border bg-card p-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
                   >
                     <div className="flex-1">
@@ -91,12 +133,30 @@ export const GlobalAssistantButton = () => {
                 ))}
               </div>
             </div>
-          ) : (
+          )}
+
+          {mode === "open" && (
             <div className="flex flex-1 flex-col gap-3 overflow-hidden p-5">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSelected(null)}
+                onClick={reset}
+                className="self-start gap-1"
+              >
+                <X className="h-3.5 w-3.5" /> Voltar
+              </Button>
+              <div className="flex-1 overflow-hidden">
+                <OpenAssistantChat />
+              </div>
+            </div>
+          )}
+
+          {mode === "course" && selected && (
+            <div className="flex flex-1 flex-col gap-3 overflow-hidden p-5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={reset}
                 className="self-start gap-1"
               >
                 <X className="h-3.5 w-3.5" /> Trocar curso
