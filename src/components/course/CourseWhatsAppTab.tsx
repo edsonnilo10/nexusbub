@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Copy, Check, MessageCircle, RotateCcw, Loader2, BookOpen, Calendar } from "lucide-react";
+import { Copy, Check, MessageCircle, RotateCcw, Loader2, BookOpen, Calendar, FileText, FileDown } from "lucide-react";
+import jsPDF from "jspdf";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,6 +135,7 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
             defaultText={t.defaultText}
             savedText={t.savedKey ? overrides[t.savedKey] as string | null : null}
             onSave={t.savedKey ? save : null}
+            courseName={course.name}
           />
         ))}
       </div>
@@ -149,9 +151,31 @@ interface CardProps {
   defaultText: string;
   savedText: string | null;
   onSave: ((patch: Partial<CourseOverrides>) => void) | null;
+  courseName: string;
 }
 
-const TemplateCard = ({ templateKey, label, desc, Icon, defaultText, savedText, onSave }: CardProps) => {
+// Slugifica nome do arquivo: "CM US MAMA: ..." -> "cm-us-mama"
+const slugifyFilename = (name: string) =>
+  name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "curso";
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const TemplateCard = ({ templateKey, label, desc, Icon, defaultText, savedText, onSave, courseName }: CardProps) => {
   const [copied, setCopied] = useState(false);
   const [edited, setEdited] = useState<string>(savedText ?? defaultText);
 
@@ -176,6 +200,63 @@ const TemplateCard = ({ templateKey, label, desc, Icon, defaultText, savedText, 
     setCopied(true);
     toast({ title: "Copiado para a área de transferência" });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const baseFilename = `${slugifyFilename(courseName)}-${slugifyFilename(label)}`;
+
+  const handleExportTxt = () => {
+    // BOM UTF-8 garante acentos corretos no Notepad / Word
+    const blob = new Blob(["\uFEFF" + edited], { type: "text/plain;charset=utf-8" });
+    downloadBlob(blob, `${baseFilename}.txt`);
+    toast({ title: "Arquivo .txt baixado" });
+  };
+
+  const handleExportPdf = () => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 48;
+    const marginTop = 56;
+    const marginBottom = 48;
+    const usableWidth = pageWidth - marginX * 2;
+
+    // Cabeçalho
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    const titleLines = doc.splitTextToSize(courseName, usableWidth);
+    doc.text(titleLines, marginX, marginTop);
+
+    let cursorY = marginTop + titleLines.length * 16 + 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(110);
+    doc.text(`${label} — Pronto para WhatsApp`, marginX, cursorY);
+    cursorY += 14;
+    doc.setDrawColor(220);
+    doc.line(marginX, cursorY, pageWidth - marginX, cursorY);
+    cursorY += 16;
+
+    // Corpo: remove marcadores de negrito/itálico do WhatsApp
+    doc.setTextColor(20);
+    doc.setFontSize(11);
+    const cleanText = edited
+      .replace(/\*([^*\n]+)\*/g, "$1")
+      .replace(/_([^_\n]+)_/g, "$1");
+
+    const lines = doc.splitTextToSize(cleanText, usableWidth);
+    const lineHeight = 14;
+
+    for (const line of lines) {
+      if (cursorY + lineHeight > pageHeight - marginBottom) {
+        doc.addPage();
+        cursorY = marginTop;
+      }
+      doc.text(line, marginX, cursorY);
+      cursorY += lineHeight;
+    }
+
+    doc.save(`${baseFilename}.pdf`);
+    toast({ title: "Arquivo .pdf baixado" });
   };
 
   const isCustomized = onSave !== null && savedText !== null && savedText !== undefined;
@@ -211,6 +292,16 @@ const TemplateCard = ({ templateKey, label, desc, Icon, defaultText, savedText, 
               <RotateCcw className="h-4 w-4" />
             </Button>
           )}
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleExportTxt} variant="outline" size="sm" className="flex-1" title="Baixar como .txt">
+            <FileText className="h-4 w-4" />
+            .txt
+          </Button>
+          <Button onClick={handleExportPdf} variant="outline" size="sm" className="flex-1" title="Baixar como .pdf">
+            <FileDown className="h-4 w-4" />
+            .pdf
+          </Button>
         </div>
       </CardContent>
     </Card>
