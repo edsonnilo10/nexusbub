@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Copy, Check, MessageCircle, RotateCcw, Loader2, BookOpen, Calendar } from "lucide-react";
+import { Copy, Check, MessageCircle, RotateCcw, Loader2, BookOpen, Calendar, FileText, FileDown } from "lucide-react";
+import jsPDF from "jspdf";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
