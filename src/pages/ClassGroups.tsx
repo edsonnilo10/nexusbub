@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarDays, Loader2, Plus, Search, Users2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Loader2, Plus, Search, Sparkles, Users2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
@@ -25,6 +25,7 @@ import {
   type CourseUnit,
 } from "@/lib/courseHelpers";
 import { ClassGroupDialog } from "@/components/classGroups/ClassGroupDialog";
+import { ClassGroupDetailsDialog } from "@/components/classGroups/ClassGroupDetailsDialog";
 
 export interface ClassGroupRow {
   id: string;
@@ -63,6 +64,9 @@ const ClassGroups = () => {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ClassGroupRow | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsGroup, setDetailsGroup] = useState<ClassGroupRow | null>(null);
+  const [comboFilter, setComboFilter] = useState<"all" | "combo" | "single">("all");
 
   useEffect(() => {
     document.title = "Turmas | Nexus Ultrassonografia";
