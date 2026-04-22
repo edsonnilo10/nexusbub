@@ -26,6 +26,7 @@ import {
 } from "@/lib/courseHelpers";
 import { ClassGroupDialog } from "@/components/classGroups/ClassGroupDialog";
 import { ClassGroupDetailsDialog } from "@/components/classGroups/ClassGroupDetailsDialog";
+import { UpcomingClassesPanel } from "@/components/classGroups/UpcomingClassesPanel";
 
 export interface ClassGroupRow {
   id: string;
@@ -250,6 +251,15 @@ const ClassGroups = () => {
             </Tabs>
           </CardContent>
         </Card>
+
+        {!loading && (
+          <UpcomingClassesPanel
+            groups={groups}
+            coursesByGroup={coursesByGroup}
+            onSelect={openDetails}
+            unitFilter={unitFilter}
+          />
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16">
