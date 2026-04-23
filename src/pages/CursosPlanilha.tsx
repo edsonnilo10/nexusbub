@@ -13,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCursosResumo } from "@/hooks/useCursosResumo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -122,6 +129,24 @@ export default function CursosPlanilha() {
           >
             🌆 São Paulo (SP)
           </Button>
+
+          <Select
+            value={String(ano)}
+            onValueChange={(v) => setAno(v === "todos" ? "todos" : parseInt(v, 10))}
+          >
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="Ano" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os anos</SelectItem>
+              {ANOS_DISPONIVEIS.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <div className="relative ml-auto w-full max-w-xs">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
