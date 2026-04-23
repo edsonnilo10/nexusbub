@@ -596,48 +596,96 @@ Deno.serve(async (req) => {
 
     const windows: WindowRow[] = [];
 
+    // Apenas as 5 abas abaixo são lidas. Qualquer outra aba da planilha é
+    // ignorada silenciosamente (não vira erro nem aparece no relatório).
     const targets: { key: string; aliases: string[]; handler: (v: string[][], title: string) => Promise<UpsertCounters> }[] = [
       {
-        key: "São Paulo",
-        aliases: ["sao paulo", "são paulo", "sp", "matriculas sp"],
-        handler: (v, t) => processEnrollmentsTab(supabase, userId, "sao_paulo", v, t, courses, windows),
-      },
-      {
-        key: "Brasília",
-        aliases: ["brasilia", "brasília", "df", "matriculas df"],
-        handler: (v, t) => processEnrollmentsTab(supabase, userId, "brasilia", v, t, courses, windows),
-      },
-      {
         key: "GR base",
-        aliases: ["gr base", "grbase", "base gr", "alunos pagos", "pagos"],
+        aliases: [
+          "(gr)base(preencher aqui)",
+          "gr base",
+          "grbase",
+          "base gr",
+        ],
         handler: (v, t) => processPaidStudentsTab(supabase, userId, v, t, courses),
       },
       {
+        key: "Calendário DF",
+        aliases: [
+          "(df)calendario 2026",
+          "(df)calendário 2026",
+          "calendario df 2026",
+          "calendário df 2026",
+        ],
+        handler: (v, t) => processCalendarTab(supabase, userId, "brasilia", v, t, courses),
+      },
+      {
         key: "Calendário SP",
-        aliases: ["calendario sp", "calendário sp", "calendario sao paulo", "agenda sp"],
+        aliases: [
+          "(sp)calendario 2026 sp",
+          "(sp)calendário 2026 sp",
+          "(sp)calendario 2026",
+          "(sp)calendário 2026",
+          "calendario sp 2026",
+          "calendário sp 2026",
+        ],
         handler: (v, t) => processCalendarTab(supabase, userId, "sao_paulo", v, t, courses),
       },
       {
-        key: "Calendário DF",
-        aliases: ["calendario df", "calendário df", "calendario brasilia", "agenda df"],
-        handler: (v, t) => processCalendarTab(supabase, userId, "brasilia", v, t, courses),
+        key: "Brasília",
+        aliases: [
+          "(df)turmas com matriculados e pre 2026",
+          "(df)turmas com matriculados e pré 2026",
+          "turmas df 2026",
+          "matriculados df 2026",
+        ],
+        handler: (v, t) => processEnrollmentsTab(supabase, userId, "brasilia", v, t, courses, windows),
+      },
+      {
+        key: "São Paulo",
+        aliases: [
+          "(sp)turmas com matriculados e pre 2026",
+          "(sp)turmas com matriculados e pré 2026",
+          "turmas sp 2026",
+          "matriculados sp 2026",
+        ],
+        handler: (v, t) => processEnrollmentsTab(supabase, userId, "sao_paulo", v, t, courses, windows),
       },
     ];
 
+    // Track quais titles já foram consumidos para evitar matchear a mesma aba
+    // em dois targets (caso aliases se sobreponham por engano).
+    const usedTitles = new Set<string>();
+
     for (const target of targets) {
-      const tab = matchTab(tabs, target.aliases);
+      const candidateTabs = tabs.filter((t) => !usedTitles.has(t.title));
+      const tab = matchTab(candidateTabs, target.aliases);
       if (!tab) {
         result.missing_tabs.push(target.key);
         continue;
       }
+      usedTitles.add(tab.title);
       try {
         const values = await getSheetValues(spreadsheetId, tab.title, accessToken);
         const c = await target.handler(values, tab.title);
+        // Se o handler reportou só "colunas não encontradas" e nada foi inserido,
+        // tratamos como skip silencioso (a aba existe mas não tem o formato esperado).
+        const onlyHeaderError = c.inserted === 0 && c.errors.length > 0 &&
+          c.errors.every((e) => /coluna|colunas/i.test(e) && /não encontrad/i.test(e));
+        if (onlyHeaderError) {
+          continue;
+        }
         result.processed[target.key] = { tab_title: tab.title, ...c };
       } catch (e: any) {
         result.processed[target.key] = { tab_title: tab.title, inserted: 0, updated: 0, errors: [e.message] };
       }
     }
+
+    // Abas da planilha que NÃO são nenhuma das 5 esperadas são ignoradas — não
+    // entram em result.processed nem em missing_tabs. Listamos apenas para info.
+    result.ignored_tabs = tabs
+      .map((t) => t.title)
+      .filter((title) => !usedTitles.has(title));
 
     // Sync class_groups + apply combo rules
     try {
