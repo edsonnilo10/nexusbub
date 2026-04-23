@@ -143,17 +143,46 @@ const getSheetValues = async (
 };
 
 // ---------- tab matching ----------
+// Strategy: 3 passes, strict to loose, but never an unbounded `includes`.
+// Pass 1: exact equality after normalization (lower + diacritics + whitespace).
+// Pass 2: equality after stripping ALL punctuation/whitespace.
+// Pass 3: prefix overlap on stripped form, requiring at least 12 shared chars.
 const matchTab = (tabs: SheetMeta[], wanted: string[]): SheetMeta | null => {
+  // Pass 1
   for (const w of wanted) {
     const wn = norm(w);
     const t = tabs.find((x) => norm(x.title) === wn);
-    if (t) return t;
+    if (t) {
+      console.log(`[matchTab] exact match: alias="${w}" -> tab="${t.title}"`);
+      return t;
+    }
   }
+  // Pass 2
   for (const w of wanted) {
-    const wn = norm(w);
-    const t = tabs.find((x) => norm(x.title).includes(wn) || wn.includes(norm(x.title)));
-    if (t) return t;
+    const ws = stripAll(w);
+    const t = tabs.find((x) => stripAll(x.title) === ws);
+    if (t) {
+      console.log(`[matchTab] stripped match: alias="${w}" -> tab="${t.title}"`);
+      return t;
+    }
   }
+  // Pass 3 — restricted prefix overlap
+  for (const w of wanted) {
+    const ws = stripAll(w);
+    if (ws.length < 12) continue;
+    const t = tabs.find((x) => {
+      const ts = stripAll(x.title);
+      if (ts.length < 12) return false;
+      const overlap = Math.min(ts.length, ws.length);
+      if (overlap < 12) return false;
+      return ts.startsWith(ws) || ws.startsWith(ts);
+    });
+    if (t) {
+      console.log(`[matchTab] prefix match: alias="${w}" -> tab="${t.title}"`);
+      return t;
+    }
+  }
+  console.log(`[matchTab] NO match for aliases=${JSON.stringify(wanted)}`);
   return null;
 };
 
