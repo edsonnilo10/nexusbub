@@ -251,6 +251,8 @@ const CourseEditor = () => {
                   Código usado na planilha antes do primeiro ponto. Ex: <code>CM US MESQ</code> para turmas <code>CM US MESQ.2601.1</code>. Deixe em branco para usar detecção automática pelo slug.
                 </p>
               </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
                 <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} />
               </div>
               <div className="space-y-2">
