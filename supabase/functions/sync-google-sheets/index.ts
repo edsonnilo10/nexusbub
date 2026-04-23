@@ -400,11 +400,16 @@ const processEnrollmentsTab = async (
 
   const records: any[] = [];
   const now = new Date().toISOString();
+  let sampleLogged = 0;
   for (const [key, { count, firstRow }] of agg.entries()) {
     const turmaCode = turmaDisplay.get(key) || "";
     const mes = key.split("||")[1] || "";
     const start = parseDate(mes);
-    const matched = findCourse(courses, turmaCode, unit);
+    const matched = findCourseByTurma(courses, turmaCode, unit);
+    if (sampleLogged < 3) {
+      console.log(`[processEnrollmentsTab] ${tabTitle} sample: turma="${turmaCode}" prefix="${turmaPrefix(turmaCode)}" course_id=${matched?.id ?? "NULL"} slug=${matched?.slug ?? "—"}`);
+      sampleLogged++;
+    }
     records.push({
       user_id: userId,
       unit,
