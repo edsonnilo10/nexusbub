@@ -254,6 +254,17 @@ type WindowRow = {
   class_label: string | null;
 };
 
+// Estrutura especial das abas (DF/SP)TURMAS COM MATRICULADOS E PRÉ:
+// - Linha 0: cabeçalhos de seção ("ALUNOS PAGOS" / "ALUNOS PRÉ MATRICULADOS")
+// - Linha 1: cabeçalho de colunas, repetido para PAGOS (esquerda) e PRÉ (direita)
+//   Mês(INICIO) | TURMA | NOME | TELEFONE | EMAIL | ESPECIALIDADE | UF |
+//   VENDEDOR | CRM | JALECO | PARCELAS | STATUS DO ALUNO | 1º PAGAMENTO PAGTO |
+//   VALOR PAGO | STATUS APÓS 2º BOLETO | PARCELAMENTO | INFORME SECRETARIA
+// - Linha 2+: dados dos alunos. A coluna TURMA contém o código/mnemônico do curso.
+//
+// Cada linha de aluno conta como 1 matriculado. Agregamos por (TURMA, Mês INICIO)
+// e gravamos em enrollments_by_class com student_count = nº de alunos da turma,
+// somando PAGOS + PRÉ (o tipo é diferenciado pelos paid_students separadamente).
 const processEnrollmentsTab = async (
   supabase: any,
   userId: string,
@@ -264,55 +275,121 @@ const processEnrollmentsTab = async (
   windows: WindowRow[],
 ): Promise<UpsertCounters> => {
   const c: UpsertCounters = { inserted: 0, updated: 0, errors: [] };
-  if (values.length < 2) return c;
-  const header = values[0];
-  const idxCourse = findIdx(header, ["curso", "course"]);
-  const idxClass = findIdx(header, ["turma", "class", "grupo"]);
-  const idxStart = findIdx(header, ["inicio", "início", "start", "data inicio"]);
-  const idxEnd = findIdx(header, ["fim", "termino", "término", "end", "data fim"]);
-  const idxCount = findIdx(header, ["alunos", "matriculados", "qtd", "quantidade", "total", "n alunos"]);
-  if (idxCourse < 0 || idxCount < 0) {
-    c.errors.push(`Aba "${tabTitle}": colunas Curso/Alunos não encontradas`);
+  if (values.length < 3) {
+    console.log(`[processEnrollmentsTab] ${tabTitle}: too few rows (${values.length})`);
     return c;
   }
-  console.log(`[processEnrollmentsTab] ${tabTitle}: ${values.length - 1} rows`);
-  const records: any[] = [];
-  const now = new Date().toISOString();
-  for (let r = 1; r < values.length; r++) {
+
+  // Header é a LINHA 2 (índice 1)
+  const header = values[1];
+  const headerNorm = header.map((h) => norm(h || ""));
+
+  // Encontrar índices do PRIMEIRO e SEGUNDO "TURMA" para separar as duas seções
+  const turmaIdxs: number[] = [];
+  for (let i = 0; i < headerNorm.length; i++) {
+    if (headerNorm[i] === "turma") turmaIdxs.push(i);
+  }
+
+  if (turmaIdxs.length === 0) {
+    c.errors.push(`Aba "${tabTitle}": coluna TURMA não encontrada na linha 2`);
+    console.log(`[processEnrollmentsTab] ${tabTitle}: no TURMA column. Header sample=${JSON.stringify(header.slice(0, 30))}`);
+    return c;
+  }
+
+  const turmaPagos = turmaIdxs[0];
+  const turmaPre = turmaIdxs.length >= 2 ? turmaIdxs[1] : -1;
+  // Limite da seção PAGOS: começa em 0, termina onde começa a PRÉ
+  const fimPagos = turmaPre >= 0 ? turmaPre : header.length;
+
+  console.log(`[processEnrollmentsTab] ${tabTitle}: header on row 2, TURMA cols=[${turmaIdxs.join(",")}], pagos=[0..${fimPagos}), pre=[${turmaPre}..${header.length})`);
+
+  // Helper para localizar coluna dentro de uma janela [start, end)
+  const findInRange = (cands: string[], start: number, end: number): number => {
+    const candsN = cands.map(norm);
+    for (let i = start; i < end; i++) {
+      const h = headerNorm[i];
+      if (!h) continue;
+      if (candsN.some((cn) => h === cn || h.includes(cn))) return i;
+    }
+    return -1;
+  };
+
+  // Índice das colunas relevantes em cada seção
+  const buildSection = (start: number, end: number) => ({
+    turma: findInRange(["turma"], start, end),
+    nome: findInRange(["nome"], start, end),
+    mesInicio: findInRange(["mes(inicio)", "mes inicio", "mês(inicio)", "mês inicio", "inicio", "início", "mes", "mês"], start, end),
+  });
+
+  const secPagos = buildSection(0, fimPagos);
+  const secPre = turmaPre >= 0 ? buildSection(turmaPre, header.length) : null;
+
+  console.log(`[processEnrollmentsTab] ${tabTitle}: secPagos=${JSON.stringify(secPagos)} secPre=${JSON.stringify(secPre)}`);
+
+  // Agregar contagem por (turma_code, mes_inicio) — uma linha por aluno
+  type Agg = { count: number; firstRow: number };
+  const agg = new Map<string, Agg>();
+  // Guarda o nome original da turma para preservar capitalização
+  const turmaDisplay = new Map<string, string>();
+
+  const eatRow = (row: string[], section: { turma: number; nome: number; mesInicio: number }, r: number) => {
+    if (section.turma < 0) return;
+    const turmaCode = (row[section.turma] || "").trim();
+    if (!turmaCode) return;
+    const nome = section.nome >= 0 ? (row[section.nome] || "").trim() : "";
+    if (!nome) return; // só conta se houver aluno
+    const mes = section.mesInicio >= 0 ? (row[section.mesInicio] || "").trim() : "";
+    const key = `${norm(turmaCode)}||${norm(mes)}`;
+    const cur = agg.get(key);
+    if (cur) {
+      cur.count += 1;
+    } else {
+      agg.set(key, { count: 1, firstRow: r + 1 });
+      turmaDisplay.set(key, turmaCode);
+    }
+  };
+
+  for (let r = 2; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
-    const courseName = (row[idxCourse] || "").trim();
-    if (!courseName) continue;
-    const studentCount = parseInteger(row[idxCount]);
-    const classLabel = idxClass >= 0 ? (row[idxClass] || "").trim() : null;
-    const start = idxStart >= 0 ? parseDate(row[idxStart]) : null;
-    const end = idxEnd >= 0 ? parseDate(row[idxEnd]) : null;
-    const matched = findCourse(courses, courseName, unit);
+    eatRow(row, secPagos, r);
+    if (secPre) eatRow(row, secPre, r);
+  }
+
+  console.log(`[processEnrollmentsTab] ${tabTitle}: aggregated ${agg.size} (turma, mes) groups`);
+
+  const records: any[] = [];
+  const now = new Date().toISOString();
+  for (const [key, { count, firstRow }] of agg.entries()) {
+    const turmaCode = turmaDisplay.get(key) || "";
+    const mes = key.split("||")[1] || "";
+    const start = parseDate(mes);
+    const matched = findCourse(courses, turmaCode, unit);
     records.push({
       user_id: userId,
       unit,
       course_id: matched?.id ?? null,
-      course_name: courseName,
-      class_label: classLabel || null,
+      course_name: matched?.name || turmaCode,
+      class_label: turmaCode || null,
       class_start_date: start,
-      class_end_date: end,
-      student_count: studentCount,
+      class_end_date: null,
+      student_count: count,
       source_sheet: tabTitle,
-      source_row: r + 1,
+      source_row: firstRow,
       synced_at: now,
     });
-
-    if (matched && start && end) {
+    if (matched && start) {
       windows.push({
         unit,
         course_id: matched.id,
         course_name: matched.name,
         start_date: start,
-        end_date: end,
-        class_label: classLabel || null,
+        end_date: start,
+        class_label: turmaCode || null,
       });
     }
   }
+
   await batchUpsert(
     supabase,
     "enrollments_by_class",
@@ -321,7 +398,7 @@ const processEnrollmentsTab = async (
     c,
     `enrollments ${tabTitle}`,
   );
-  console.log(`[processEnrollmentsTab] ${tabTitle}: done, inserted=${c.inserted}, errors=${c.errors.length}`);
+  console.log(`[processEnrollmentsTab] ${tabTitle}: done, ${records.length} grupos -> inserted=${c.inserted}, errors=${c.errors.length}`);
   return c;
 };
 
