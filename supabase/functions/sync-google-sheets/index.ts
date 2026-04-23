@@ -275,6 +275,9 @@ const processEnrollmentsTab = async (
     c.errors.push(`Aba "${tabTitle}": colunas Curso/Alunos não encontradas`);
     return c;
   }
+  console.log(`[processEnrollmentsTab] ${tabTitle}: ${values.length - 1} rows`);
+  const records: any[] = [];
+  const now = new Date().toISOString();
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
@@ -285,7 +288,7 @@ const processEnrollmentsTab = async (
     const start = idxStart >= 0 ? parseDate(row[idxStart]) : null;
     const end = idxEnd >= 0 ? parseDate(row[idxEnd]) : null;
     const matched = findCourse(courses, courseName, unit);
-    const record = {
+    records.push({
       user_id: userId,
       unit,
       course_id: matched?.id ?? null,
@@ -296,18 +299,9 @@ const processEnrollmentsTab = async (
       student_count: studentCount,
       source_sheet: tabTitle,
       source_row: r + 1,
-      synced_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from("enrollments_by_class")
-      .upsert(record, {
-        onConflict: "user_id,unit,course_name,class_label,class_start_date",
-        ignoreDuplicates: false,
-      });
-    if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
-    else c.inserted++;
+      synced_at: now,
+    });
 
-    // Collect for class_groups
     if (matched && start && end) {
       windows.push({
         unit,
@@ -319,6 +313,15 @@ const processEnrollmentsTab = async (
       });
     }
   }
+  await batchUpsert(
+    supabase,
+    "enrollments_by_class",
+    records,
+    "user_id,unit,course_name,class_label,class_start_date",
+    c,
+    `enrollments ${tabTitle}`,
+  );
+  console.log(`[processEnrollmentsTab] ${tabTitle}: done, inserted=${c.inserted}, errors=${c.errors.length}`);
   return c;
 };
 
