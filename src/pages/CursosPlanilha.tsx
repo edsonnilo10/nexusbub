@@ -13,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCursosResumo } from "@/hooks/useCursosResumo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,8 +29,14 @@ type UnidadeFilter = "todos" | "sao_paulo" | "brasilia";
 
 const unidadeLabel = (u: "sao_paulo" | "brasilia") => (u === "sao_paulo" ? "SP" : "DF");
 
+const ANO_ATUAL = new Date().getFullYear();
+const ANOS_DISPONIVEIS = [ANO_ATUAL + 1, ANO_ATUAL, ANO_ATUAL - 1, ANO_ATUAL - 2, ANO_ATUAL - 3];
+
 export default function CursosPlanilha() {
-  const { data, isLoading, isError, refetch, isFetching } = useCursosResumo();
+  const [ano, setAno] = useState<number | "todos">(2026);
+  const { data, isLoading, isError, refetch, isFetching } = useCursosResumo(
+    ano === "todos" ? undefined : ano
+  );
   const [unidade, setUnidade] = useState<UnidadeFilter>("todos");
   const [busca, setBusca] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -116,6 +129,24 @@ export default function CursosPlanilha() {
           >
             🌆 São Paulo (SP)
           </Button>
+
+          <Select
+            value={String(ano)}
+            onValueChange={(v) => setAno(v === "todos" ? "todos" : parseInt(v, 10))}
+          >
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="Ano" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os anos</SelectItem>
+              {ANOS_DISPONIVEIS.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <div className="relative ml-auto w-full max-w-xs">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
