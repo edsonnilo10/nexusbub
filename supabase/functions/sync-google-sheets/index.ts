@@ -207,23 +207,55 @@ const findCourse = (
   return matches[0];
 };
 
-// "CM US CAVF.SP.2607.1" -> "cmuscavf"
+// Extrai o MNEMONICO do código de TURMA (tudo antes do primeiro ponto),
+// normaliza para comparação: minúsculo, sem acentos, sem espaços.
+// Ex.: "CM US MESQ.2601.1" -> "cmusmesq"
+//      "CM US CAVF.SP.2607.1" -> "cmuscavf"
 const turmaPrefix = (turma: string): string => {
   const head = (turma || "").split(".")[0] || "";
   return norm(head).replace(/\s+/g, "");
 };
 
-// Deriva unidade do código de turma: 2º segmento "SP" => sao_paulo, senão brasilia
+// Deriva unidade do código de TURMA. Padrão: [MNEMONICO].[AAMM].[N]
+// Quando há "SP" entre o mnemônico e o ano (3 ou mais segmentos),
+// é São Paulo. Caso contrário, Brasília (DF).
 const unitFromTurma = (turma: string, fallback: "sao_paulo" | "brasilia"): "sao_paulo" | "brasilia" => {
   const parts = (turma || "").split(".");
-  if (parts.length < 2) return fallback;
+  if (parts.length < 3) return fallback; // sem token de unidade explícito => DF
   const seg = norm(parts[1]).replace(/\s+/g, "");
   if (seg === "sp") return "sao_paulo";
   if (seg === "df" || seg === "bsb") return "brasilia";
+  // 3 segmentos mas o 2º não é unidade => fallback
   return fallback;
 };
 
-// Match por prefixo da TURMA + sufixo de unidade no slug do curso
+// Extrai o "mnemônico normalizado" do slug do curso, removendo o sufixo
+// de unidade (-sp/-bsb/-df) e qualquer hash de 4 chars no fim (ex.: "-ul9a").
+// Ex.: "cm-us-cavf-bsb"   -> "cmuscavf"
+//      "cm-us-mama-sp"    -> "cmusmama"
+//      "cm-us-pedi-quadril-sp" -> "cmuspediquadril"
+const slugMnemonic = (slug: string | null | undefined): string => {
+  if (!slug) return "";
+  const parts = norm(slug).split("-").filter(Boolean);
+  // remove sufixos de unidade conhecidos no fim
+  while (parts.length > 0) {
+    const last = parts[parts.length - 1];
+    if (last === "sp" || last === "bsb" || last === "df") {
+      parts.pop();
+      continue;
+    }
+    break;
+  }
+  // Remove sufixo de hash curto (4 chars alfanumérico) que aparece em alguns slugs
+  if (parts.length > 1) {
+    const last = parts[parts.length - 1];
+    if (/^[a-z0-9]{4}$/.test(last) && /\d/.test(last)) parts.pop();
+  }
+  return parts.join("");
+};
+
+// Match por igualdade exata do MNEMONICO (prefixo da TURMA == mnemônico do slug),
+// preferindo cursos da mesma unidade.
 const findCourseByTurma = (
   courses: Course[],
   turma: string,
@@ -231,20 +263,21 @@ const findCourseByTurma = (
 ): Course | undefined => {
   const prefix = turmaPrefix(turma);
   if (!prefix) return undefined;
-  const suffix = unit === "brasilia" ? "bsb" : "sp";
-  const stripSlug = (c: Course) => norm((c as any).slug || "").replace(/-/g, "");
-  // 1) match exato com sufixo correto da unidade
-  const exact = courses.find((c) => {
-    const s = stripSlug(c);
-    return s.startsWith(prefix) && s.endsWith(suffix);
-  });
+  // 1) match exato + mesma unidade
+  const exact = courses.find(
+    (c) => c.unit === unit && slugMnemonic(c.slug) === prefix,
+  );
   if (exact) return exact;
-  // 2) fallback: qualquer curso da mesma unit cujo slug comece com o prefixo
-  return courses.find((c) => {
+  // 2) match exato em qualquer unidade (raro: curso só cadastrado em uma unidade)
+  const anyUnit = courses.find((c) => slugMnemonic(c.slug) === prefix);
+  if (anyUnit) return anyUnit;
+  // 3) fallback por nome: mnemônico do início do nome (ex.: "CM US CAVF: ...")
+  const byName = courses.find((c) => {
     if (c.unit !== unit) return false;
-    const s = stripSlug(c);
-    return s.startsWith(prefix);
+    const head = norm(c.name).split(":")[0] || "";
+    return head.replace(/\s+/g, "") === prefix;
   });
+  return byName;
 };
 
 interface UpsertCounters { inserted: number; updated: number; errors: string[] }
