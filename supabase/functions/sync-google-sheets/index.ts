@@ -734,25 +734,29 @@ Deno.serve(async (req) => {
     const usedTitles = new Set<string>();
 
     for (const target of targets) {
+      console.log(`[sync] >>> start target "${target.key}"`);
       const candidateTabs = tabs.filter((t) => !usedTitles.has(t.title));
       const tab = matchTab(candidateTabs, target.aliases);
       if (!tab) {
+        console.log(`[sync] target "${target.key}": NO TAB MATCHED`);
         result.missing_tabs.push(target.key);
         continue;
       }
       usedTitles.add(tab.title);
       try {
         const values = await getSheetValues(spreadsheetId, tab.title, accessToken);
+        console.log(`[sync] target "${target.key}" tab="${tab.title}" rows=${values.length}`);
         const c = await target.handler(values, tab.title);
-        // Se o handler reportou só "colunas não encontradas" e nada foi inserido,
-        // tratamos como skip silencioso (a aba existe mas não tem o formato esperado).
         const onlyHeaderError = c.inserted === 0 && c.errors.length > 0 &&
           c.errors.every((e) => /coluna|colunas/i.test(e) && /não encontrad/i.test(e));
         if (onlyHeaderError) {
+          console.log(`[sync] target "${target.key}": skipped (header mismatch)`);
           continue;
         }
         result.processed[target.key] = { tab_title: tab.title, ...c };
+        console.log(`[sync] <<< done target "${target.key}" inserted=${c.inserted} errors=${c.errors.length}`);
       } catch (e: any) {
+        console.error(`[sync] target "${target.key}" THREW:`, e?.message || e);
         result.processed[target.key] = { tab_title: tab.title, inserted: 0, updated: 0, errors: [e.message] };
       }
     }
