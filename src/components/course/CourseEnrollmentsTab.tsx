@@ -55,7 +55,7 @@ export const CourseEnrollmentsTab = ({ course }: Props) => {
 
   const handleSync = async () => {
     setSyncing(true);
-    const { data, error } = await supabase.functions.invoke("sync-sheet", { body: {} });
+    const { data, error } = await supabase.functions.invoke("sync-google-sheets", { body: {} });
     setSyncing(false);
     if (error || data?.error) {
       toast({
