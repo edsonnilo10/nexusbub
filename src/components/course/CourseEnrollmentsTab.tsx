@@ -55,21 +55,52 @@ export const CourseEnrollmentsTab = ({ course }: Props) => {
 
   const handleSync = async () => {
     setSyncing(true);
-    const { data, error } = await supabase.functions.invoke("sync-google-sheets", { body: {} });
-    setSyncing(false);
-    if (error || data?.error) {
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-google-sheets", {
+        body: {},
+        headers: { "Content-Type": "application/json" },
+      });
+      if (error) {
+        console.error("[sync-google-sheets] invoke error:", error);
+        toast({
+          title: "Erro ao sincronizar",
+          description: error.message || "Falha ao chamar a função. Verifique sua planilha em Configurações.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (data?.error) {
+        toast({
+          title: "Erro ao sincronizar",
+          description: String(data.error),
+          variant: "destructive",
+        });
+        return;
+      }
+      const proc = data?.processed || {};
+      const totalIns =
+        (proc.paid_students?.inserted || 0) +
+        (proc.enrollments_by_class?.inserted || 0) +
+        (proc.calendar_events?.inserted || 0);
+      const totalUpd =
+        (proc.paid_students?.updated || 0) +
+        (proc.enrollments_by_class?.updated || 0) +
+        (proc.calendar_events?.updated || 0);
+      toast({
+        title: "Sincronização concluída",
+        description: `${totalIns} novo(s) · ${totalUpd} atualizado(s)`,
+      });
+      await reload();
+    } catch (e: any) {
+      console.error("[sync-google-sheets] exception:", e);
       toast({
         title: "Erro ao sincronizar",
-        description: error?.message || data?.error || "Configure a planilha em Configurações.",
+        description: e?.message || "Falha inesperada ao sincronizar.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setSyncing(false);
     }
-    toast({
-      title: "Sincronização concluída",
-      description: `${data.alunosNovos} novo(s) · ${data.alunosAtualizados} atualizado(s)`,
-    });
-    await reload();
   };
 
   const lastSync = enrollments.length > 0
