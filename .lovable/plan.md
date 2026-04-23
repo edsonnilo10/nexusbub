@@ -1,115 +1,107 @@
 
-## Fazer o sync parar de estourar no meio e parar de mostrar relatório velho
+
+## Adicionar UNIQUE constraints para o ON CONFLICT do sync funcionar
 
 ### Diagnóstico
 
-O problema agora não parece mais ser o matching das abas.
+Os logs mostram exatamente o erro do Postgres:
 
-Os logs mais recentes do backend mostram que:
-- a função já está vendo as abas corretas;
-- o novo `matchTab` já encontrou corretamente `"(GR)BASE(PREENCHER AQUI)"`;
-- o print da tela ainda mostra o relatório antigo das 16:41, ou seja: o sync novo falha **antes de salvar um novo `last_sync_summary`**.
+```
+there is no unique or exclusion constraint matching the ON CONFLICT specification
+```
 
-Isso indica que o erro atual acontece **durante o processamento**, não na descoberta das abas. O ponto mais provável é timeout/cancelamento da função, porque o código ainda faz muitos `upsert`s linha por linha, principalmente na aba **GR base**.
+A edge function chama `upsert(..., { onConflict: "..." })` em 3 tabelas, mas no banco essas tabelas só têm a PK em `id`. Sem um UNIQUE/PK que case com as colunas do `onConflict`, o `upsert` falha 100%.
 
-### O que será implementado
+Mapeamento `tabela → colunas usadas no onConflict`:
 
-#### 1) Otimizar a função `sync-google-sheets` para processar em lote
-Arquivo:
-- `supabase/functions/sync-google-sheets/index.ts`
+| Tabela | Colunas no `onConflict` |
+|---|---|
+| `paid_students` | `user_id, student_name, course_name, class_label` |
+| `calendar_events` | `user_id, unit, course_name, event_label, start_date` |
+| `enrollments_by_class` | `user_id, unit, course_name, class_label, class_start_date` |
 
-Mudanças:
-- trocar os `upsert`s por linha por `upsert`s em lote, em chunks;
-- aplicar isso nos 3 processadores:
-  - `processPaidStudentsTab`
-  - `processEnrollmentsTab`
-  - `processCalendarTab`
-- manter os mesmos dados e chaves de conflito, mas reduzir drasticamente o número de round-trips ao banco.
+Hoje no banco existe apenas `*_pkey` em `id` nas 3 tabelas. Nenhuma UNIQUE.
 
-Objetivo:
-- evitar timeout no meio da execução;
-- permitir que a função chegue ao fim e grave o resumo novo.
+### O que será feito
 
-#### 2) Adicionar logs de progresso por aba
-No mesmo arquivo:
-- logar início e fim de cada target;
-- logar quantidade de linhas lidas;
-- logar quantos registros foram preparados e quantos foram persistidos por lote.
+#### 1) Migration única com 3 UNIQUE constraints
 
-Objetivo:
-- identificar exatamente onde a execução para, se ainda houver falha;
-- diferenciar “aba ignorada”, “aba vazia”, “erro de colunas” e “timeout”.
+Nova migration em `supabase/migrations/`:
 
-#### 3) Manter o filtro estrito só para as 5 abas esperadas
-No mesmo arquivo:
-- preservar a lógica atual de ignorar qualquer aba fora desta lista:
-  - `(GR)BASE(PREENCHER AQUI)`
-  - `(DF)CALENDARIO 2026`
-  - `(SP)CALENDARIO 2026 SP`
-  - `(DF)TURMAS COM MATRICULADOS E PRÉ 2026`
-  - `(SP)TURMAS COM MATRICULADOS E PRÉ 2026`
+```sql
+-- paid_students
+ALTER TABLE public.paid_students
+  ADD CONSTRAINT paid_students_sync_unique
+  UNIQUE (user_id, student_name, course_name, class_label);
 
-Objetivo:
-- garantir que abas como `CONTROLE GERAL` continuem 100% fora do processamento.
+-- calendar_events
+ALTER TABLE public.calendar_events
+  ADD CONSTRAINT calendar_events_sync_unique
+  UNIQUE (user_id, unit, course_name, event_label, start_date);
 
-#### 4) Melhorar a mensagem de erro no frontend
-Arquivo:
-- `src/pages/Settings.tsx`
+-- enrollments_by_class
+ALTER TABLE public.enrollments_by_class
+  ADD CONSTRAINT enrollments_by_class_sync_unique
+  UNIQUE (user_id, unit, course_name, class_label, class_start_date);
+```
 
-Mudanças:
-- parar de mostrar só `Falha ao chamar a sincronização. Tente novamente.`;
-- exibir `error.message` quando existir;
-- diferenciar erro do backend de erro retornado no payload.
+Observações importantes:
+- As constraints batem **exatamente** com o `onConflict` da edge function — nenhuma mudança de código necessária.
+- Não vou tocar em `id` (PK fica como está).
+- Não vou apagar dados nem mudar tipos.
 
-Objetivo:
-- quando der problema, você ver o motivo real em vez de um toast genérico.
+#### 2) Limpeza de duplicatas pré-existentes (se houver)
 
-#### 5) Evitar confusão com resumo antigo na tela
-Arquivo:
-- `src/pages/Settings.tsx`
+Antes de adicionar a UNIQUE, a migration vai deduplicar registros que conflitariam com a nova chave, mantendo o mais recente (`synced_at DESC`, depois `id`):
 
-Mudanças:
-- indicar que o bloco exibido é o “último resumo salvo”;
-- se a chamada atual falhar, manter isso explícito para não parecer que aquele relatório acabou de ser gerado.
+```sql
+DELETE FROM public.paid_students a
+USING public.paid_students b
+WHERE a.id < b.id
+  AND a.user_id IS NOT DISTINCT FROM b.user_id
+  AND a.student_name IS NOT DISTINCT FROM b.student_name
+  AND a.course_name IS NOT DISTINCT FROM b.course_name
+  AND a.class_label IS NOT DISTINCT FROM b.class_label;
+```
 
-Objetivo:
-- evitar leitura enganosa de erros antigos como se fossem do sync atual.
+(Mesma lógica para as outras 2 tabelas, com as colunas correspondentes.)
+
+Isso é necessário porque, sem isso, o `ADD CONSTRAINT` quebra se já houver linhas duplicadas pelas novas chaves.
+
+### O que NÃO vou mexer
+
+- Edge function `sync-google-sheets/index.ts` — o `onConflict` já está correto.
+- Esquema das colunas — nenhuma coluna nova, nenhuma mudança de tipo.
+- RLS policies — continuam iguais.
+- `enrollments_by_class` em termos de comportamento — só ganha a UNIQUE que já era esperada pelo upsert.
 
 ### Resultado esperado
 
-Depois da implementação:
-- o sync deve completar sem travar na aba `GR base`;
-- o resumo salvo deve ser atualizado com a execução mais recente;
-- as abas `CONTROLE GERAL` continuam ignoradas;
-- se ainda houver erro real, ele aparecerá com mensagem útil.
+Depois da migration:
+- `Sincronizar agora` deve concluir sem `ON CONFLICT` errors.
+- `paid_students`, `calendar_events`, `enrollments_by_class` passam a ter contagens > 0 no resumo.
+- `last_sync_summary` finalmente atualiza com horário novo.
+- Erros das abas `CONTROLE GERAL` continuam ausentes (matching já está OK).
 
-### Arquivos que serão alterados
+### Risco e mitigação
 
-- `supabase/functions/sync-google-sheets/index.ts`
-- `src/pages/Settings.tsx`
+| Risco | Mitigação |
+|---|---|
+| Dados existentes têm duplicatas pelas novas chaves | DELETE de deduplicação roda **antes** do ADD CONSTRAINT na mesma migration |
+| Linhas com `class_label = NULL` causariam múltiplos NULLs (UNIQUE permite múltiplos NULLs no Postgres) | Aceitável — re-sync sobrescreve esses casos por outra chave de inserção; se virar problema real depois, ajustamos para `NULLS NOT DISTINCT` |
 
-### Detalhes técnicos
+### Validação após migration
 
-```text
-Hoje:
-GR base -> milhares de upserts individuais -> função pode morrer antes do fim
+1. Abrir **Configurações → Sincronizar agora**.
+2. Conferir no resumo:
+   - `GR base`: contagem de registros > 0, sem erro.
+   - `Calendário DF` e `Calendário SP`: contagem > 0, sem erro.
+   - `Brasília` e `São Paulo`: contagem > 0.
+3. Conferir nos Edge Function Logs: nenhum `ON CONFLICT` error.
 
-Depois:
-GR base -> monta array de registros -> envia em chunks (ex. 200/500 por vez) -> termina dentro do tempo
-```
+### Próximo passo (modo default)
 
-- O matching estrito das 5 abas será mantido.
-- O foco da correção muda de “descobrir a aba certa” para “processar sem timeout”.
-- Não será criada nova função backend.
-- Não será alterada a estrutura da planilha.
+| Ação | Ferramenta |
+|---|---|
+| Criar migration com DELETE de duplicatas + 3 UNIQUE constraints | migration tool |
 
-### Validação após implementar
-
-1. Rodar `Sincronizar agora`
-2. Confirmar nos logs:
-   - início e fim de cada uma das 5 abas
-   - nenhum travamento após `GR base`
-3. Confirmar na UI:
-   - novo horário em `Última sincronização`
-   - sem toast genérico
-   - sem erros das abas `CONTROLE GERAL`
