@@ -786,7 +786,7 @@ Deno.serve(async (req) => {
     const tabs = await getSheetMetadata(spreadsheetId, accessToken);
 
     const { data: coursesData } = await supabase
-      .from("courses").select("id, name, unit");
+      .from("courses").select("id, name, unit, slug");
     const courses = (coursesData || []) as Course[];
 
     const result: Record<string, any> = {
