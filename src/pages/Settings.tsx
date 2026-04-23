@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileSpreadsheet, Loader2, RefreshCw, ExternalLink, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, Loader2, RefreshCw, ExternalLink, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -188,6 +188,28 @@ const Settings = () => {
                         </ul>
                       </details>
                     )}
+                  </div>
+                )}
+
+                {Array.isArray(lastSummary?.unmatched_turmas) && lastSummary.unmatched_turmas.length > 0 && (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm space-y-2">
+                    <div className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-4 w-4" />
+                      Turmas sem curso vinculado ({lastSummary.unmatched_turmas.length})
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Esses códigos de turma vieram da planilha mas não casaram com nenhum curso cadastrado. Cadastre o curso ou preencha o campo <strong>Mnemônico</strong> no editor do curso correspondente para resolver.
+                    </p>
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {lastSummary.unmatched_turmas.map((u: any) => (
+                        <div key={u.prefix} className="flex flex-wrap items-center gap-2 text-xs">
+                          <code className="rounded bg-background px-1.5 py-0.5 font-mono">{u.prefix}</code>
+                          <Badge variant="secondary">{u.quantidade} aluno(s)</Badge>
+                          <Badge variant="outline">{u.unit === "sao_paulo" ? "SP" : "DF"}</Badge>
+                          <span className="text-muted-foreground">ex: {u.exemplo}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </>
