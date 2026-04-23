@@ -1,60 +1,52 @@
 
 
-## Reativar o sync com o robô `bot-planilha`
+## Reenviar o JSON COMPLETO no secret `GOOGLE_SERVICE_ACCOUNT_JSON`
 
-### Diagnóstico
+### Diagnóstico (logs do backend agora)
 
-O JSON que você colou está **válido e completo**, mas o secret `GOOGLE_SERVICE_ACCOUNT_JSON` no backend está corrompido (erro `Unexpected number in JSON at position 1`). Precisamos sobrescrever o secret com o JSON correto.
+```
+SyntaxError: Unexpected token 'c', "ca3825b7d5"... is not valid JSON
+```
 
-### Passos (ordem obrigatória)
+O valor salvo no secret é só `ca3825b7d5...` — isso é o `private_key_id` (um pedacinho do meio do arquivo), não o JSON inteiro. Por isso o `JSON.parse` quebra na primeira linha. **Compartilhar a planilha com o robô não resolve isso** — a função nem chega lá, ela falha antes de qualquer chamada ao Google.
 
-**1. Atualizar o secret `GOOGLE_SERVICE_ACCOUNT_JSON`**
-- Vou disparar o pedido de atualização do secret usando exatamente o JSON que você enviou (do `{` até o `}`, intacto, com `\n` na `private_key`).
-- Você só precisa confirmar a atualização quando o painel pedir.
+### O que vai ser feito
 
-**2. Você compartilha a NOVA planilha com o robô**
-- Abrir a nova planilha → **Compartilhar**
-- Colar: `bot-planilha@firm-capsule-439815-k9.iam.gserviceaccount.com`
-- Permissão: **Leitor**
-- Desmarcar "Notificar pessoas" → **Compartilhar**
-
-**3. Você atualiza a URL no Hub**
-- Menu → **Configurações**
-- Cola o link novo no campo **URL da planilha** → **Salvar**
-
-**4. Roda o sync**
-- Mesmo card → **Sincronizar agora**
-- Conferir o relatório (abas processadas, registros, erros)
-
-**5. Conferência nas telas**
-- **Cursos (Planilha)** → vagas/pagos/pré
-- **Turmas** → janelas criadas
-- **Dashboard** → totais
-
-**6. Segurança (obrigatório no fim)**
-- No Google Cloud Console, **revogar a chave** `ca3825b7d53b73b9765ce1006ad2db74f27a0eef` da Service Account `bot-planilha`
-- Gerar uma nova chave JSON
-- Me avisar para eu atualizar o secret de novo com a chave nova
-- Motivo: a chave atual ficou exposta no histórico do chat
-
-### O que vou fazer no próximo turno (modo default)
+No próximo turno (modo default), vou disparar **uma nova atualização** do secret `GOOGLE_SERVICE_ACCOUNT_JSON` com o **JSON inteiro** que você colou no chat anteriormente — do `{` inicial até o `}` final, com todas as chaves (`type`, `project_id`, `private_key_id`, `private_key` com `\n`, `client_email`, etc.).
 
 | Ação | Ferramenta |
 |---|---|
-| Atualizar `GOOGLE_SERVICE_ACCOUNT_JSON` com o JSON correto | `update_secret` |
+| Sobrescrever `GOOGLE_SERVICE_ACCOUNT_JSON` com o JSON completo | `update_secret` |
+
+### Importante na hora de aprovar o secret
+
+Quando o painel abrir pedindo o valor, **cole exatamente o conteúdo entre `{` e `}` (inclusive)** — o arquivo inteiro. Não cole só o `private_key_id`, nem só a `private_key`, nem só o `client_email`. Tem que ser o objeto JSON inteiro.
+
+Se ajudar, este é o formato esperado (resumido):
+```json
+{
+  "type": "service_account",
+  "project_id": "firm-capsule-439815-k9",
+  "private_key_id": "ca3825b7d5...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+  "client_email": "bot-planilha@firm-capsule-439815-k9.iam.gserviceaccount.com",
+  ...
+}
+```
+
+### Depois que o secret for salvo corretamente
+
+1. Você volta em **Configurações** → **Sincronizar agora**
+2. Se der erro 403 do Google → faltou compartilhar a planilha com `bot-planilha@firm-capsule-439815-k9.iam.gserviceaccount.com` como Leitor
+3. Se der OK → ver o relatório de abas processadas
+
+### Lembrete de segurança (continua valendo)
+
+A chave `ca3825b7d5...` foi exposta no chat. Depois que o sync funcionar, **revogar essa chave** no Google Cloud (IAM → Contas de serviço → bot-planilha → Chaves) e gerar uma nova. Aí me avisa pra eu atualizar o secret de novo.
 
 ### O que NÃO vou fazer
 
-- Não vou tocar em código (a função `sync-google-sheets` já está pronta)
+- Não vou mexer em código
 - Não vou criar Edge Function nova
-- Não vou modificar a estrutura da planilha
-- Não vou rodar o sync por você (precisa ser feito pela UI depois que você compartilhar a planilha com o robô)
-
-### Riscos
-
-| Risco | Mitigação |
-|---|---|
-| Esquecer de compartilhar a planilha com o robô → erro 403 | Passo 2 cobre |
-| Chave exposta no chat | Passo 6 (rotação obrigatória) |
-| Nomes de curso diferentes na nova planilha → cria duplicatas | Reviso depois com você |
+- Não vou rodar o sync (precisa ser pela UI)
 
