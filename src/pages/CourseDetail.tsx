@@ -6,7 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { CourseFull, CourseModule, CourseClass, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
+import { CourseFull, CourseModule, CourseClass, courseTypeLabel, unitLabel, isComboCourse } from "@/lib/courseHelpers";
 import { CourseInfoTab } from "@/components/course/CourseInfoTab";
 import { CourseLandingTab } from "@/components/course/CourseLandingTab";
 import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
@@ -15,6 +15,7 @@ import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
 import { CourseEnrollmentsTab } from "@/components/course/CourseEnrollmentsTab";
 import { CourseOperationsTab } from "@/components/course/CourseOperationsTab";
+import { ComboTabs } from "@/components/course/ComboTabs";
 import { loadCourseClasses } from "@/lib/classGroupsResolver";
 import { toast } from "@/hooks/use-toast";
 import {
