@@ -1,87 +1,86 @@
 
 
-## Corrigir Combo GIOB + TRVG (SP e BSB) com tabs internas
+## Trocar a planilha do Sheets e re-sincronizar com os novos códigos
 
-### Diagnóstico
+Boa notícia: **não precisa de nenhum código novo**. O sistema já está 100% preparado para esse cenário. A planilha é lida via Service Account (o "robô" que você criou), e a troca de URL é uma operação de configuração simples.
 
-| Item | SP | BSB |
-|---|---|---|
-| Curso combo existe | ✅ `3c9255c5...` | ✅ `ec830730...` |
-| Combo tem turmas vinculadas | ❌ nenhuma | ❌ nenhuma |
-| Combo tem módulos cadastrados | ❌ 0 | ❌ 0 |
-| GIOB individual existe | ❌ NÃO existe | ✅ `2163b377...` (20 módulos) |
-| TRVG individual existe | ✅ `4d13307f...` (5 módulos) | ✅ `f493a113...` (5 módulos) |
-| Turmas conjuntas GIOB+TRVG | ❌ TRVG tem 3 turmas próprias, GIOB não existe | ✅ 4 grupos (3 próximos + 1 encerrado) |
+### O que você precisa fazer (passo a passo, na ordem)
 
-### Plano de execução
+#### 1. Compartilhar a nova planilha com o robô
 
-#### 1. Dados (data fix via INSERT)
+Na **nova planilha** do Google Sheets:
+- Clique em **Compartilhar** (canto superior direito)
+- Cole o e-mail do robô (Service Account) — algo como `nome@projeto.iam.gserviceaccount.com`
+- Defina como **Leitor**
+- Desmarque "Notificar pessoas"
+- Clique em **Compartilhar**
 
-**a) Criar curso GIOB SP individual**
-- Espelhar o BSB: nome "CM US GIOB SP: Básico de Ultrassonografia em Ginecologia e Obstetrícia", slug `cm-us-giob-sp`, unit `sao_paulo`, workload 60h, mesma descrição/coordenação
-- Copiar os 20 módulos do GIOB BSB para o novo GIOB SP
+> Esse e-mail está dentro do JSON que você salvou no secret `GOOGLE_SERVICE_ACCOUNT_JSON` quando configurou o robô. Se não lembrar qual é, abra o JSON original ou me avise que eu busco nos logs.
 
-**b) Vincular GIOB SP nas mesmas 3 turmas que o TRVG SP já tem**
-- Grupos `ff577684` (17–25/jul), `84b4bbf6` (18–26/set), `655bce78` (04–12/dez) de 2026
-- Inserir 3 linhas em `class_group_courses` (course_id = novo GIOB SP, display_mode `individual`)
+#### 2. Atualizar o link no Hub
 
-**c) Vincular o COMBO SP nas mesmas 3 janelas**
-- 3 inserts em `class_group_courses` (course_id = combo SP `3c9255c5`, display_mode `combo_only`)
+- Abrir **Configurações** (menu superior, ícone de engrenagem)
+- No campo **URL da planilha**, apagar o link antigo e colar o **novo link completo** (`https://docs.google.com/spreadsheets/d/...`)
+- Clicar em **Salvar**
 
-**d) Vincular o COMBO BSB nas 4 janelas existentes do GIOB+TRVG BSB**
-- Grupos `3c5b3d28` (20–28/fev — encerrada), `47b6d27b` (15–23/mai), `316cd52a` (14–22/ago), `fd2bfa1f` (13–21/nov)
-- 4 inserts em `class_group_courses` (course_id = combo BSB `ec830730`, display_mode `combo_only`)
+#### 3. Validar a estrutura das abas
 
-**e) Copiar módulos para os 2 combos**
-- Combo SP `3c9255c5`: 20 módulos do GIOB BSB + 5 do TRVG BSB (25 inserts em `course_modules`, com `order_index` 0–24)
-- Combo BSB `ec830730`: mesma cópia (25 inserts)
-- Marcar visualmente as seções via `description` do módulo (ex.: "[GIOB] …", "[TRVG] …") para facilitar identificação na tab
+A função de sync procura **5 abas específicas** (nomes flexíveis — ignora acento e maiúsculas). A nova planilha precisa ter:
 
-**f) (Opcional) Atualizar `display_mode` dos vínculos individuais para `both`**
-- Hoje GIOB BSB e TRVG BSB estão como `individual` → ficam fora do combo. Mantenho como está; a regra automática (item 3) cuida disso quando você decidir.
-
-#### 2. UI — Tabs internas no CourseDetail dos combos
-
-Em `src/pages/CourseDetail.tsx` (ou no componente `CourseInfoTab` / `CourseLandingTab` — vou verificar qual é o ponto certo durante a implementação):
-
-- Detectar se o curso atual é um combo (heurística: `name` contém " + " ou existe regra ativa em `course_combo_rules` apontando esse curso como `combo_course_id`)
-- Quando combo, renderizar componente `<ComboTabs />` com 3 abas usando `Tabs` do shadcn:
-  - **Tab "Combo completo"**: módulos completos + datas do combo (turmas vinculadas)
-  - **Tab "Só GIOB"**: módulos e datas do GIOB individual (mesma unidade)
-  - **Tab "Só TRVG"**: módulos e datas do TRVG individual (mesma unidade)
-- Para SP, a tab "Só GIOB" agora terá conteúdo (curso recém-criado)
-- Resolver o GIOB/TRVG individual procurando em `courses` por `slug` LIKE `cm-us-giob-{sp,bsb}` e `cm-us-trvg-{sp,bsb}` ou por mapeamento explícito
-
-#### 3. Regra automática (pendente — você não respondeu)
-
-Vou criar com padrão recomendado: combo `combo_only`, individuais `both`. Isso significa que GIOB e TRVG continuam visíveis sozinhos, e o combo só aparece quando os dois coincidem na mesma janela. Se preferir outro modo, me avise antes de eu rodar.
-
-- Insert em `course_combo_rules`: 1 linha SP (combo `3c9255c5`, triggers [novo GIOB SP, `4d13307f`]) e 1 linha BSB (combo `ec830730`, triggers [`2163b377`, `f493a113`])
-
-### Arquivos / operações
-
-| Tipo | Alvo |
+| Aba esperada | Colunas mínimas |
 |---|---|
-| INSERT | `courses` (1 linha — GIOB SP) |
-| INSERT | `course_modules` (20 + 25 + 25 = 70 linhas) |
-| INSERT | `class_group_courses` (3 + 3 + 4 = 10 linhas) |
-| INSERT | `course_combo_rules` (2 linhas) |
-| Editar | `src/pages/CourseDetail.tsx` (renderizar tabs quando combo) |
-| Criar | `src/components/course/ComboTabs.tsx` (componente novo com as 3 abas) |
-| Helper | `src/lib/courseHelpers.ts` (função `isComboCourse` + `findComboComponents`) |
+| **São Paulo** | Curso, Turma, Início, Fim, Alunos |
+| **Brasília** | Curso, Turma, Início, Fim, Alunos |
+| **GR base** | Aluno, Curso, Turma, Status, Contrato, Valor, Data Pagamento (importa só linhas com Status iniciando em `1.PAGO`) |
+| **Calendário SP** | Curso, Turma/Evento, Início, Fim, Local, Coordenador |
+| **Calendário DF** | Curso, Turma/Evento, Início, Fim, Local, Coordenador |
 
-### O que NÃO será feito
+Se alguma aba estiver com nome muito diferente, o relatório de sync vai listar em "Abas não encontradas" — daí você renomeia ou me avisa para ajustar o matcher.
 
-- Sem migrations de schema (a estrutura já comporta tudo)
-- Sem tocar em `client.ts` / `types.ts`
-- Sem mexer em RLS
-- Sem alterar `course_classes` legado (vamos só usar `class_groups`)
-- Sem criar página/rota nova — as tabs ficam dentro do CourseDetail existente
+#### 4. Rodar a sincronização
 
-### Notas técnicas
+- Ainda em Configurações, clicar em **Sincronizar agora**
+- Aguardar o relatório aparecer com:
+  - Quantas abas foram processadas
+  - Quantos registros foram inseridos por aba
+  - Quantos vínculos de turmas foram criados
+  - Erros (se houver)
 
-- Os INSERTs em `class_group_courses` precisam respeitar o `user_id` do dono do registro? Não — a tabela não tem coluna `user_id`, RLS só checa `is_approved`. Como inserts via tool de migração rodam como `service_role`, passa direto.
-- Os INSERTs em `course_modules` também não exigem `user_id`.
-- O novo curso GIOB SP fica sem `created_by` (campo nullable) — sem problema.
-- A descrição programática que já existe nos combos será mantida; os módulos são adicionais.
+#### 5. Conferir os dados nas telas
+
+- **Cursos (Planilha)** → conferir se vagas, pagos e pré batem
+- **Turmas** → conferir se as janelas (datas) foram criadas
+- **Dashboard** → conferir totais
+
+### Sobre os "novos códigos" da planilha
+
+O sync usa o **nome do curso** (não o código) como chave para casar com o cadastro do Hub. Cada nome de curso vira um `slug` automático. Se na nova planilha os nomes mudaram, podem acontecer duas coisas:
+
+- **Curso novo no Hub** — se o nome não bater com nada existente, o sync **cria um curso novo** automaticamente
+- **Curso "duplicado"** — se mudou só a grafia, vai aparecer um curso novo separado do antigo
+
+**Se isso acontecer**, me avise depois do primeiro sync e eu te mostro como mesclar/renomear, ou preparo um mapeamento de aliases (planilha → cadastro existente).
+
+### Riscos / pontos de atenção
+
+| Risco | Mitigação |
+|---|---|
+| Robô sem acesso → sync falha com 403 | Passo 1 resolve |
+| Nomes de curso diferentes → cria duplicatas | Reviso depois com você se acontecer |
+| Datas em formato estranho → ficam null | O parser aceita `dd/mm/aaaa`, `dd-mm-aaaa` e ISO |
+| Dados antigos da planilha anterior | O sync é **upsert por nome+turma**, não apaga — registros antigos sem correspondência continuam. Posso adicionar limpeza se quiser |
+
+### O que NÃO precisa ser feito
+
+- ❌ Criar Edge Function nova
+- ❌ Pedir API Key do Google
+- ❌ Mexer no secret `GOOGLE_SERVICE_ACCOUNT_JSON` (o robô continua o mesmo)
+- ❌ Criar tabelas novas
+- ❌ Tocar em código
+
+### Se precisar, posso fazer depois
+
+- Diagnóstico dos cursos que ficaram "órfãos" depois do sync
+- Adicionar coluna de **código do curso** na planilha como chave alternativa de match (mais robusto que casar por nome)
+- Criar tela de "mapeamento" para vincular nome da planilha → curso do Hub manualmente
 
