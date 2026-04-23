@@ -1,62 +1,44 @@
 
 
-## Correção das 4 vulnerabilidades do scan
+## Conectar o hub ao GitHub
 
-Confirmei via scan + inspeção direta no banco. As duas "errors/warns" mais sérias são reais e abrem brecha hoje. Vou fechar todas.
+Você escolheu acessar o código via GitHub. Essa é a melhor opção para ter o repositório completo, com histórico de versões, e poder clonar/editar localmente.
 
-### Diagnóstico real (já validado no banco)
+### Como ativar (passo a passo no Lovable)
 
-| # | Severidade | Onde | Problema confirmado |
-|---|---|---|---|
-| 1 | 🔴 Error | `profiles` — policy `Users update own profile` | Sem `WITH CHECK` → usuário pode rodar `UPDATE profiles SET approved=true WHERE id=auth.uid()` e se auto-aprovar. **Brecha ativa.** |
-| 2 | 🟠 Warn (crítica) | `storage.objects` — bucket `course-covers` | Existem **3 policies duplicadas** (`Authenticated upload`, `Owner update`, `Owner delete`) que ignoram `is_approved()`. Como policies são OR, qualquer logado (mesmo não-aprovado) sobe arquivo na pasta `<uid>/`. |
-| 3 | 🟠 Warn | `storage.objects` — policy `Authenticated read course covers` | SELECT amplo permite `list()` de todos os arquivos do bucket. A leitura individual via URL pública continua funcionando pela policy `Public read individual course covers` (anon). |
-| 4 | 🟡 Warn | Extensão `pg_net` no schema `public` | Boa prática: mover para schema `extensions`. |
+A conexão com o GitHub **não é feita por código** — é feita pela interface do Lovable, com sua conta. Eu não consigo ativar isso por você. Mas é rápido:
 
-### O que NÃO é problema (apesar do prompt sugerir)
-- **"Raw Server Error Messages Exposed"** — não apareceu no scan. As edge functions atuais (`course-assistant`, `extract-course`, `sync-google-sheets`) já retornam mensagens genéricas no catch. Não vou mexer.
-- **Coluna `role` em `profiles`** — não existe. Roles vivem em `user_roles` com policy RESTRICTIVE (já segura). O prompt do usuário superestimou.
-- **Admin-only para upload de capas** — o padrão atual do app é "qualquer aprovado pode editar curso/capa". Não vou restringir só a admins (quebraria o fluxo); vou apenas garantir que **só aprovados** consigam, removendo as policies frouxas.
+**No desktop:**
+1. Canto superior direito do editor → ícone do **GitHub** (ou clique em **Share** → aba GitHub)
+2. Clique em **Connect to GitHub**
+3. Autorize o app **Lovable** na sua conta GitHub (vai abrir uma janela do GitHub)
+4. Escolha a organização/conta onde o repositório será criado
+5. Clique em **Create Repository**
 
----
+**No mobile:**
+1. Toque no botão `...` no canto inferior direito (modo Chat)
+2. Toque em **GitHub** → **Connect to GitHub**
+3. Mesmo fluxo de autorização
 
-## Plano de execução (1 migration SQL, sem mudanças de código frontend)
+### O que acontece depois de conectar
 
-### Migration única — corrige as 4 issues
+- Um repositório novo é criado na sua conta GitHub com **todo o código atual do hub** (src/, supabase/functions/, supabase/migrations/, configs, etc.)
+- **Sincronização bidirecional automática**: toda mudança que eu fizer aqui vai pro GitHub na hora, e qualquer commit que você fizer no GitHub volta pra cá
+- Você pode clonar localmente: `git clone <url-do-repo>`
+- Pode dar acesso à sua equipe pelas permissões normais do GitHub
 
-**A) Fecha auto-aprovação em `profiles`**
-- Drop policy `Users update own profile`
-- Recria com `USING (auth.uid()=id)` **+** `WITH CHECK (auth.uid()=id AND approved = (SELECT approved FROM profiles WHERE id=auth.uid()))` — bloqueia mudança da coluna `approved` por não-admin
-- Mantém `Admins update all profiles` intacta (admins continuam aprovando pelo painel)
+### O que NÃO vai pro GitHub (por segurança)
 
-**B) Limpa policies duplicadas do bucket `course-covers`**
-- Drop `Authenticated upload course covers`
-- Drop `Owner update course covers`
-- Drop `Owner delete course covers`
-- Sobram apenas as 3 policies que já exigem `is_approved(auth.uid())` (insert/update/delete) + a leitura
+- Secrets do Lovable Cloud (`LOVABLE_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`, chaves do Supabase) — continuam só no Cloud
+- Arquivos `.env` com valores reais — apenas o template
+- Conteúdo do banco de dados (tabelas, registros) — só as migrations SQL vão
 
-**C) Restringe listagem do bucket**
-- Drop `Authenticated read course covers` (SELECT amplo a authenticated)
-- A leitura via `<img src>` continua funcionando pela policy `Public read individual course covers` (já existente para `anon`)
-- Resultado: ninguém consegue mais `list()` o bucket; URLs públicas individuais seguem funcionando
+### Depois que conectar, me avisa
 
-**D) Move extensão `pg_net` para schema `extensions`**
-- `CREATE SCHEMA IF NOT EXISTS extensions;`
-- `ALTER EXTENSION pg_net SET SCHEMA extensions;`
+Se quiser, depois de conectado eu posso:
+- Configurar um workflow do GitHub Actions
+- Criar um README mais completo descrevendo a arquitetura do hub
+- Adicionar um `.github/CODEOWNERS` ou templates de PR
 
-### E) Marcar findings como resolvidos
-Após a migration aplicar, chamo `security--manage_security_finding` com `mark_as_fixed` para os 4 findings.
-
----
-
-## Resumo do impacto
-
-| Vulnerabilidade | Antes | Depois |
-|---|---|---|
-| Auto-aprovação de perfil | Qualquer user vira aprovado sozinho | Só admin altera `approved` |
-| Upload de capa por não-aprovado | Qualquer logado sobe arquivo | Só aprovados |
-| Listagem do bucket | Qualquer logado lista tudo | Bloqueado (URLs públicas seguem) |
-| `pg_net` no public | Warn no scanner | Movido para `extensions` |
-
-**Sem mudanças no frontend** — todos os fluxos atuais (admin aprova, aprovado edita curso/capa, `<img>` carrega capa) continuam funcionando idênticos.
+**Documentação oficial:** https://docs.lovable.dev/integrations/git-integration
 
