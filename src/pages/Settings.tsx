@@ -144,8 +144,11 @@ const Settings = () => {
                   <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
                     <div className="flex items-center gap-2 font-medium">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
-                      Última sincronização: {new Date(lastSync).toLocaleString("pt-BR")}
+                      Último resumo salvo: {new Date(lastSync).toLocaleString("pt-BR")}
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Este é o último resultado que foi gravado no banco. Se a sincronização atual falhar antes de terminar, este bloco continua mostrando o resumo anterior.
+                    </p>
                     {lastSummary?.processed && (
                       <div className="space-y-1">
                         {Object.entries(lastSummary.processed).map(([key, val]: [string, any]) => (
