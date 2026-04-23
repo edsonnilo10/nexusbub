@@ -1,129 +1,117 @@
 
 
-## Por que tudo aparece zerado
+## Plano: 5 correções no sync + UI de turmas órfãs
 
-Os dados **estão sincronizados no banco**:
-- `enrollments_by_class`: 44 linhas
-- `paid_students`: 243 linhas
-- `calendar_events`: 95 linhas
+### 1) Edge function `supabase/functions/sync-google-sheets/index.ts`
 
-Mas a UI mostra 0 porque o resumo (`useCursosResumo`) agrega **por `course_id`**, e **todas** as linhas de matrículas e pagos têm `course_id = NULL`. Sem o link com `courses.id`, nada é atribuído a nenhum curso → todos zerados.
-
-Há também um bug grosseiro no `paid_students`: `student_name` e `course_name` estão recebendo `"1.PAGO"` e datas (ex.: `08/03/2024`). Os índices de coluna estão pegando o cabeçalho errado.
-
-### Causas precisas
-
-| # | Onde | Problema |
-|---|---|---|
-| 1 | `processEnrollmentsTab` → `findCourse(courses, turmaCode, unit)` | Compara `"CM US CAVF.SP.2607.1"` com slug `"cm-us-cavf-bsb"`. Nunca casa. `course_id = NULL` em todas as 44 linhas. |
-| 2 | `processPaidStudentsTab` | `findIdx(header, ["status",...])` pode estar achando uma coluna chamada "status" antes de "STATUS DO ALUNO", e o `idxName` está pegando a coluna errada (resultado: `student_name = "1.PAGO"`, `course_name = "08/03/2024"`). |
-| 3 | `processPaidStudentsTab` → `findCourse(courses, courseName)` | Mesmo se `courseName` viesse certo, ele recebe a **TURMA** (ex.: `CM US CAVF.SP.2607.1`), não o nome do curso. Não casa com slug. |
-| 4 | `useCursosResumo` | Só agrega quando `course_id` existe. Como todos são NULL, mostra 0. |
-
-### Arquitetura de matching (TURMA → curso)
-
-Padrão observado nos dados:
-
-```text
-Turma: CM US CAVF.SP.2607.1   →  prefixo: "CM US CAVF" + unidade SP
-Turma: CM US CAVF.2604.1       →  prefixo: "CM US CAVF" + unidade DF (default)
-Slug:  cm-us-cavf-bsb           →  prefixo normalizado: "cmuscavf" + sufixo "bsb"
-Slug:  cm-us-giob-sp            →  prefixo normalizado: "cmusgiob" + sufixo "sp"
-```
-
-Regra: extrair o prefixo da TURMA até o primeiro ponto, normalizar (sem espaços/acentos/maiúsculas), e casar com o slug do curso filtrado pela unidade (`-sp` para SP, `-bsb` para DF).
-
-### O que será feito
-
-#### 1) `supabase/functions/sync-google-sheets/index.ts`
-
-Adicionar duas funções utilitárias:
-
+**a) Fallback DF na `unitFromTurma`**
+Mudar a chamada em `processPaidStudentsTab` (linha ~557) para usar `"brasilia"` como fallback:
 ```ts
-// "CM US CAVF.SP.2607.1" -> "cmuscavf"
-const turmaPrefix = (turma: string): string => {
-  const head = (turma || "").split(".")[0] || "";
-  return norm(head).replace(/\s+/g, "");
-};
+const derivedUnit = unitFromTurma(classLabel, "brasilia");
+```
+A própria função já aceita o fallback como parâmetro — só trocar o valor passado.
 
-// match por prefixo + sufixo de unidade no slug
-const findCourseByTurma = (courses: Course[], turma: string, unit: "sao_paulo" | "brasilia") => {
-  const prefix = turmaPrefix(turma);
+**b) Preferir `courses.mnemonic` no `findCourseByTurma`**
+Atualizar a função para, antes de calcular o mnemônico via slug, comparar com `course.mnemonic` (quando preenchido):
+```ts
+const findCourseByTurma = (courses, turma, unit) => {
+  const prefix = turmaPrefix(turma); // "cmusmesq"
   if (!prefix) return undefined;
-  const suffix = unit === "brasilia" ? "bsb" : "sp";
-  // 1) preferir match exato com sufixo da unidade
-  const exact = courses.find((c) => {
-    const slugStripped = norm(c.slug || "").replace(/-/g, "");
-    return slugStripped.startsWith(prefix) && slugStripped.endsWith(suffix);
+  
+  // 1) match por mnemonic explícito (prioridade)
+  const byMnemonic = courses.find((c) => {
+    if (!c.mnemonic) return false;
+    return norm(c.mnemonic).replace(/\s+/g, "") === prefix && c.unit === unit;
   });
-  if (exact) return exact;
-  // 2) fallback: qualquer curso da mesma unit cujo slug comece com o prefixo
-  return courses.find((c) => {
-    if (c.unit !== unit) return false;
-    const slugStripped = norm(c.slug || "").replace(/-/g, "");
-    return slugStripped.startsWith(prefix);
+  if (byMnemonic) return byMnemonic;
+  
+  // 2) fallback mnemonic em qualquer unit
+  const byMnemonicAnyUnit = courses.find((c) => {
+    if (!c.mnemonic) return false;
+    return norm(c.mnemonic).replace(/\s+/g, "") === prefix;
   });
+  if (byMnemonicAnyUnit) return byMnemonicAnyUnit;
+  
+  // 3) fallback antigo: slug stripped (lógica atual)
+  // ...
 };
 ```
 
-**Em `processEnrollmentsTab`**: trocar `findCourse(courses, turmaCode, unit)` por `findCourseByTurma(courses, turmaCode, unit)`.
+**c) Coletor de turmas órfãs (`unmatched_turmas`)**
+Criar um `Map<string, { prefix, quantidade, exemplo }>` no escopo do `processPaidStudentsTab` e `processEnrollmentsTab`. Sempre que `findCourseByTurma` retornar `undefined`, incrementar contagem. Agregar globalmente e retornar no JSON:
+```ts
+{
+  ok: true,
+  processed: { ... },
+  unmatched_turmas: [
+    { prefix: "cmusinme", quantidade: 191, exemplo: "CM US INME.SP.2607.1" },
+    { prefix: "cmusmor1", quantidade: 50, exemplo: "CM US MOR1.2603.1" },
+    ...
+  ]
+}
+```
 
-**Em `processPaidStudentsTab`**:
-- Tornar a busca de cabeçalho mais estrita: `idxName` precisa ser uma coluna cujo conteúdo seja exatamente "NOME"/"ALUNO" (rejeitando "STATUS DO ALUNO"); `idxStatus` precisa preferir "STATUS DO ALUNO".
-- Derivar `unit` da TURMA: se o segundo segmento depois do ponto for `SP` → SP, senão DF (alinhado com a planilha GR).
-- Passar a usar `findCourseByTurma(courses, classLabel, derivedUnit)` em vez de `findCourse(courses, courseName)`.
-- Logar amostra das primeiras 3 linhas processadas (`student_name`, `class_label`, `course_id`) para confirmar que parou de gravar `"1.PAGO"`.
+**d) Log de falhas de matching**
+Para cada prefixo órfão (uma amostra por prefixo, não por linha), logar:
+```ts
+console.log(`[match-fail] turma="${turma}" prefix="${prefix}" derivedUnit="${unit}" anyCourseWithPrefix=${found ? found.slug : 'NONE'}`);
+```
 
-#### 2) Limpar dados sujos antes do próximo sync
-
-Migration única que apaga linhas claramente quebradas dos pagos (onde `student_name` ou `course_name` contém apenas `"1.PAGO"` ou bate o regex de data `dd/mm/yyyy`). Isso evita que esses 243 lixos fiquem ocupando as UNIQUE keys e atrapalhem o re-upsert:
+### 2) Migration: coluna `mnemonic` em `courses`
 
 ```sql
-DELETE FROM public.paid_students
-WHERE student_name IN ('1.PAGO', '2.PAGO', '0.PAGO')
-   OR course_name ~ '^\d{2}/\d{2}/\d{4}$';
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS mnemonic TEXT;
+COMMENT ON COLUMN public.courses.mnemonic IS 'Código curto usado na planilha antes do primeiro ponto. Ex: CM US MESQ para turmas CM US MESQ.2601.1';
 ```
 
-Dados de `enrollments_by_class` ficam — vão ser **atualizados** pelo upsert (mesma chave) com `course_id` preenchido.
+(Sem dado obrigatório — usuário preenche pela UI conforme aprende quais cursos precisam.)
 
-#### 3) Re-rodar o sync
+### 3) Campo `mnemonic` no `CourseEditor`
 
-Após o deploy da edge function corrigida e da migration, basta clicar **Sincronizar agora**. Como o `onConflict` já está com UNIQUE batendo, o upsert vai sobrescrever as 44 linhas existentes de enrollments preenchendo `course_id`, e vai inserir os pagos corretamente.
+Em `src/pages/CourseEditor.tsx`, adicionar input texto opcional "Mnemônico (código da planilha)" com helper text:
+> "Código usado na planilha antes do primeiro ponto. Ex: `CM US MESQ` para turmas `CM US MESQ.2601.1`. Deixe em branco para usar detecção automática pelo slug."
 
-### O que NÃO vou mexer
+Salvar em `courses.mnemonic` no submit.
 
-- Schema das tabelas (UNIQUE constraints já estão certas).
-- `useCursosResumo` (a lógica está correta — só falta `course_id` nos dados).
-- Estrutura da planilha.
-- Matching de abas (já está OK conforme logs).
+### 4) UI de "Turmas sem curso vinculado" em `Settings`
 
-### Resultado esperado
+Em `src/pages/Settings.tsx`, ler `lastSummary.unmatched_turmas` e renderizar uma seção nova abaixo do resumo de sync:
 
-Depois do sync corrigido:
-- `enrollments_by_class.course_id` preenchido nas 44 linhas (ou mais).
-- `paid_students` com `student_name` real, `class_label` real e `course_id` preenchido.
-- Tela "Cursos" deixa de mostrar tudo zerado.
-- Dashboard global passa a contar matriculados/pagos por curso e por unidade.
+```
+┌─ Turmas sem curso vinculado (5) ────────────────┐
+│ cmusinme   191 alunos   CM US INME.SP.2607.1   │
+│ cmusmor1    50 alunos   CM US MOR1.2603.1      │
+│ ...                                              │
+└──────────────────────────────────────────────────┘
+Cadastre o curso ou preencha o "Mnemônico" no editor 
+do curso correspondente para resolver.
+```
+
+### 5) Re-rodar sync automaticamente
+
+Após o deploy da edge function corrigida + migration, disparar `supabase.functions.invoke("sync-google-sheets")` automaticamente uma vez (ou instruir o usuário a clicar em "Sincronizar agora"). Isso repopula `course_id` nas linhas existentes via `onConflict` UPDATE.
+
+---
+
+### Arquivos tocados
+
+| Arquivo | Mudança |
+|---|---|
+| `supabase/functions/sync-google-sheets/index.ts` | fallback DF + preferir mnemonic + coletor órfãos + logs |
+| migration | `ALTER TABLE courses ADD COLUMN mnemonic TEXT` |
+| `src/pages/CourseEditor.tsx` | input "Mnemônico" + persistência |
+| `src/pages/Settings.tsx` | bloco "Turmas sem curso vinculado" |
 
 ### Validação
 
-1. `Sincronizar agora` na UI.
-2. Conferir nos logs:
-   - `[processEnrollmentsTab]`: amostra mostrando `course_id` não-nulo.
-   - `[processPaidStudentsTab]`: amostra mostrando nomes de alunos reais.
-3. Conferir SQL:
+1. Após o sync, inspecionar `lastSummary.unmatched_turmas` na UI.
+2. Conferir nos Edge Function Logs as linhas `[match-fail]` para cada prefixo órfão.
+3. Checar SQL:
    ```sql
    SELECT count(*) FILTER (WHERE course_id IS NOT NULL) AS com_curso,
           count(*) AS total
-   FROM enrollments_by_class;
+   FROM paid_students;
    ```
-4. Conferir UI: tela "Cursos" mostra `Pagos`, `Pré`, `Total` > 0.
-
-### Próximo passo (modo default)
-
-| Ação | Ferramenta |
-|---|---|
-| Adicionar `turmaPrefix` + `findCourseByTurma` e plugar em `processEnrollmentsTab` | code--line_replace |
-| Endurecer headers e usar TURMA para casar curso em `processPaidStudentsTab` | code--line_replace |
-| Migration para limpar `paid_students` com lixo `"1.PAGO"`/datas | migration tool |
+4. Esperado: ~54% → ~85%+ com `course_id` preenchido só com o Passo 1.
+5. Após cadastrar mnemônicos pelos órfãos top (MIFE, INME, MOR1/MOR2, etc.) → >95%.
 
