@@ -6,7 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { CourseFull, CourseModule, CourseClass, courseTypeLabel, unitLabel } from "@/lib/courseHelpers";
+import { CourseFull, CourseModule, CourseClass, courseTypeLabel, unitLabel, isComboCourse } from "@/lib/courseHelpers";
 import { CourseInfoTab } from "@/components/course/CourseInfoTab";
 import { CourseLandingTab } from "@/components/course/CourseLandingTab";
 import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
@@ -15,6 +15,7 @@ import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
 import { CourseEnrollmentsTab } from "@/components/course/CourseEnrollmentsTab";
 import { CourseOperationsTab } from "@/components/course/CourseOperationsTab";
+import { ComboTabs } from "@/components/course/ComboTabs";
 import { loadCourseClasses } from "@/lib/classGroupsResolver";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -28,6 +29,7 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<CourseFull | null>(null);
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [classes, setClasses] = useState<CourseClass[]>([]);
+  const [comboComponentIds, setComboComponentIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,10 +38,11 @@ const CourseDetail = () => {
 
   const load = async (courseId: string) => {
     setLoading(true);
-    const [{ data: c }, { data: m }, cls] = await Promise.all([
+    const [{ data: c }, { data: m }, cls, { data: rules }] = await Promise.all([
       supabase.from("courses").select("*").eq("id", courseId).maybeSingle(),
       supabase.from("course_modules").select("*").eq("course_id", courseId),
       loadCourseClasses(courseId),
+      supabase.from("course_combo_rules").select("trigger_course_ids").eq("combo_course_id", courseId).eq("active", true),
     ]);
     if (!c) {
       toast({ title: "Curso não encontrado", variant: "destructive" });
@@ -50,6 +53,8 @@ const CourseDetail = () => {
     setCourse(c as CourseFull);
     setModules((m as CourseModule[]) || []);
     setClasses(cls);
+    const triggerIds = (rules || []).flatMap((r: any) => r.trigger_course_ids || []);
+    setComboComponentIds(Array.from(new Set(triggerIds)));
     setLoading(false);
   };
 
@@ -154,7 +159,16 @@ const CourseDetail = () => {
             <CourseProposal course={course} modules={modules} classes={classes} />
           </TabsContent>
           <TabsContent value="info" className="mt-4 sm:mt-6">
-            <CourseInfoTab course={course} modules={modules} classes={classes} />
+            {(isComboCourse(course) || comboComponentIds.length > 0) ? (
+              <ComboTabs
+                combo={course}
+                comboModules={modules}
+                comboClasses={classes}
+                componentCourseIds={comboComponentIds}
+              />
+            ) : (
+              <CourseInfoTab course={course} modules={modules} classes={classes} />
+            )}
           </TabsContent>
           <TabsContent value="classes" className="mt-4 sm:mt-6">
             <CourseClassesTab course={course} classes={classes} onChange={setClasses} />

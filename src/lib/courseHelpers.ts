@@ -116,6 +116,13 @@ const MONTHS_PT_LONG = [
 ];
 
 /** Ex.: "18 a 20 de Junho de 2026" / "30 de Junho a 02 de Julho de 2026" */
+/** Heurística: o curso é um combo? */
+export const isComboCourse = (course: Pick<CourseFull, "name" | "slug">): boolean => {
+  const n = (course.name || "").toLowerCase();
+  const s = (course.slug || "").toLowerCase();
+  return n.includes(" + ") || s.includes("combo") || s.startsWith("basico-giob-trvg");
+};
+
 export const formatClassDateRange = (start: string | null, end: string | null): string => {
   if (!start) return "—";
   const s = new Date(start + "T00:00:00");
