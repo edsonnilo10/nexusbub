@@ -187,7 +187,7 @@ const matchTab = (tabs: SheetMeta[], wanted: string[]): SheetMeta | null => {
 };
 
 // ---------- per-tab processors ----------
-type Course = { id: string; name: string; unit: string };
+type Course = { id: string; name: string; unit: "sao_paulo" | "brasilia"; slug: string | null };
 const findCourse = (
   courses: Course[],
   name: string,
