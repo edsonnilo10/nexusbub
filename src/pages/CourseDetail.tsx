@@ -159,7 +159,16 @@ const CourseDetail = () => {
             <CourseProposal course={course} modules={modules} classes={classes} />
           </TabsContent>
           <TabsContent value="info" className="mt-4 sm:mt-6">
-            <CourseInfoTab course={course} modules={modules} classes={classes} />
+            {(isComboCourse(course) || comboComponentIds.length > 0) ? (
+              <ComboTabs
+                combo={course}
+                comboModules={modules}
+                comboClasses={classes}
+                componentCourseIds={comboComponentIds}
+              />
+            ) : (
+              <CourseInfoTab course={course} modules={modules} classes={classes} />
+            )}
           </TabsContent>
           <TabsContent value="classes" className="mt-4 sm:mt-6">
             <CourseClassesTab course={course} classes={classes} onChange={setClasses} />
