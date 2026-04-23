@@ -61,7 +61,11 @@ const Settings = () => {
     const { data, error } = await supabase.functions.invoke("sync-google-sheets", { body: {} });
     setSyncing(false);
     if (error) {
-      toast({ title: "Erro ao sincronizar", description: "Falha ao chamar a sincronização. Tente novamente.", variant: "destructive" });
+      toast({
+        title: "Erro ao sincronizar",
+        description: error.message || "Falha ao chamar a sincronização. Veja os logs do backend.",
+        variant: "destructive",
+      });
       return;
     }
     if (data?.error) {
@@ -73,9 +77,11 @@ const Settings = () => {
     const processed = data.processed || {};
     const totalRows = Object.values(processed).reduce((acc: number, p: any) => acc + (p.inserted || 0), 0);
     const tabsOk = Object.keys(processed).length;
+    const totalErrors = Object.values(processed).reduce((acc: number, p: any) => acc + (p.errors?.length || 0), 0);
     toast({
-      title: "Sincronização concluída",
-      description: `${tabsOk} aba(s) processada(s) · ${totalRows} registro(s) atualizado(s)`,
+      title: totalErrors > 0 ? "Sincronização concluída com avisos" : "Sincronização concluída",
+      description: `${tabsOk} aba(s) processada(s) · ${totalRows} registro(s) atualizado(s)${totalErrors > 0 ? ` · ${totalErrors} erro(s)` : ""}`,
+      variant: totalErrors > 0 ? "destructive" : "default",
     });
   };
 
