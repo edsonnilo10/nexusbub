@@ -1,62 +1,115 @@
 
-
-## Corrigir matching de abas no `sync-google-sheets`
+## Fazer o sync parar de estourar no meio e parar de mostrar relatório velho
 
 ### Diagnóstico
 
-O log do último sync mostra que a planilha **tem todas as 5 abas certas**:
-- `(GR)BASE(PREENCHER AQUI)` ✓
-- `(DF)TURMAS COM MATRICULADOS e PRÉ 2026` ✓
-- `(SP)TURMAS COM MATRICULADOS e PRÉ 2026` ✓
-- `(DF)CALENDARIO 2026` ✓
-- `(SP)CALENDARIO 2026 SP` ✓
+O problema agora não parece mais ser o matching das abas.
 
-Mas:
-- **Brasília** e **São Paulo** estão sendo casadas com `(DF)CONTROLE GERAL - BRASILIA(NÃO MEXER)` e `(SP)CONTROLE GERAL SÃO PAULO(NÃO MEXER)` (abas erradas, sem as colunas esperadas → "1 erro").
-- **GR base, Calendário SP, Calendário DF**: aparecem como `missing_tabs` mesmo existindo na planilha.
+Os logs mais recentes do backend mostram que:
+- a função já está vendo as abas corretas;
+- o novo `matchTab` já encontrou corretamente `"(GR)BASE(PREENCHER AQUI)"`;
+- o print da tela ainda mostra o relatório antigo das 16:41, ou seja: o sync novo falha **antes de salvar um novo `last_sync_summary`**.
 
-Causa: a função `matchTab` faz duas passadas — exato e depois `includes` em qualquer direção. Quando o pass exato falha (provavelmente por espaço duplo ou caractere invisível dentro do título real), o fallback `includes` pega qualquer aba que contenha um pedaço pequeno de algum alias. Aliases curtos como `"turmas df 2026"` casam com várias abas erradas.
+Isso indica que o erro atual acontece **durante o processamento**, não na descoberta das abas. O ponto mais provável é timeout/cancelamento da função, porque o código ainda faz muitos `upsert`s linha por linha, principalmente na aba **GR base**.
 
-E o erro do toast "Falha ao chamar a sincronização" pode ser apenas reflexo visual do `1 erro(s)` — a função não está crashando.
+### O que será implementado
 
-### Mudanças (1 arquivo só)
+#### 1) Otimizar a função `sync-google-sheets` para processar em lote
+Arquivo:
+- `supabase/functions/sync-google-sheets/index.ts`
 
-**`supabase/functions/sync-google-sheets/index.ts`**
+Mudanças:
+- trocar os `upsert`s por linha por `upsert`s em lote, em chunks;
+- aplicar isso nos 3 processadores:
+  - `processPaidStudentsTab`
+  - `processEnrollmentsTab`
+  - `processCalendarTab`
+- manter os mesmos dados e chaves de conflito, mas reduzir drasticamente o número de round-trips ao banco.
 
-1. **Reescrever `matchTab`** para ser mais robusto e mais estrito:
-   - Normalizar agora também colapsa espaços múltiplos, remove zero-width chars (`\u200b`, `\u200c`, `\ufeff`), e mantém o `lower + strip diacritics + trim` atual.
-   - **Pass 1**: igualdade exata após normalização (mantém).
-   - **Pass 2**: igualdade após remover **toda pontuação e espaços** (cobre `(DF)CALENDARIO 2026` vs `dfcalendario2026`, espaço duplo, etc).
-   - **Pass 3 (fallback restrito)**: `title.startsWith(alias)` OU `alias.startsWith(title)`, exigindo overlap mínimo de 12 caracteres na versão sem pontuação. Isso evita que `"turmas df 2026"` case com `"controle geral df ..."`.
-   - Sem mais `includes` em qualquer direção sem restrição de tamanho.
+Objetivo:
+- evitar timeout no meio da execução;
+- permitir que a função chegue ao fim e grave o resumo novo.
 
-2. **Limpar aliases redundantes** que viraram fonte de falso-positivo: tirar os curtinhos (`"turmas df 2026"`, `"matriculados df 2026"`, `"calendario df 2026"`, etc.) e manter só os nomes reais + 1-2 variações de acento. Os 5 nomes exatos da planilha são:
-   - `(GR)BASE(PREENCHER AQUI)`
-   - `(DF)TURMAS COM MATRICULADOS e PRÉ 2026`
-   - `(SP)TURMAS COM MATRICULADOS e PRÉ 2026`
-   - `(DF)CALENDARIO 2026`
-   - `(SP)CALENDARIO 2026 SP`
+#### 2) Adicionar logs de progresso por aba
+No mesmo arquivo:
+- logar início e fim de cada target;
+- logar quantidade de linhas lidas;
+- logar quantos registros foram preparados e quantos foram persistidos por lote.
 
-3. **Logar** os `tabs_found` normalizados e as tentativas de match no console pra facilitar debug futuro (vai pro Edge Function Logs, não pro UI).
+Objetivo:
+- identificar exatamente onde a execução para, se ainda houver falha;
+- diferenciar “aba ignorada”, “aba vazia”, “erro de colunas” e “timeout”.
 
-### O que NÃO vou fazer
+#### 3) Manter o filtro estrito só para as 5 abas esperadas
+No mesmo arquivo:
+- preservar a lógica atual de ignorar qualquer aba fora desta lista:
+  - `(GR)BASE(PREENCHER AQUI)`
+  - `(DF)CALENDARIO 2026`
+  - `(SP)CALENDARIO 2026 SP`
+  - `(DF)TURMAS COM MATRICULADOS E PRÉ 2026`
+  - `(SP)TURMAS COM MATRICULADOS E PRÉ 2026`
 
-- Não vou mexer nos handlers (`processCalendarTab`, `processEnrollmentsTab`, `processPaidStudentsTab`) — eles vão funcionar assim que o match certo chegar até eles.
-- Não vou mexer no Settings.tsx nem no toast — o "Erro ao sincronizar" some sozinho quando `processed` parar de ter erros.
-- Não vou mexer em secret nem em planilha (já estão OK).
+Objetivo:
+- garantir que abas como `CONTROLE GERAL` continuem 100% fora do processamento.
 
-### Riscos
+#### 4) Melhorar a mensagem de erro no frontend
+Arquivo:
+- `src/pages/Settings.tsx`
 
-| Risco | Mitigação |
-|---|---|
-| Match novo ainda não pegar alguma das 5 abas | Pass 2 (sem pontuação) é bem permissivo pra acentos/espaços; se ainda assim falhar, o log no console mostra exatamente o título recebido |
-| Algum dos handlers falhar com erro real (não de header) | Vai aparecer em `processed[key].errors` como antes — não silencia erros legítimos |
+Mudanças:
+- parar de mostrar só `Falha ao chamar a sincronização. Tente novamente.`;
+- exibir `error.message` quando existir;
+- diferenciar erro do backend de erro retornado no payload.
 
-### Próximo passo (modo default)
+Objetivo:
+- quando der problema, você ver o motivo real em vez de um toast genérico.
 
-| Ação | Ferramenta |
-|---|---|
-| Reescrever `matchTab` + ajustar `targets` em `supabase/functions/sync-google-sheets/index.ts` | code--line_replace |
+#### 5) Evitar confusão com resumo antigo na tela
+Arquivo:
+- `src/pages/Settings.tsx`
 
-Depois você roda **Sincronizar agora** e me manda o resultado.
+Mudanças:
+- indicar que o bloco exibido é o “último resumo salvo”;
+- se a chamada atual falhar, manter isso explícito para não parecer que aquele relatório acabou de ser gerado.
 
+Objetivo:
+- evitar leitura enganosa de erros antigos como se fossem do sync atual.
+
+### Resultado esperado
+
+Depois da implementação:
+- o sync deve completar sem travar na aba `GR base`;
+- o resumo salvo deve ser atualizado com a execução mais recente;
+- as abas `CONTROLE GERAL` continuam ignoradas;
+- se ainda houver erro real, ele aparecerá com mensagem útil.
+
+### Arquivos que serão alterados
+
+- `supabase/functions/sync-google-sheets/index.ts`
+- `src/pages/Settings.tsx`
+
+### Detalhes técnicos
+
+```text
+Hoje:
+GR base -> milhares de upserts individuais -> função pode morrer antes do fim
+
+Depois:
+GR base -> monta array de registros -> envia em chunks (ex. 200/500 por vez) -> termina dentro do tempo
+```
+
+- O matching estrito das 5 abas será mantido.
+- O foco da correção muda de “descobrir a aba certa” para “processar sem timeout”.
+- Não será criada nova função backend.
+- Não será alterada a estrutura da planilha.
+
+### Validação após implementar
+
+1. Rodar `Sincronizar agora`
+2. Confirmar nos logs:
+   - início e fim de cada uma das 5 abas
+   - nenhum travamento após `GR base`
+3. Confirmar na UI:
+   - novo horário em `Última sincronização`
+   - sem toast genérico
+   - sem erros das abas `CONTROLE GERAL`
