@@ -77,7 +77,7 @@ const Settings = () => {
     const processed = data.processed || {};
     const totalRows = Object.values(processed).reduce((acc: number, p: any) => acc + (p.inserted || 0), 0);
     const tabsOk = Object.keys(processed).length;
-    const totalErrors = Object.values(processed).reduce((acc: number, p: any) => acc + (p.errors?.length || 0), 0);
+    const totalErrors = Object.values(processed).reduce((acc: number, p: any) => acc + (p.errors?.length || 0), 0) as number;
     toast({
       title: totalErrors > 0 ? "Sincronização concluída com avisos" : "Sincronização concluída",
       description: `${tabsOk} aba(s) processada(s) · ${totalRows} registro(s) atualizado(s)${totalErrors > 0 ? ` · ${totalErrors} erro(s)` : ""}`,
