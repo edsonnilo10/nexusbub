@@ -1,52 +1,62 @@
 
 
-## Reenviar o JSON COMPLETO no secret `GOOGLE_SERVICE_ACCOUNT_JSON`
+## Corrigir matching de abas no `sync-google-sheets`
 
-### Diagnóstico (logs do backend agora)
+### Diagnóstico
 
-```
-SyntaxError: Unexpected token 'c', "ca3825b7d5"... is not valid JSON
-```
+O log do último sync mostra que a planilha **tem todas as 5 abas certas**:
+- `(GR)BASE(PREENCHER AQUI)` ✓
+- `(DF)TURMAS COM MATRICULADOS e PRÉ 2026` ✓
+- `(SP)TURMAS COM MATRICULADOS e PRÉ 2026` ✓
+- `(DF)CALENDARIO 2026` ✓
+- `(SP)CALENDARIO 2026 SP` ✓
 
-O valor salvo no secret é só `ca3825b7d5...` — isso é o `private_key_id` (um pedacinho do meio do arquivo), não o JSON inteiro. Por isso o `JSON.parse` quebra na primeira linha. **Compartilhar a planilha com o robô não resolve isso** — a função nem chega lá, ela falha antes de qualquer chamada ao Google.
+Mas:
+- **Brasília** e **São Paulo** estão sendo casadas com `(DF)CONTROLE GERAL - BRASILIA(NÃO MEXER)` e `(SP)CONTROLE GERAL SÃO PAULO(NÃO MEXER)` (abas erradas, sem as colunas esperadas → "1 erro").
+- **GR base, Calendário SP, Calendário DF**: aparecem como `missing_tabs` mesmo existindo na planilha.
 
-### O que vai ser feito
+Causa: a função `matchTab` faz duas passadas — exato e depois `includes` em qualquer direção. Quando o pass exato falha (provavelmente por espaço duplo ou caractere invisível dentro do título real), o fallback `includes` pega qualquer aba que contenha um pedaço pequeno de algum alias. Aliases curtos como `"turmas df 2026"` casam com várias abas erradas.
 
-No próximo turno (modo default), vou disparar **uma nova atualização** do secret `GOOGLE_SERVICE_ACCOUNT_JSON` com o **JSON inteiro** que você colou no chat anteriormente — do `{` inicial até o `}` final, com todas as chaves (`type`, `project_id`, `private_key_id`, `private_key` com `\n`, `client_email`, etc.).
+E o erro do toast "Falha ao chamar a sincronização" pode ser apenas reflexo visual do `1 erro(s)` — a função não está crashando.
 
-| Ação | Ferramenta |
-|---|---|
-| Sobrescrever `GOOGLE_SERVICE_ACCOUNT_JSON` com o JSON completo | `update_secret` |
+### Mudanças (1 arquivo só)
 
-### Importante na hora de aprovar o secret
+**`supabase/functions/sync-google-sheets/index.ts`**
 
-Quando o painel abrir pedindo o valor, **cole exatamente o conteúdo entre `{` e `}` (inclusive)** — o arquivo inteiro. Não cole só o `private_key_id`, nem só a `private_key`, nem só o `client_email`. Tem que ser o objeto JSON inteiro.
+1. **Reescrever `matchTab`** para ser mais robusto e mais estrito:
+   - Normalizar agora também colapsa espaços múltiplos, remove zero-width chars (`\u200b`, `\u200c`, `\ufeff`), e mantém o `lower + strip diacritics + trim` atual.
+   - **Pass 1**: igualdade exata após normalização (mantém).
+   - **Pass 2**: igualdade após remover **toda pontuação e espaços** (cobre `(DF)CALENDARIO 2026` vs `dfcalendario2026`, espaço duplo, etc).
+   - **Pass 3 (fallback restrito)**: `title.startsWith(alias)` OU `alias.startsWith(title)`, exigindo overlap mínimo de 12 caracteres na versão sem pontuação. Isso evita que `"turmas df 2026"` case com `"controle geral df ..."`.
+   - Sem mais `includes` em qualquer direção sem restrição de tamanho.
 
-Se ajudar, este é o formato esperado (resumido):
-```json
-{
-  "type": "service_account",
-  "project_id": "firm-capsule-439815-k9",
-  "private_key_id": "ca3825b7d5...",
-  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  "client_email": "bot-planilha@firm-capsule-439815-k9.iam.gserviceaccount.com",
-  ...
-}
-```
+2. **Limpar aliases redundantes** que viraram fonte de falso-positivo: tirar os curtinhos (`"turmas df 2026"`, `"matriculados df 2026"`, `"calendario df 2026"`, etc.) e manter só os nomes reais + 1-2 variações de acento. Os 5 nomes exatos da planilha são:
+   - `(GR)BASE(PREENCHER AQUI)`
+   - `(DF)TURMAS COM MATRICULADOS e PRÉ 2026`
+   - `(SP)TURMAS COM MATRICULADOS e PRÉ 2026`
+   - `(DF)CALENDARIO 2026`
+   - `(SP)CALENDARIO 2026 SP`
 
-### Depois que o secret for salvo corretamente
-
-1. Você volta em **Configurações** → **Sincronizar agora**
-2. Se der erro 403 do Google → faltou compartilhar a planilha com `bot-planilha@firm-capsule-439815-k9.iam.gserviceaccount.com` como Leitor
-3. Se der OK → ver o relatório de abas processadas
-
-### Lembrete de segurança (continua valendo)
-
-A chave `ca3825b7d5...` foi exposta no chat. Depois que o sync funcionar, **revogar essa chave** no Google Cloud (IAM → Contas de serviço → bot-planilha → Chaves) e gerar uma nova. Aí me avisa pra eu atualizar o secret de novo.
+3. **Logar** os `tabs_found` normalizados e as tentativas de match no console pra facilitar debug futuro (vai pro Edge Function Logs, não pro UI).
 
 ### O que NÃO vou fazer
 
-- Não vou mexer em código
-- Não vou criar Edge Function nova
-- Não vou rodar o sync (precisa ser pela UI)
+- Não vou mexer nos handlers (`processCalendarTab`, `processEnrollmentsTab`, `processPaidStudentsTab`) — eles vão funcionar assim que o match certo chegar até eles.
+- Não vou mexer no Settings.tsx nem no toast — o "Erro ao sincronizar" some sozinho quando `processed` parar de ter erros.
+- Não vou mexer em secret nem em planilha (já estão OK).
+
+### Riscos
+
+| Risco | Mitigação |
+|---|---|
+| Match novo ainda não pegar alguma das 5 abas | Pass 2 (sem pontuação) é bem permissivo pra acentos/espaços; se ainda assim falhar, o log no console mostra exatamente o título recebido |
+| Algum dos handlers falhar com erro real (não de header) | Vai aparecer em `processed[key].errors` como antes — não silencia erros legítimos |
+
+### Próximo passo (modo default)
+
+| Ação | Ferramenta |
+|---|---|
+| Reescrever `matchTab` + ajustar `targets` em `supabase/functions/sync-google-sheets/index.ts` | code--line_replace |
+
+Depois você roda **Sincronizar agora** e me manda o resultado.
 
