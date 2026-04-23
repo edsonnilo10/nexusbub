@@ -29,6 +29,7 @@ const CourseDetail = () => {
   const [course, setCourse] = useState<CourseFull | null>(null);
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [classes, setClasses] = useState<CourseClass[]>([]);
+  const [comboComponentIds, setComboComponentIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,10 +38,11 @@ const CourseDetail = () => {
 
   const load = async (courseId: string) => {
     setLoading(true);
-    const [{ data: c }, { data: m }, cls] = await Promise.all([
+    const [{ data: c }, { data: m }, cls, { data: rules }] = await Promise.all([
       supabase.from("courses").select("*").eq("id", courseId).maybeSingle(),
       supabase.from("course_modules").select("*").eq("course_id", courseId),
       loadCourseClasses(courseId),
+      supabase.from("course_combo_rules").select("trigger_course_ids").eq("combo_course_id", courseId).eq("active", true),
     ]);
     if (!c) {
       toast({ title: "Curso não encontrado", variant: "destructive" });
@@ -51,6 +53,8 @@ const CourseDetail = () => {
     setCourse(c as CourseFull);
     setModules((m as CourseModule[]) || []);
     setClasses(cls);
+    const triggerIds = (rules || []).flatMap((r: any) => r.trigger_course_ids || []);
+    setComboComponentIds(Array.from(new Set(triggerIds)));
     setLoading(false);
   };
 
