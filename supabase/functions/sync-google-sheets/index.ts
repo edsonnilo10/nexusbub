@@ -457,24 +457,57 @@ const processPaidStudentsTab = async (
   const c: UpsertCounters = { inserted: 0, updated: 0, errors: [] };
   if (values.length < 2) return c;
   const header = values[0];
-  const idxName = findIdx(header, ["aluno", "nome", "student", "participante"]);
-  const idxCourse = findIdx(header, ["curso", "course"]);
-  const idxClass = findIdx(header, ["turma", "class"]);
-  const idxStatus = findIdx(header, ["status", "pagamento", "situacao"]);
-  const idxContract = findIdx(header, ["contrato", "contract"]);
-  const idxAmount = findIdx(header, ["valor", "amount", "preco", "preço"]);
-  const idxPayDate = findIdx(header, ["data pagamento", "data pago", "pagamento", "data"]);
-  const idxStart = findIdx(header, ["inicio", "início", "start"]);
-  const idxEmail = findIdx(header, ["email", "e-mail"]);
-  const idxPhone = findIdx(header, ["telefone", "celular", "whatsapp", "phone"]);
-  const idxNotes = findIdx(header, ["obs", "observa", "notes"]);
-  if (idxName < 0 || idxStatus < 0) {
-    c.errors.push(`Aba "${tabTitle}": colunas Aluno/Status não encontradas`);
+  const headerN = header.map((h) => norm(h || ""));
+
+  // Header detection STRICT: campos comuns precisam ser exatos (não substring),
+  // para não confundir "STATUS DO ALUNO" com "ALUNO" ou "STATUS".
+  const exactIdx = (cands: string[]): number => {
+    const cs = cands.map(norm);
+    for (let i = 0; i < headerN.length; i++) {
+      if (cs.includes(headerN[i])) return i;
+    }
+    return -1;
+  };
+  const containsIdx = (cands: string[], reject: string[] = []): number => {
+    const cs = cands.map(norm);
+    const rj = reject.map(norm);
+    for (let i = 0; i < headerN.length; i++) {
+      const h = headerN[i];
+      if (!h) continue;
+      if (rj.some((r) => h.includes(r))) continue;
+      if (cs.some((cn) => h === cn || h.includes(cn))) return i;
+    }
+    return -1;
+  };
+
+  // ALUNO/NOME — exigir match exato e rejeitar "status do aluno"
+  let idxName = exactIdx(["aluno", "nome", "nome do aluno", "participante", "student"]);
+  if (idxName < 0) idxName = containsIdx(["nome do aluno", "nome aluno"], ["status"]);
+  // STATUS — preferir "status do aluno"
+  let idxStatus = exactIdx(["status do aluno", "status aluno"]);
+  if (idxStatus < 0) idxStatus = containsIdx(["status do aluno"]);
+  if (idxStatus < 0) idxStatus = exactIdx(["status"]);
+
+  const idxCourse = containsIdx(["curso", "course"], ["status", "valor"]);
+  const idxClass = exactIdx(["turma", "class"]);
+  const idxContract = containsIdx(["contrato", "contract"]);
+  const idxAmount = containsIdx(["valor pago", "valor", "amount"]);
+  const idxPayDate = containsIdx(["1º pagamento", "1 pagamento", "data pagamento", "data pago", "pagto"]);
+  const idxStart = containsIdx(["mes(inicio)", "mes inicio", "mês(inicio)", "mês inicio", "inicio", "início", "start"], ["status"]);
+  const idxEmail = containsIdx(["email", "e-mail"]);
+  const idxPhone = containsIdx(["telefone", "celular", "whatsapp", "phone"]);
+  const idxNotes = containsIdx(["informe secretaria", "obs", "observa", "notes"]);
+
+  if (idxName < 0 || idxStatus < 0 || idxClass < 0) {
+    c.errors.push(`Aba "${tabTitle}": colunas Nome/Status/Turma não encontradas`);
+    console.log(`[processPaidStudentsTab] ${tabTitle}: header miss idxName=${idxName} idxStatus=${idxStatus} idxClass=${idxClass}. headerN sample=${JSON.stringify(headerN.slice(0, 30))}`);
     return c;
   }
-  console.log(`[processPaidStudentsTab] ${tabTitle}: ${values.length - 1} rows`);
+  console.log(`[processPaidStudentsTab] ${tabTitle}: ${values.length - 1} rows | idxName=${idxName} idxStatus=${idxStatus} idxClass=${idxClass} idxCourse=${idxCourse}`);
+
   const records: any[] = [];
   const now = new Date().toISOString();
+  let sampleLogged = 0;
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
@@ -482,16 +515,27 @@ const processPaidStudentsTab = async (
     if (!norm(status).startsWith("1.pago") && !norm(status).startsWith("1 pago")) continue;
     const studentName = (row[idxName] || "").trim();
     if (!studentName) continue;
-    const courseName = idxCourse >= 0 ? (row[idxCourse] || "").trim() : null;
-    const classLabel = idxClass >= 0 ? (row[idxClass] || "").trim() : null;
-    const matched = courseName ? findCourse(courses, courseName) : undefined;
+    // Sanity: rejeita lixo conhecido como "1.PAGO" ou datas no campo nome
+    if (/^\d+(\.|\s)?pago$/i.test(studentName) || /^\d{2}\/\d{2}\/\d{4}$/.test(studentName)) continue;
+
+    const classLabel = (row[idxClass] || "").trim();
+    const courseNameRaw = idxCourse >= 0 ? (row[idxCourse] || "").trim() : "";
+    // Derivar unit a partir da TURMA; fallback para SP
+    const derivedUnit = unitFromTurma(classLabel, "sao_paulo");
+    const matched = classLabel ? findCourseByTurma(courses, classLabel, derivedUnit) : undefined;
+
+    if (sampleLogged < 3) {
+      console.log(`[processPaidStudentsTab] ${tabTitle} sample: name="${studentName}" turma="${classLabel}" unit=${derivedUnit} course_id=${matched?.id ?? "NULL"}`);
+      sampleLogged++;
+    }
+
     records.push({
       user_id: userId,
       student_name: studentName,
       student_email: idxEmail >= 0 ? (row[idxEmail] || "").trim() || null : null,
       student_phone: idxPhone >= 0 ? (row[idxPhone] || "").trim() || null : null,
       course_id: matched?.id ?? null,
-      course_name: courseName || null,
+      course_name: matched?.name || courseNameRaw || null,
       class_label: classLabel || null,
       class_start_date: idxStart >= 0 ? parseDate(row[idxStart]) : null,
       payment_status: status || "1.PAGO",
