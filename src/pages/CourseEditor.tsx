@@ -33,6 +33,7 @@ const CourseEditor = () => {
   const [name, setName] = useState("");
   const [type, setType] = useState<"pos_graduacao" | "modular">("modular");
   const [unit, setUnit] = useState<CourseUnit>("sao_paulo");
+  const [mnemonic, setMnemonic] = useState("");
   const [description, setDescription] = useState("");
   const [highlights, setHighlights] = useState("");
   const [workloadHours, setWorkloadHours] = useState("");
@@ -63,6 +64,7 @@ const CourseEditor = () => {
     setName(c.name);
     setType(c.type as any);
     setUnit(((c as any).unit as CourseUnit) || "sao_paulo");
+    setMnemonic((c as any).mnemonic || "");
     setDescription(c.description || "");
     setHighlights(c.highlights || "");
     setWorkloadHours(c.workload_hours?.toString() || "");
@@ -116,6 +118,7 @@ const CourseEditor = () => {
       slug: slugify(name),
       type,
       unit,
+      mnemonic: mnemonic.trim() || null,
       description: description.trim() || null,
       highlights: highlights.trim() || null,
       workload_hours: workloadHours ? parseInt(workloadHours) : null,
@@ -237,7 +240,17 @@ const CourseEditor = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Descrição</Label>
+                <Label>Mnemônico (código da planilha)</Label>
+                <Input
+                  value={mnemonic}
+                  onChange={(e) => setMnemonic(e.target.value)}
+                  placeholder="Ex: CM US MESQ"
+                  maxLength={50}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Código usado na planilha antes do primeiro ponto. Ex: <code>CM US MESQ</code> para turmas <code>CM US MESQ.2601.1</code>. Deixe em branco para usar detecção automática pelo slug.
+                </p>
+              </div>
                 <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} />
               </div>
               <div className="space-y-2">
