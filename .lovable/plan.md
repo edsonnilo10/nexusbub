@@ -1,69 +1,55 @@
 
 
-## Setup pós-conexão GitHub: CI + CODEOWNERS + PR template
+## Implementar `/cursos-planilha` aproveitando o sync existente
 
-Vou adicionar três arquivos de configuração que já vão sincronizar automaticamente para o seu repositório GitHub assim que eu sair do modo plano.
+### Arquivos
 
-### O que será criado
+**1. `src/hooks/useCursosResumo.tsx`** (novo)
+- `useQuery` com key `["cursos-resumo"]`
+- Busca em paralelo: `courses` (id, name, unit, vagas se existir — senão derivar), `enrollments_by_class`, `paid_students`
+- Agrega por `course_id` + `unit`:
+  - `pagos` = count em `paid_students` com `payment_status` contendo "pago"
+  - `pre` = soma de `student_count` de `enrollments_by_class` menos pagos (ou `student_count` total quando não houver match)
+  - `total` = pagos + pre
+  - `vagas` lida do campo correspondente em `courses` (fallback 0 se nulo)
+  - `vagasRestantes` = vagas - total
+- Retorna array `CursoResumo[]` tipado localmente no próprio hook
+- `staleTime: 5 * 60_000`, `refetchOnWindowFocus: false`
+- Expõe também `refetch` para o botão sincronizar
 
-**1. `.github/workflows/ci.yml`** — GitHub Actions
-- Roda em cada push e pull request
-- Instala dependências com `bun install`
-- Executa typecheck (`tsc --noEmit`)
-- Roda lint (`eslint`)
-- Roda testes (`vitest run`)
-- Faz build de produção (`vite build`) para garantir que nada quebrou
+**2. `src/pages/CursosPlanilha.tsx`** (novo)
+- `<AppHeader />` no topo + container
+- Header da página: título "Cursos (Planilha)" + botão "Sincronizar agora" (chama edge function `sync-google-sheets` via `supabase.functions.invoke`, depois `refetch`, com `toast.success`/`toast.error`)
+- 4 Cards de resumo (tokens Nexus: `bg-card`, `text-primary`, `border-primary/20`):
+  - Total de Vagas, Pagos, Pré-matriculados, Vagas Restantes
+- Filtros: 3 botões (Todos / Brasília / São Paulo) usando `Button` variant `default`/`outline`
+- `Input` de busca (filtra por `nome` ou `codigo` localmente)
+- `Table` shadcn com colunas: Curso, Unidade, Vagas, Pagos, Pré, Total, Restantes
+  - Badge unidade: DF = `secondary`, SP = `default` (com classes para tons accent/gold dos tokens existentes)
+  - Badge restantes: `>5` verde (default), `1-5` outline com `text-amber-600`, `<=0` `destructive` "LOTADO"
+- `Skeleton` enquanto `isLoading`
+- Empty state quando filtro não retorna nada
+- Rodapé: "X cursos exibidos · Atualizado a cada 5 minutos"
 
-**2. `.github/CODEOWNERS`** — Donos do código
-- Define você como reviewer obrigatório de tudo por padrão
-- Marca pastas críticas (`supabase/migrations/`, `supabase/functions/`, `src/integrations/`) como ainda mais sensíveis
-- Vou usar um placeholder `@seu-usuario-github` que você troca pelo seu handle real
+**3. `src/App.tsx`** (editar)
+- Importar `CursosPlanilha`
+- Adicionar `<Route path="/cursos-planilha" element={<ProtectedRoute><CursosPlanilha /></ProtectedRoute>} />`
 
-**3. `.github/pull_request_template.md`** — Template de PR
-- Checklist padrão: descrição, tipo de mudança, testes, screenshots
-- Lembra de checar RLS quando mexer em tabelas
-- Lembra de não commitar secrets
+**4. `src/components/AppHeader.tsx`** (editar)
+- Importar `TableProperties` do `lucide-react`
+- Adicionar no `navItems`: `{ to: "/cursos-planilha", label: "Cursos", icon: TableProperties, adminOnly: false }` entre "Turmas" e "Mensagens"
 
-### Como usar depois (passo a passo que vou te ensinar)
+### O que NÃO será feito
 
-Depois que eu criar os arquivos, eles aparecem no seu repo automaticamente (via sync bidirecional). Aí você precisa:
-
-1. **Trocar o handle no CODEOWNERS**
-   - Abrir `.github/CODEOWNERS` no GitHub (botão lápis)
-   - Substituir `@seu-usuario-github` pelo seu username real do GitHub
-   - Commit direto na branch principal
-
-2. **Ativar branch protection** (opcional mas recomendado)
-   - GitHub repo → Settings → Branches → Add rule
-   - Branch name pattern: `main`
-   - Marcar: "Require a pull request before merging"
-   - Marcar: "Require status checks to pass" → selecionar `CI`
-   - Marcar: "Require review from Code Owners"
-
-3. **Ver o CI rodando**
-   - Após o primeiro push pós-setup, abrir aba **Actions** no GitHub
-   - Acompanhar o workflow `CI` rodando os 4 jobs (typecheck, lint, test, build)
-   - Se der verde ✅ tudo certo. Se vermelho, clica no job pra ver o log
-
-4. **Trabalhar localmente (opcional)**
-   ```bash
-   git clone https://github.com/SEU_USER/SEU_REPO.git
-   cd SEU_REPO
-   bun install
-   bun run dev
-   ```
-   Qualquer commit que você der `git push` cai no Lovable em segundos.
-
-### O que NÃO vou mexer
-
-- Código da aplicação (`src/`, `supabase/`) — intacto
-- README — já atualizei na rodada anterior
-- Configs do Vite/Tailwind/TS — intactas
+- Sem `fetch-courses` edge function
+- Sem `GOOGLE_API_KEY`
+- Sem `src/types/curso.ts` paralelo (tipo fica local no hook)
+- Sem editar `client.ts` ou `types.ts`
+- Sem migrations (RLS já cobre as 3 tabelas usadas)
 
 ### Notas técnicas
 
-- O workflow usa `oven-sh/setup-bun@v1` (oficial do Bun) com cache de dependências
-- Job único com steps sequenciais para minimizar consumo de minutos do Actions (free tier tem 2000 min/mês)
-- Não roda em PRs de Dependabot para evitar ruído (pode ser ajustado depois)
-- Não faz deploy — Lovable já cuida do deploy automaticamente via sync
+- Como as tabelas têm RLS por `user_id`, cada usuário aprovado vê apenas o que ele mesmo sincronizou. Isso é coerente com o resto do app.
+- O botão "Sincronizar agora" reaproveita a edge function `sync-google-sheets` já existente; não recria pipeline.
+- Tons de SP/DF seguem o que já é usado em `UpcomingClassesPanel`/`ClassGroups` para consistência visual.
 
