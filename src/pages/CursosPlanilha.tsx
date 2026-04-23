@@ -22,8 +22,14 @@ type UnidadeFilter = "todos" | "sao_paulo" | "brasilia";
 
 const unidadeLabel = (u: "sao_paulo" | "brasilia") => (u === "sao_paulo" ? "SP" : "DF");
 
+const ANO_ATUAL = new Date().getFullYear();
+const ANOS_DISPONIVEIS = [ANO_ATUAL + 1, ANO_ATUAL, ANO_ATUAL - 1, ANO_ATUAL - 2, ANO_ATUAL - 3];
+
 export default function CursosPlanilha() {
-  const { data, isLoading, isError, refetch, isFetching } = useCursosResumo();
+  const [ano, setAno] = useState<number | "todos">(2026);
+  const { data, isLoading, isError, refetch, isFetching } = useCursosResumo(
+    ano === "todos" ? undefined : ano
+  );
   const [unidade, setUnidade] = useState<UnidadeFilter>("todos");
   const [busca, setBusca] = useState("");
   const [syncing, setSyncing] = useState(false);
