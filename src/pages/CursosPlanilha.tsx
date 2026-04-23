@@ -223,7 +223,7 @@ function RestantesBadge({ value }: { value: number }) {
   if (value <= 0) return <Badge variant="destructive">LOTADO</Badge>;
   if (value <= 5)
     return (
-      <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">
+      <Badge variant="outline" className="border-warning/40 text-warning">
         {value}
       </Badge>
     );
