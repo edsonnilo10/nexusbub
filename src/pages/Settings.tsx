@@ -192,8 +192,8 @@ const Settings = () => {
                 )}
 
                 {Array.isArray(lastSummary?.unmatched_turmas) && lastSummary.unmatched_turmas.length > 0 && (
-                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm space-y-2">
-                    <div className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
+                  <div className="rounded-md border-2 border-dashed border-destructive/40 bg-destructive/5 p-3 text-sm space-y-2">
+                    <div className="flex items-center gap-2 font-medium text-destructive">
                       <AlertTriangle className="h-4 w-4" />
                       Turmas sem curso vinculado ({lastSummary.unmatched_turmas.length})
                     </div>
