@@ -1,0 +1,22 @@
+# CODEOWNERS — Nexus Hub
+#
+# Define quem precisa revisar mudanças antes do merge.
+# Sintaxe: <padrão de arquivo>  <owners separados por espaço>
+#
+# IMPORTANTE: troque @seu-usuario-github pelo seu handle real do GitHub
+# (ou por um time, ex: @nexus-ultrassom/devs).
+
+# Padrão: você revisa tudo
+*                               @seu-usuario-github
+
+# Áreas sensíveis — exigem atenção extra
+/supabase/migrations/           @seu-usuario-github
+/supabase/functions/            @seu-usuario-github
+/src/integrations/              @seu-usuario-github
+
+# Configs de build / CI
+/.github/                       @seu-usuario-github
+/vite.config.ts                 @seu-usuario-github
+/tailwind.config.ts             @seu-usuario-github
+/tsconfig*.json                 @seu-usuario-github
+/package.json                   @seu-usuario-github
