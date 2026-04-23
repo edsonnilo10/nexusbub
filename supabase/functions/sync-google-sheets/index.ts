@@ -10,7 +10,16 @@ const corsHeaders = {
 
 // ---------- helpers ----------
 const norm = (s: string) =>
-  String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  String(s)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // diacritics
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, "") // zero-width chars
+    .replace(/\s+/g, " ") // collapse whitespace
+    .trim();
+
+// Strip ALL punctuation/whitespace for structural comparison.
+const stripAll = (s: string) => norm(s).replace(/[^a-z0-9]/g, "");
 
 const slugify = (s: string) =>
   norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
