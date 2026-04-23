@@ -187,7 +187,36 @@ const matchTab = (tabs: SheetMeta[], wanted: string[]): SheetMeta | null => {
 };
 
 // ---------- per-tab processors ----------
-type Course = { id: string; name: string; unit: "sao_paulo" | "brasilia"; slug: string | null };
+type Course = { id: string; name: string; unit: "sao_paulo" | "brasilia"; slug: string | null; mnemonic: string | null };
+
+// Coletor global de turmas órfãs (turmas que não casaram com nenhum curso)
+type UnmatchedEntry = { prefix: string; quantidade: number; exemplo: string; unit: string };
+const unmatchedTurmas = new Map<string, UnmatchedEntry>();
+const matchFailLogged = new Set<string>(); // log uma amostra por prefixo
+
+const recordUnmatched = (
+  turma: string,
+  prefix: string,
+  unit: string,
+  courses: Course[],
+) => {
+  if (!prefix) return;
+  const cur = unmatchedTurmas.get(prefix);
+  if (cur) {
+    cur.quantidade += 1;
+  } else {
+    unmatchedTurmas.set(prefix, { prefix, quantidade: 1, exemplo: turma, unit });
+  }
+  if (!matchFailLogged.has(prefix)) {
+    matchFailLogged.add(prefix);
+    const anyCourse = courses.find(
+      (c) => slugMnemonic(c.slug) === prefix || (c.mnemonic && norm(c.mnemonic).replace(/\s+/g, "") === prefix),
+    );
+    console.log(
+      `[match-fail] turma="${turma}" prefix="${prefix}" derivedUnit="${unit}" anyCourseWithPrefix=${anyCourse ? `${anyCourse.slug} (${anyCourse.unit})` : "NONE"}`,
+    );
+  }
+};
 const findCourse = (
   courses: Course[],
   name: string,
@@ -255,7 +284,10 @@ const slugMnemonic = (slug: string | null | undefined): string => {
 };
 
 // Match por igualdade exata do MNEMONICO (prefixo da TURMA == mnemônico do slug),
-// preferindo cursos da mesma unidade.
+// preferindo cursos da mesma unidade. Usa courses.mnemonic se preenchido.
+const normMnemonic = (m: string | null | undefined): string =>
+  norm(m || "").replace(/\s+/g, "");
+
 const findCourseByTurma = (
   courses: Course[],
   turma: string,
@@ -263,15 +295,30 @@ const findCourseByTurma = (
 ): Course | undefined => {
   const prefix = turmaPrefix(turma);
   if (!prefix) return undefined;
-  // 1) match exato + mesma unidade
+
+  // 1) match por mnemonic explícito (prioridade) + mesma unidade
+  const byMnemonic = courses.find(
+    (c) => c.unit === unit && c.mnemonic && normMnemonic(c.mnemonic) === prefix,
+  );
+  if (byMnemonic) return byMnemonic;
+
+  // 2) match por mnemonic explícito em qualquer unidade
+  const byMnemonicAny = courses.find(
+    (c) => c.mnemonic && normMnemonic(c.mnemonic) === prefix,
+  );
+  if (byMnemonicAny) return byMnemonicAny;
+
+  // 3) match exato por slug + mesma unidade
   const exact = courses.find(
     (c) => c.unit === unit && slugMnemonic(c.slug) === prefix,
   );
   if (exact) return exact;
-  // 2) match exato em qualquer unidade (raro: curso só cadastrado em uma unidade)
+
+  // 4) match exato por slug em qualquer unidade
   const anyUnit = courses.find((c) => slugMnemonic(c.slug) === prefix);
   if (anyUnit) return anyUnit;
-  // 3) fallback por nome: mnemônico do início do nome (ex.: "CM US CAVF: ...")
+
+  // 5) fallback por nome: mnemônico do início do nome (ex.: "CM US CAVF: ...")
   const byName = courses.find((c) => {
     if (c.unit !== unit) return false;
     const head = norm(c.name).split(":")[0] || "";
@@ -439,6 +486,9 @@ const processEnrollmentsTab = async (
     const mes = key.split("||")[1] || "";
     const start = parseDate(mes);
     const matched = findCourseByTurma(courses, turmaCode, unit);
+    if (!matched) {
+      recordUnmatched(turmaCode, turmaPrefix(turmaCode), unit, courses);
+    }
     if (sampleLogged < 3) {
       console.log(`[processEnrollmentsTab] ${tabTitle} sample: turma="${turmaCode}" prefix="${turmaPrefix(turmaCode)}" course_id=${matched?.id ?? "NULL"} slug=${matched?.slug ?? "—"}`);
       sampleLogged++;
@@ -553,9 +603,13 @@ const processPaidStudentsTab = async (
 
     const classLabel = (row[idxClass] || "").trim();
     const courseNameRaw = idxCourse >= 0 ? (row[idxCourse] || "").trim() : "";
-    // Derivar unit a partir da TURMA; fallback para SP
-    const derivedUnit = unitFromTurma(classLabel, "sao_paulo");
+    // Derivar unit a partir da TURMA; fallback DF (DF é o padrão histórico,
+    // SP sempre vem marcado explicitamente com .SP. no código da turma)
+    const derivedUnit = unitFromTurma(classLabel, "brasilia");
     const matched = classLabel ? findCourseByTurma(courses, classLabel, derivedUnit) : undefined;
+    if (classLabel && !matched) {
+      recordUnmatched(classLabel, turmaPrefix(classLabel), derivedUnit, courses);
+    }
 
     if (sampleLogged < 3) {
       console.log(`[processPaidStudentsTab] ${tabTitle} sample: name="${studentName}" turma="${classLabel}" unit=${derivedUnit} course_id=${matched?.id ?? "NULL"}`);
@@ -868,8 +922,12 @@ Deno.serve(async (req) => {
     const tabs = await getSheetMetadata(spreadsheetId, accessToken);
 
     const { data: coursesData } = await supabase
-      .from("courses").select("id, name, unit, slug");
+      .from("courses").select("id, name, unit, slug, mnemonic");
     const courses = (coursesData || []) as Course[];
+
+    // Reset coletores globais por execução
+    unmatchedTurmas.clear();
+    matchFailLogged.clear();
 
     const result: Record<string, any> = {
       tabs_found: tabs.map((t) => t.title),
@@ -972,6 +1030,12 @@ Deno.serve(async (req) => {
     } catch (e: any) {
       result.class_groups = { error: e?.message || "Erro ao sincronizar janelas" };
     }
+
+    // Lista ordenada de turmas órfãs (mais alunos primeiro)
+    result.unmatched_turmas = Array.from(unmatchedTurmas.values())
+      .sort((a, b) => b.quantidade - a.quantidade)
+      .slice(0, 50);
+    console.log(`[sync] unmatched_turmas: ${result.unmatched_turmas.length} prefixos órfãos`);
 
     const summary = {
       ...result,

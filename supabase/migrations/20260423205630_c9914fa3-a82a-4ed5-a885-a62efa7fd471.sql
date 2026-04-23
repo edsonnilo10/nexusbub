@@ -1,0 +1,2 @@
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS mnemonic TEXT;
+COMMENT ON COLUMN public.courses.mnemonic IS 'Código curto usado na planilha antes do primeiro ponto. Ex: CM US MESQ para turmas CM US MESQ.2601.1';
