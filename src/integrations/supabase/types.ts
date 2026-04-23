@@ -459,6 +459,7 @@ export type Database = {
           highlights: string | null
           id: string
           installments: number | null
+          mnemonic: string | null
           modality: string | null
           name: string
           payment_methods: string | null
@@ -477,6 +478,7 @@ export type Database = {
           highlights?: string | null
           id?: string
           installments?: number | null
+          mnemonic?: string | null
           modality?: string | null
           name: string
           payment_methods?: string | null
@@ -495,6 +497,7 @@ export type Database = {
           highlights?: string | null
           id?: string
           installments?: number | null
+          mnemonic?: string | null
           modality?: string | null
           name?: string
           payment_methods?: string | null
