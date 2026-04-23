@@ -207,6 +207,46 @@ const findCourse = (
   return matches[0];
 };
 
+// "CM US CAVF.SP.2607.1" -> "cmuscavf"
+const turmaPrefix = (turma: string): string => {
+  const head = (turma || "").split(".")[0] || "";
+  return norm(head).replace(/\s+/g, "");
+};
+
+// Deriva unidade do código de turma: 2º segmento "SP" => sao_paulo, senão brasilia
+const unitFromTurma = (turma: string, fallback: "sao_paulo" | "brasilia"): "sao_paulo" | "brasilia" => {
+  const parts = (turma || "").split(".");
+  if (parts.length < 2) return fallback;
+  const seg = norm(parts[1]).replace(/\s+/g, "");
+  if (seg === "sp") return "sao_paulo";
+  if (seg === "df" || seg === "bsb") return "brasilia";
+  return fallback;
+};
+
+// Match por prefixo da TURMA + sufixo de unidade no slug do curso
+const findCourseByTurma = (
+  courses: Course[],
+  turma: string,
+  unit: "sao_paulo" | "brasilia",
+): Course | undefined => {
+  const prefix = turmaPrefix(turma);
+  if (!prefix) return undefined;
+  const suffix = unit === "brasilia" ? "bsb" : "sp";
+  const stripSlug = (c: Course) => norm((c as any).slug || "").replace(/-/g, "");
+  // 1) match exato com sufixo correto da unidade
+  const exact = courses.find((c) => {
+    const s = stripSlug(c);
+    return s.startsWith(prefix) && s.endsWith(suffix);
+  });
+  if (exact) return exact;
+  // 2) fallback: qualquer curso da mesma unit cujo slug comece com o prefixo
+  return courses.find((c) => {
+    if (c.unit !== unit) return false;
+    const s = stripSlug(c);
+    return s.startsWith(prefix);
+  });
+};
+
 interface UpsertCounters { inserted: number; updated: number; errors: string[] }
 
 // Generic batched upsert with in-batch dedupe by conflict key.
