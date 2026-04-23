@@ -1,107 +1,129 @@
 
 
-## Adicionar UNIQUE constraints para o ON CONFLICT do sync funcionar
+## Por que tudo aparece zerado
 
-### Diagnóstico
+Os dados **estão sincronizados no banco**:
+- `enrollments_by_class`: 44 linhas
+- `paid_students`: 243 linhas
+- `calendar_events`: 95 linhas
 
-Os logs mostram exatamente o erro do Postgres:
+Mas a UI mostra 0 porque o resumo (`useCursosResumo`) agrega **por `course_id`**, e **todas** as linhas de matrículas e pagos têm `course_id = NULL`. Sem o link com `courses.id`, nada é atribuído a nenhum curso → todos zerados.
 
+Há também um bug grosseiro no `paid_students`: `student_name` e `course_name` estão recebendo `"1.PAGO"` e datas (ex.: `08/03/2024`). Os índices de coluna estão pegando o cabeçalho errado.
+
+### Causas precisas
+
+| # | Onde | Problema |
+|---|---|---|
+| 1 | `processEnrollmentsTab` → `findCourse(courses, turmaCode, unit)` | Compara `"CM US CAVF.SP.2607.1"` com slug `"cm-us-cavf-bsb"`. Nunca casa. `course_id = NULL` em todas as 44 linhas. |
+| 2 | `processPaidStudentsTab` | `findIdx(header, ["status",...])` pode estar achando uma coluna chamada "status" antes de "STATUS DO ALUNO", e o `idxName` está pegando a coluna errada (resultado: `student_name = "1.PAGO"`, `course_name = "08/03/2024"`). |
+| 3 | `processPaidStudentsTab` → `findCourse(courses, courseName)` | Mesmo se `courseName` viesse certo, ele recebe a **TURMA** (ex.: `CM US CAVF.SP.2607.1`), não o nome do curso. Não casa com slug. |
+| 4 | `useCursosResumo` | Só agrega quando `course_id` existe. Como todos são NULL, mostra 0. |
+
+### Arquitetura de matching (TURMA → curso)
+
+Padrão observado nos dados:
+
+```text
+Turma: CM US CAVF.SP.2607.1   →  prefixo: "CM US CAVF" + unidade SP
+Turma: CM US CAVF.2604.1       →  prefixo: "CM US CAVF" + unidade DF (default)
+Slug:  cm-us-cavf-bsb           →  prefixo normalizado: "cmuscavf" + sufixo "bsb"
+Slug:  cm-us-giob-sp            →  prefixo normalizado: "cmusgiob" + sufixo "sp"
 ```
-there is no unique or exclusion constraint matching the ON CONFLICT specification
-```
 
-A edge function chama `upsert(..., { onConflict: "..." })` em 3 tabelas, mas no banco essas tabelas só têm a PK em `id`. Sem um UNIQUE/PK que case com as colunas do `onConflict`, o `upsert` falha 100%.
-
-Mapeamento `tabela → colunas usadas no onConflict`:
-
-| Tabela | Colunas no `onConflict` |
-|---|---|
-| `paid_students` | `user_id, student_name, course_name, class_label` |
-| `calendar_events` | `user_id, unit, course_name, event_label, start_date` |
-| `enrollments_by_class` | `user_id, unit, course_name, class_label, class_start_date` |
-
-Hoje no banco existe apenas `*_pkey` em `id` nas 3 tabelas. Nenhuma UNIQUE.
+Regra: extrair o prefixo da TURMA até o primeiro ponto, normalizar (sem espaços/acentos/maiúsculas), e casar com o slug do curso filtrado pela unidade (`-sp` para SP, `-bsb` para DF).
 
 ### O que será feito
 
-#### 1) Migration única com 3 UNIQUE constraints
+#### 1) `supabase/functions/sync-google-sheets/index.ts`
 
-Nova migration em `supabase/migrations/`:
+Adicionar duas funções utilitárias:
 
-```sql
--- paid_students
-ALTER TABLE public.paid_students
-  ADD CONSTRAINT paid_students_sync_unique
-  UNIQUE (user_id, student_name, course_name, class_label);
+```ts
+// "CM US CAVF.SP.2607.1" -> "cmuscavf"
+const turmaPrefix = (turma: string): string => {
+  const head = (turma || "").split(".")[0] || "";
+  return norm(head).replace(/\s+/g, "");
+};
 
--- calendar_events
-ALTER TABLE public.calendar_events
-  ADD CONSTRAINT calendar_events_sync_unique
-  UNIQUE (user_id, unit, course_name, event_label, start_date);
-
--- enrollments_by_class
-ALTER TABLE public.enrollments_by_class
-  ADD CONSTRAINT enrollments_by_class_sync_unique
-  UNIQUE (user_id, unit, course_name, class_label, class_start_date);
+// match por prefixo + sufixo de unidade no slug
+const findCourseByTurma = (courses: Course[], turma: string, unit: "sao_paulo" | "brasilia") => {
+  const prefix = turmaPrefix(turma);
+  if (!prefix) return undefined;
+  const suffix = unit === "brasilia" ? "bsb" : "sp";
+  // 1) preferir match exato com sufixo da unidade
+  const exact = courses.find((c) => {
+    const slugStripped = norm(c.slug || "").replace(/-/g, "");
+    return slugStripped.startsWith(prefix) && slugStripped.endsWith(suffix);
+  });
+  if (exact) return exact;
+  // 2) fallback: qualquer curso da mesma unit cujo slug comece com o prefixo
+  return courses.find((c) => {
+    if (c.unit !== unit) return false;
+    const slugStripped = norm(c.slug || "").replace(/-/g, "");
+    return slugStripped.startsWith(prefix);
+  });
+};
 ```
 
-Observações importantes:
-- As constraints batem **exatamente** com o `onConflict` da edge function — nenhuma mudança de código necessária.
-- Não vou tocar em `id` (PK fica como está).
-- Não vou apagar dados nem mudar tipos.
+**Em `processEnrollmentsTab`**: trocar `findCourse(courses, turmaCode, unit)` por `findCourseByTurma(courses, turmaCode, unit)`.
 
-#### 2) Limpeza de duplicatas pré-existentes (se houver)
+**Em `processPaidStudentsTab`**:
+- Tornar a busca de cabeçalho mais estrita: `idxName` precisa ser uma coluna cujo conteúdo seja exatamente "NOME"/"ALUNO" (rejeitando "STATUS DO ALUNO"); `idxStatus` precisa preferir "STATUS DO ALUNO".
+- Derivar `unit` da TURMA: se o segundo segmento depois do ponto for `SP` → SP, senão DF (alinhado com a planilha GR).
+- Passar a usar `findCourseByTurma(courses, classLabel, derivedUnit)` em vez de `findCourse(courses, courseName)`.
+- Logar amostra das primeiras 3 linhas processadas (`student_name`, `class_label`, `course_id`) para confirmar que parou de gravar `"1.PAGO"`.
 
-Antes de adicionar a UNIQUE, a migration vai deduplicar registros que conflitariam com a nova chave, mantendo o mais recente (`synced_at DESC`, depois `id`):
+#### 2) Limpar dados sujos antes do próximo sync
+
+Migration única que apaga linhas claramente quebradas dos pagos (onde `student_name` ou `course_name` contém apenas `"1.PAGO"` ou bate o regex de data `dd/mm/yyyy`). Isso evita que esses 243 lixos fiquem ocupando as UNIQUE keys e atrapalhem o re-upsert:
 
 ```sql
-DELETE FROM public.paid_students a
-USING public.paid_students b
-WHERE a.id < b.id
-  AND a.user_id IS NOT DISTINCT FROM b.user_id
-  AND a.student_name IS NOT DISTINCT FROM b.student_name
-  AND a.course_name IS NOT DISTINCT FROM b.course_name
-  AND a.class_label IS NOT DISTINCT FROM b.class_label;
+DELETE FROM public.paid_students
+WHERE student_name IN ('1.PAGO', '2.PAGO', '0.PAGO')
+   OR course_name ~ '^\d{2}/\d{2}/\d{4}$';
 ```
 
-(Mesma lógica para as outras 2 tabelas, com as colunas correspondentes.)
+Dados de `enrollments_by_class` ficam — vão ser **atualizados** pelo upsert (mesma chave) com `course_id` preenchido.
 
-Isso é necessário porque, sem isso, o `ADD CONSTRAINT` quebra se já houver linhas duplicadas pelas novas chaves.
+#### 3) Re-rodar o sync
+
+Após o deploy da edge function corrigida e da migration, basta clicar **Sincronizar agora**. Como o `onConflict` já está com UNIQUE batendo, o upsert vai sobrescrever as 44 linhas existentes de enrollments preenchendo `course_id`, e vai inserir os pagos corretamente.
 
 ### O que NÃO vou mexer
 
-- Edge function `sync-google-sheets/index.ts` — o `onConflict` já está correto.
-- Esquema das colunas — nenhuma coluna nova, nenhuma mudança de tipo.
-- RLS policies — continuam iguais.
-- `enrollments_by_class` em termos de comportamento — só ganha a UNIQUE que já era esperada pelo upsert.
+- Schema das tabelas (UNIQUE constraints já estão certas).
+- `useCursosResumo` (a lógica está correta — só falta `course_id` nos dados).
+- Estrutura da planilha.
+- Matching de abas (já está OK conforme logs).
 
 ### Resultado esperado
 
-Depois da migration:
-- `Sincronizar agora` deve concluir sem `ON CONFLICT` errors.
-- `paid_students`, `calendar_events`, `enrollments_by_class` passam a ter contagens > 0 no resumo.
-- `last_sync_summary` finalmente atualiza com horário novo.
-- Erros das abas `CONTROLE GERAL` continuam ausentes (matching já está OK).
+Depois do sync corrigido:
+- `enrollments_by_class.course_id` preenchido nas 44 linhas (ou mais).
+- `paid_students` com `student_name` real, `class_label` real e `course_id` preenchido.
+- Tela "Cursos" deixa de mostrar tudo zerado.
+- Dashboard global passa a contar matriculados/pagos por curso e por unidade.
 
-### Risco e mitigação
+### Validação
 
-| Risco | Mitigação |
-|---|---|
-| Dados existentes têm duplicatas pelas novas chaves | DELETE de deduplicação roda **antes** do ADD CONSTRAINT na mesma migration |
-| Linhas com `class_label = NULL` causariam múltiplos NULLs (UNIQUE permite múltiplos NULLs no Postgres) | Aceitável — re-sync sobrescreve esses casos por outra chave de inserção; se virar problema real depois, ajustamos para `NULLS NOT DISTINCT` |
-
-### Validação após migration
-
-1. Abrir **Configurações → Sincronizar agora**.
-2. Conferir no resumo:
-   - `GR base`: contagem de registros > 0, sem erro.
-   - `Calendário DF` e `Calendário SP`: contagem > 0, sem erro.
-   - `Brasília` e `São Paulo`: contagem > 0.
-3. Conferir nos Edge Function Logs: nenhum `ON CONFLICT` error.
+1. `Sincronizar agora` na UI.
+2. Conferir nos logs:
+   - `[processEnrollmentsTab]`: amostra mostrando `course_id` não-nulo.
+   - `[processPaidStudentsTab]`: amostra mostrando nomes de alunos reais.
+3. Conferir SQL:
+   ```sql
+   SELECT count(*) FILTER (WHERE course_id IS NOT NULL) AS com_curso,
+          count(*) AS total
+   FROM enrollments_by_class;
+   ```
+4. Conferir UI: tela "Cursos" mostra `Pagos`, `Pré`, `Total` > 0.
 
 ### Próximo passo (modo default)
 
 | Ação | Ferramenta |
 |---|---|
-| Criar migration com DELETE de duplicatas + 3 UNIQUE constraints | migration tool |
+| Adicionar `turmaPrefix` + `findCourseByTurma` e plugar em `processEnrollmentsTab` | code--line_replace |
+| Endurecer headers e usar TURMA para casar curso em `processPaidStudentsTab` | code--line_replace |
+| Migration para limpar `paid_students` com lixo `"1.PAGO"`/datas | migration tool |
 
