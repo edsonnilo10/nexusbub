@@ -209,6 +209,41 @@ const findCourse = (
 
 interface UpsertCounters { inserted: number; updated: number; errors: string[] }
 
+// Generic batched upsert with in-batch dedupe by conflict key.
+// Postgres can't update the same row twice in one INSERT ... ON CONFLICT,
+// so we keep the LAST occurrence per key and split into chunks.
+const BATCH_SIZE = 300;
+const batchUpsert = async (
+  supabase: any,
+  table: string,
+  records: any[],
+  conflictCols: string,
+  counters: UpsertCounters,
+  label: string,
+): Promise<void> => {
+  if (records.length === 0) return;
+  const keys = conflictCols.split(",").map((k) => k.trim());
+  const dedupMap = new Map<string, any>();
+  for (const r of records) {
+    const key = keys.map((k) => String(r[k] ?? "")).join("||");
+    dedupMap.set(key, r);
+  }
+  const deduped = Array.from(dedupMap.values());
+  console.log(`[batchUpsert] ${label}: ${records.length} -> ${deduped.length} after dedupe, batches of ${BATCH_SIZE}`);
+  for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+    const chunk = deduped.slice(i, i + BATCH_SIZE);
+    const { error } = await supabase
+      .from(table)
+      .upsert(chunk, { onConflict: conflictCols, ignoreDuplicates: false });
+    if (error) {
+      counters.errors.push(`${label} lote ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`);
+      console.error(`[batchUpsert] ${label} batch ${i}: ${error.message}`);
+    } else {
+      counters.inserted += chunk.length;
+    }
+  }
+};
+
 // Window collected from enrollment rows: per unit + dates + course
 type WindowRow = {
   unit: "sao_paulo" | "brasilia";
