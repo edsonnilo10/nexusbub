@@ -209,6 +209,41 @@ const findCourse = (
 
 interface UpsertCounters { inserted: number; updated: number; errors: string[] }
 
+// Generic batched upsert with in-batch dedupe by conflict key.
+// Postgres can't update the same row twice in one INSERT ... ON CONFLICT,
+// so we keep the LAST occurrence per key and split into chunks.
+const BATCH_SIZE = 300;
+const batchUpsert = async (
+  supabase: any,
+  table: string,
+  records: any[],
+  conflictCols: string,
+  counters: UpsertCounters,
+  label: string,
+): Promise<void> => {
+  if (records.length === 0) return;
+  const keys = conflictCols.split(",").map((k) => k.trim());
+  const dedupMap = new Map<string, any>();
+  for (const r of records) {
+    const key = keys.map((k) => String(r[k] ?? "")).join("||");
+    dedupMap.set(key, r);
+  }
+  const deduped = Array.from(dedupMap.values());
+  console.log(`[batchUpsert] ${label}: ${records.length} -> ${deduped.length} after dedupe, batches of ${BATCH_SIZE}`);
+  for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+    const chunk = deduped.slice(i, i + BATCH_SIZE);
+    const { error } = await supabase
+      .from(table)
+      .upsert(chunk, { onConflict: conflictCols, ignoreDuplicates: false });
+    if (error) {
+      counters.errors.push(`${label} lote ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`);
+      console.error(`[batchUpsert] ${label} batch ${i}: ${error.message}`);
+    } else {
+      counters.inserted += chunk.length;
+    }
+  }
+};
+
 // Window collected from enrollment rows: per unit + dates + course
 type WindowRow = {
   unit: "sao_paulo" | "brasilia";
@@ -240,6 +275,9 @@ const processEnrollmentsTab = async (
     c.errors.push(`Aba "${tabTitle}": colunas Curso/Alunos não encontradas`);
     return c;
   }
+  console.log(`[processEnrollmentsTab] ${tabTitle}: ${values.length - 1} rows`);
+  const records: any[] = [];
+  const now = new Date().toISOString();
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
@@ -250,7 +288,7 @@ const processEnrollmentsTab = async (
     const start = idxStart >= 0 ? parseDate(row[idxStart]) : null;
     const end = idxEnd >= 0 ? parseDate(row[idxEnd]) : null;
     const matched = findCourse(courses, courseName, unit);
-    const record = {
+    records.push({
       user_id: userId,
       unit,
       course_id: matched?.id ?? null,
@@ -261,18 +299,9 @@ const processEnrollmentsTab = async (
       student_count: studentCount,
       source_sheet: tabTitle,
       source_row: r + 1,
-      synced_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from("enrollments_by_class")
-      .upsert(record, {
-        onConflict: "user_id,unit,course_name,class_label,class_start_date",
-        ignoreDuplicates: false,
-      });
-    if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
-    else c.inserted++;
+      synced_at: now,
+    });
 
-    // Collect for class_groups
     if (matched && start && end) {
       windows.push({
         unit,
@@ -284,6 +313,15 @@ const processEnrollmentsTab = async (
       });
     }
   }
+  await batchUpsert(
+    supabase,
+    "enrollments_by_class",
+    records,
+    "user_id,unit,course_name,class_label,class_start_date",
+    c,
+    `enrollments ${tabTitle}`,
+  );
+  console.log(`[processEnrollmentsTab] ${tabTitle}: done, inserted=${c.inserted}, errors=${c.errors.length}`);
   return c;
 };
 
@@ -312,6 +350,9 @@ const processPaidStudentsTab = async (
     c.errors.push(`Aba "${tabTitle}": colunas Aluno/Status não encontradas`);
     return c;
   }
+  console.log(`[processPaidStudentsTab] ${tabTitle}: ${values.length - 1} rows`);
+  const records: any[] = [];
+  const now = new Date().toISOString();
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
@@ -322,7 +363,7 @@ const processPaidStudentsTab = async (
     const courseName = idxCourse >= 0 ? (row[idxCourse] || "").trim() : null;
     const classLabel = idxClass >= 0 ? (row[idxClass] || "").trim() : null;
     const matched = courseName ? findCourse(courses, courseName) : undefined;
-    const record = {
+    records.push({
       user_id: userId,
       student_name: studentName,
       student_email: idxEmail >= 0 ? (row[idxEmail] || "").trim() || null : null,
@@ -338,17 +379,18 @@ const processPaidStudentsTab = async (
       source_sheet: tabTitle,
       source_row: r + 1,
       notes: idxNotes >= 0 ? (row[idxNotes] || "").trim() || null : null,
-      synced_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from("paid_students")
-      .upsert(record, {
-        onConflict: "user_id,student_name,course_name,class_label",
-        ignoreDuplicates: false,
-      });
-    if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
-    else c.inserted++;
+      synced_at: now,
+    });
   }
+  await batchUpsert(
+    supabase,
+    "paid_students",
+    records,
+    "user_id,student_name,course_name,class_label",
+    c,
+    `paid ${tabTitle}`,
+  );
+  console.log(`[processPaidStudentsTab] ${tabTitle}: done, inserted=${c.inserted}, errors=${c.errors.length}`);
   return c;
 };
 
@@ -374,13 +416,16 @@ const processCalendarTab = async (
     c.errors.push(`Aba "${tabTitle}": coluna Curso não encontrada`);
     return c;
   }
+  console.log(`[processCalendarTab] ${tabTitle}: ${values.length - 1} rows`);
+  const records: any[] = [];
+  const now = new Date().toISOString();
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
     const courseName = (row[idxCourse] || "").trim();
     if (!courseName) continue;
     const matched = findCourse(courses, courseName, unit);
-    const record = {
+    records.push({
       user_id: userId,
       unit,
       course_id: matched?.id ?? null,
@@ -393,17 +438,18 @@ const processCalendarTab = async (
       source_sheet: tabTitle,
       source_row: r + 1,
       notes: idxNotes >= 0 ? (row[idxNotes] || "").trim() || null : null,
-      synced_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from("calendar_events")
-      .upsert(record, {
-        onConflict: "user_id,unit,course_name,event_label,start_date",
-        ignoreDuplicates: false,
-      });
-    if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
-    else c.inserted++;
+      synced_at: now,
+    });
   }
+  await batchUpsert(
+    supabase,
+    "calendar_events",
+    records,
+    "user_id,unit,course_name,event_label,start_date",
+    c,
+    `calendar ${tabTitle}`,
+  );
+  console.log(`[processCalendarTab] ${tabTitle}: done, inserted=${c.inserted}, errors=${c.errors.length}`);
   return c;
 };
 
@@ -688,25 +734,29 @@ Deno.serve(async (req) => {
     const usedTitles = new Set<string>();
 
     for (const target of targets) {
+      console.log(`[sync] >>> start target "${target.key}"`);
       const candidateTabs = tabs.filter((t) => !usedTitles.has(t.title));
       const tab = matchTab(candidateTabs, target.aliases);
       if (!tab) {
+        console.log(`[sync] target "${target.key}": NO TAB MATCHED`);
         result.missing_tabs.push(target.key);
         continue;
       }
       usedTitles.add(tab.title);
       try {
         const values = await getSheetValues(spreadsheetId, tab.title, accessToken);
+        console.log(`[sync] target "${target.key}" tab="${tab.title}" rows=${values.length}`);
         const c = await target.handler(values, tab.title);
-        // Se o handler reportou só "colunas não encontradas" e nada foi inserido,
-        // tratamos como skip silencioso (a aba existe mas não tem o formato esperado).
         const onlyHeaderError = c.inserted === 0 && c.errors.length > 0 &&
           c.errors.every((e) => /coluna|colunas/i.test(e) && /não encontrad/i.test(e));
         if (onlyHeaderError) {
+          console.log(`[sync] target "${target.key}": skipped (header mismatch)`);
           continue;
         }
         result.processed[target.key] = { tab_title: tab.title, ...c };
+        console.log(`[sync] <<< done target "${target.key}" inserted=${c.inserted} errors=${c.errors.length}`);
       } catch (e: any) {
+        console.error(`[sync] target "${target.key}" THREW:`, e?.message || e);
         result.processed[target.key] = { tab_title: tab.title, inserted: 0, updated: 0, errors: [e.message] };
       }
     }

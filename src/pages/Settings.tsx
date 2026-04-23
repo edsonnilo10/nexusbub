@@ -61,7 +61,11 @@ const Settings = () => {
     const { data, error } = await supabase.functions.invoke("sync-google-sheets", { body: {} });
     setSyncing(false);
     if (error) {
-      toast({ title: "Erro ao sincronizar", description: "Falha ao chamar a sincronização. Tente novamente.", variant: "destructive" });
+      toast({
+        title: "Erro ao sincronizar",
+        description: error.message || "Falha ao chamar a sincronização. Veja os logs do backend.",
+        variant: "destructive",
+      });
       return;
     }
     if (data?.error) {
@@ -73,9 +77,11 @@ const Settings = () => {
     const processed = data.processed || {};
     const totalRows = Object.values(processed).reduce((acc: number, p: any) => acc + (p.inserted || 0), 0);
     const tabsOk = Object.keys(processed).length;
+    const totalErrors = Object.values(processed).reduce((acc: number, p: any) => acc + (p.errors?.length || 0), 0) as number;
     toast({
-      title: "Sincronização concluída",
-      description: `${tabsOk} aba(s) processada(s) · ${totalRows} registro(s) atualizado(s)`,
+      title: totalErrors > 0 ? "Sincronização concluída com avisos" : "Sincronização concluída",
+      description: `${tabsOk} aba(s) processada(s) · ${totalRows} registro(s) atualizado(s)${totalErrors > 0 ? ` · ${totalErrors} erro(s)` : ""}`,
+      variant: totalErrors > 0 ? "destructive" : "default",
     });
   };
 
@@ -138,8 +144,11 @@ const Settings = () => {
                   <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-2">
                     <div className="flex items-center gap-2 font-medium">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
-                      Última sincronização: {new Date(lastSync).toLocaleString("pt-BR")}
+                      Último resumo salvo: {new Date(lastSync).toLocaleString("pt-BR")}
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Este é o último resultado que foi gravado no banco. Se a sincronização atual falhar antes de terminar, este bloco continua mostrando o resumo anterior.
+                    </p>
                     {lastSummary?.processed && (
                       <div className="space-y-1">
                         {Object.entries(lastSummary.processed).map(([key, val]: [string, any]) => (
