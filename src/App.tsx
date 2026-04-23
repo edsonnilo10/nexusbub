@@ -19,6 +19,7 @@ import CourseCalendar from "./pages/CourseCalendar.tsx";
 import ClassGroups from "./pages/ClassGroups.tsx";
 import GlobalDashboard from "./pages/GlobalDashboard.tsx";
 import QuickMessages from "./pages/QuickMessages.tsx";
+import CursosPlanilha from "./pages/CursosPlanilha.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/turmas" element={<ProtectedRoute><ClassGroups /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><GlobalDashboard /></ProtectedRoute>} />
             <Route path="/mensagens" element={<ProtectedRoute><QuickMessages /></ProtectedRoute>} />
+            <Route path="/cursos-planilha" element={<ProtectedRoute><CursosPlanilha /></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
             <Route path="/admin/audit" element={<ProtectedRoute adminOnly><AdminAudit /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
