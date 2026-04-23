@@ -416,13 +416,16 @@ const processCalendarTab = async (
     c.errors.push(`Aba "${tabTitle}": coluna Curso não encontrada`);
     return c;
   }
+  console.log(`[processCalendarTab] ${tabTitle}: ${values.length - 1} rows`);
+  const records: any[] = [];
+  const now = new Date().toISOString();
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
     const courseName = (row[idxCourse] || "").trim();
     if (!courseName) continue;
     const matched = findCourse(courses, courseName, unit);
-    const record = {
+    records.push({
       user_id: userId,
       unit,
       course_id: matched?.id ?? null,
@@ -435,17 +438,18 @@ const processCalendarTab = async (
       source_sheet: tabTitle,
       source_row: r + 1,
       notes: idxNotes >= 0 ? (row[idxNotes] || "").trim() || null : null,
-      synced_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from("calendar_events")
-      .upsert(record, {
-        onConflict: "user_id,unit,course_name,event_label,start_date",
-        ignoreDuplicates: false,
-      });
-    if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
-    else c.inserted++;
+      synced_at: now,
+    });
   }
+  await batchUpsert(
+    supabase,
+    "calendar_events",
+    records,
+    "user_id,unit,course_name,event_label,start_date",
+    c,
+    `calendar ${tabTitle}`,
+  );
+  console.log(`[processCalendarTab] ${tabTitle}: done, inserted=${c.inserted}, errors=${c.errors.length}`);
   return c;
 };
 
