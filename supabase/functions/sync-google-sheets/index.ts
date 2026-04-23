@@ -10,7 +10,16 @@ const corsHeaders = {
 
 // ---------- helpers ----------
 const norm = (s: string) =>
-  String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  String(s)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // diacritics
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, "") // zero-width chars
+    .replace(/\s+/g, " ") // collapse whitespace
+    .trim();
+
+// Strip ALL punctuation/whitespace for structural comparison.
+const stripAll = (s: string) => norm(s).replace(/[^a-z0-9]/g, "");
 
 const slugify = (s: string) =>
   norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -134,17 +143,46 @@ const getSheetValues = async (
 };
 
 // ---------- tab matching ----------
+// Strategy: 3 passes, strict to loose, but never an unbounded `includes`.
+// Pass 1: exact equality after normalization (lower + diacritics + whitespace).
+// Pass 2: equality after stripping ALL punctuation/whitespace.
+// Pass 3: prefix overlap on stripped form, requiring at least 12 shared chars.
 const matchTab = (tabs: SheetMeta[], wanted: string[]): SheetMeta | null => {
+  // Pass 1
   for (const w of wanted) {
     const wn = norm(w);
     const t = tabs.find((x) => norm(x.title) === wn);
-    if (t) return t;
+    if (t) {
+      console.log(`[matchTab] exact match: alias="${w}" -> tab="${t.title}"`);
+      return t;
+    }
   }
+  // Pass 2
   for (const w of wanted) {
-    const wn = norm(w);
-    const t = tabs.find((x) => norm(x.title).includes(wn) || wn.includes(norm(x.title)));
-    if (t) return t;
+    const ws = stripAll(w);
+    const t = tabs.find((x) => stripAll(x.title) === ws);
+    if (t) {
+      console.log(`[matchTab] stripped match: alias="${w}" -> tab="${t.title}"`);
+      return t;
+    }
   }
+  // Pass 3 — restricted prefix overlap
+  for (const w of wanted) {
+    const ws = stripAll(w);
+    if (ws.length < 12) continue;
+    const t = tabs.find((x) => {
+      const ts = stripAll(x.title);
+      if (ts.length < 12) return false;
+      const overlap = Math.min(ts.length, ws.length);
+      if (overlap < 12) return false;
+      return ts.startsWith(ws) || ws.startsWith(ts);
+    });
+    if (t) {
+      console.log(`[matchTab] prefix match: alias="${w}" -> tab="${t.title}"`);
+      return t;
+    }
+  }
+  console.log(`[matchTab] NO match for aliases=${JSON.stringify(wanted)}`);
   return null;
 };
 
@@ -602,56 +640,48 @@ Deno.serve(async (req) => {
       {
         key: "GR base",
         aliases: [
-          "(gr)base(preencher aqui)",
-          "gr base",
-          "grbase",
-          "base gr",
+          "(GR)BASE(PREENCHER AQUI)",
         ],
         handler: (v, t) => processPaidStudentsTab(supabase, userId, v, t, courses),
       },
       {
         key: "Calendário DF",
         aliases: [
-          "(df)calendario 2026",
-          "(df)calendário 2026",
-          "calendario df 2026",
-          "calendário df 2026",
+          "(DF)CALENDARIO 2026",
+          "(DF)CALENDÁRIO 2026",
         ],
         handler: (v, t) => processCalendarTab(supabase, userId, "brasilia", v, t, courses),
       },
       {
         key: "Calendário SP",
         aliases: [
-          "(sp)calendario 2026 sp",
-          "(sp)calendário 2026 sp",
-          "(sp)calendario 2026",
-          "(sp)calendário 2026",
-          "calendario sp 2026",
-          "calendário sp 2026",
+          "(SP)CALENDARIO 2026 SP",
+          "(SP)CALENDÁRIO 2026 SP",
         ],
         handler: (v, t) => processCalendarTab(supabase, userId, "sao_paulo", v, t, courses),
       },
       {
         key: "Brasília",
         aliases: [
-          "(df)turmas com matriculados e pre 2026",
-          "(df)turmas com matriculados e pré 2026",
-          "turmas df 2026",
-          "matriculados df 2026",
+          "(DF)TURMAS COM MATRICULADOS E PRÉ 2026",
+          "(DF)TURMAS COM MATRICULADOS e PRÉ 2026",
+          "(DF)TURMAS COM MATRICULADOS E PRE 2026",
         ],
         handler: (v, t) => processEnrollmentsTab(supabase, userId, "brasilia", v, t, courses, windows),
       },
       {
         key: "São Paulo",
         aliases: [
-          "(sp)turmas com matriculados e pre 2026",
-          "(sp)turmas com matriculados e pré 2026",
-          "turmas sp 2026",
-          "matriculados sp 2026",
+          "(SP)TURMAS COM MATRICULADOS E PRÉ 2026",
+          "(SP)TURMAS COM MATRICULADOS e PRÉ 2026",
+          "(SP)TURMAS COM MATRICULADOS E PRE 2026",
         ],
         handler: (v, t) => processEnrollmentsTab(supabase, userId, "sao_paulo", v, t, courses, windows),
       },
     ];
+
+    // Log all tab titles found, normalized, to help future debugging.
+    console.log(`[sync] tabs_found (${tabs.length}):`, tabs.map((t) => ({ title: t.title, norm: norm(t.title), stripped: stripAll(t.title) })));
 
     // Track quais titles já foram consumidos para evitar matchear a mesma aba
     // em dois targets (caso aliases se sobreponham por engano).
