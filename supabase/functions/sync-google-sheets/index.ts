@@ -350,6 +350,9 @@ const processPaidStudentsTab = async (
     c.errors.push(`Aba "${tabTitle}": colunas Aluno/Status não encontradas`);
     return c;
   }
+  console.log(`[processPaidStudentsTab] ${tabTitle}: ${values.length - 1} rows`);
+  const records: any[] = [];
+  const now = new Date().toISOString();
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
@@ -360,7 +363,7 @@ const processPaidStudentsTab = async (
     const courseName = idxCourse >= 0 ? (row[idxCourse] || "").trim() : null;
     const classLabel = idxClass >= 0 ? (row[idxClass] || "").trim() : null;
     const matched = courseName ? findCourse(courses, courseName) : undefined;
-    const record = {
+    records.push({
       user_id: userId,
       student_name: studentName,
       student_email: idxEmail >= 0 ? (row[idxEmail] || "").trim() || null : null,
@@ -376,17 +379,18 @@ const processPaidStudentsTab = async (
       source_sheet: tabTitle,
       source_row: r + 1,
       notes: idxNotes >= 0 ? (row[idxNotes] || "").trim() || null : null,
-      synced_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from("paid_students")
-      .upsert(record, {
-        onConflict: "user_id,student_name,course_name,class_label",
-        ignoreDuplicates: false,
-      });
-    if (error) c.errors.push(`Linha ${r + 1} (${tabTitle}): ${error.message}`);
-    else c.inserted++;
+      synced_at: now,
+    });
   }
+  await batchUpsert(
+    supabase,
+    "paid_students",
+    records,
+    "user_id,student_name,course_name,class_label",
+    c,
+    `paid ${tabTitle}`,
+  );
+  console.log(`[processPaidStudentsTab] ${tabTitle}: done, inserted=${c.inserted}, errors=${c.errors.length}`);
   return c;
 };
 
