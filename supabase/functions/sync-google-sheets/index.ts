@@ -511,6 +511,8 @@ const processEnrollmentsTab = async (
     const mes = key.split("||")[1] || "";
     const start = parseDate(mes);
     const end = mesFim ? parseDate(mesFim) : null;
+    // Filtro de ano: matrículas exigem data de início; nulas ou de outros anos são puladas.
+    if (!isTargetYear(start)) continue;
     const matched = findCourseByTurma(courses, turmaCode, unit);
     if (!matched) {
       recordUnmatched(turmaCode, turmaPrefix(turmaCode), unit, courses);
