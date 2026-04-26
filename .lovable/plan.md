@@ -1,122 +1,73 @@
-## Objetivo
+# Plano: Reforçar `.gitignore` com entradas de variáveis de ambiente
 
-Reduzir o bundle inicial do `/auth` (e demais entradas) com `React.lazy` em 14 páginas, e proteger contra "tela branca" em deploys novos com um `RouteErrorBoundary` específico para erros de chunk do Vite.
+## Contexto
 
----
+O `.gitignore` atual cobre `*.local` (linha 13), o que já bloqueia arquivos como `.env.local` e `.env.production.local`. Porém, **não cobre explicitamente** `.env`, `.env.production` e `.env.development` — esses arquivos podem conter chaves sensíveis (Supabase service role, tokens de API, secrets) e seriam versionados acidentalmente se criados.
 
-## Mudanças
+A ressalva do usuário em rodadas anteriores reforça a importância dessa proteção: variáveis de ambiente nunca devem ser versionadas.
 
-### 1) Novo arquivo: `src/components/RouteErrorBoundary.tsx`
+## Mudança proposta
 
-Class component que envolve o `<Suspense>` e captura erros de render + falhas de import dinâmico.
+**Arquivo:** `.gitignore` (único arquivo modificado)
 
-**Detecção robusta de chunk error** (cobre Vite e Webpack):
-```ts
-const isChunkError = (error: Error) =>
-  error.name === "ChunkLoadError" ||
-  /loading chunk|failed to fetch dynamically imported module/i.test(error.message);
+Inserir um bloco com 5 linhas **antes** da linha final `*.sw?` (linha 24), preservando o restante do arquivo intacto.
+
+### Conteúdo a inserir (após linha 23 `*.sln`, antes de `*.sw?`):
+
+```
+# Variáveis de ambiente — NUNCA versionar
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
 ```
 
-**Reset correto** (libera o boundary após clique em "Tentar novamente"):
-```ts
-handleReset = () => this.setState({ hasError: false, error: null });
+> Observação: incluí o comentário `# Variáveis de ambiente — NUNCA versionar` para deixar a intenção explícita no arquivo (consistente com o padrão do projeto, que já usa cabeçalhos de seção como `# Logs` e `# Editor directories and files`). Se preferir adicionar apenas as 5 linhas sem o comentário, é só sinalizar.
+
+## Resultado final do `.gitignore`
+
+```
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Variáveis de ambiente — NUNCA versionar
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+*.sw?
 ```
 
-**Logging condicional** (evita duplicar com o log nativo do React em dev):
-```ts
-componentDidCatch(error, info) {
-  if (import.meta.env.PROD) console.error("[RouteErrorBoundary]", error, info);
-}
-```
+## Notas
 
-**UI de fallback** (dois caminhos):
-- **Chunk error** → Card "Nova versão disponível. Recarregue a página." + botão `Recarregar` (chama `window.location.reload()`).
-- **Erro genérico** → Card "Algo deu errado." + botões `Tentar novamente` (handleReset) e `Voltar ao início` (`window.location.href = "/"`).
+- `.env.local` e `.env.*.local` já são cobertos por `*.local`, mas mantê-los explícitos torna a regra autoexplicativa e resistente a refatorações futuras do `.gitignore`.
+- Nenhum outro arquivo será tocado.
+- O `.env` atual do projeto (com `VITE_SUPABASE_*`) é gerado/gerenciado automaticamente pela plataforma — essa mudança apenas garante que ele e variantes futuras não sejam commitados.
 
-Estilo consistente com o resto do app (Card + Button do shadcn, ícone `AlertCircle` do lucide).
+## Risco
 
-### 2) Refator `src/App.tsx`
-
-**Imports lazy** (14 páginas):
-```ts
-const Index = lazy(() => import("./pages/Index"));
-const PendingApproval = lazy(() => import("./pages/PendingApproval"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const AdminApprovals = lazy(() => import("./pages/AdminApprovals"));
-const AdminAudit = lazy(() => import("./pages/AdminAudit"));
-const CourseDetail = lazy(() => import("./pages/CourseDetail"));
-const CourseEditor = lazy(() => import("./pages/CourseEditor"));
-const ImportCourses = lazy(() => import("./pages/ImportCourses"));
-const Settings = lazy(() => import("./pages/Settings"));
-const CourseCalendar = lazy(() => import("./pages/CourseCalendar"));
-const ClassGroups = lazy(() => import("./pages/ClassGroups"));
-const GlobalDashboard = lazy(() => import("./pages/GlobalDashboard"));
-const QuickMessages = lazy(() => import("./pages/QuickMessages"));
-const CursosPlanilha = lazy(() => import("./pages/CursosPlanilha"));
-```
-
-**Imports estáticos** (intencionais):
-- `Auth` — entrada principal de usuários deslogados, não pode ter latência de chunk.
-- `NotFound` — leve, e precisa estar sempre disponível como fallback do catch-all.
-
-**PageLoader inline** (mesma estética do loader do `ProtectedRoute`):
-```tsx
-const PageLoader = () => (
-  <div className="flex min-h-screen items-center justify-center bg-background">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
-```
-
-**Hierarquia dentro de `AuthProvider`**:
-```
-<AuthProvider>
-  <RouteErrorBoundary>
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        ... 16 rotas ...
-      </Routes>
-    </Suspense>
-  </RouteErrorBoundary>
-</AuthProvider>
-```
-
-**Preservação integral**:
-- Todos os providers atuais: `QueryClientProvider`, `TooltipProvider`, `Toaster`, `Sonner`, `BrowserRouter`, `AuthProvider`.
-- Todas as 16 rotas atuais com suas guardas (`ProtectedRoute`, `adminOnly`).
-- `ProtectedRoute` continua importado como **named export** (`import { ProtectedRoute } from "@/components/ProtectedRoute"`).
-- Catch-all `<Route path="*" element={<NotFound />} />` permanece como **última rota** dentro de `<Routes>`.
-
----
-
-## Tabela de riscos cobertos
-
-| Risco | Mitigação |
-|---|---|
-| Tela branca em deploy novo (chunk antigo no cache) | `RouteErrorBoundary` detecta e oferece reload |
-| Boundary preso após clicar "Tentar novamente" | `handleReset` limpa `hasError` e `error` |
-| Log duplicado de erro em dev | `if (import.meta.env.PROD)` antes do `console.error` |
-| Latência adicional no `/auth` | `Auth` permanece estático |
-| Flash visual entre loader de auth e loader de chunk | `PageLoader` usa o mesmo `Loader2` + layout do `ProtectedRoute` |
-| String fragil para detectar chunk error | Regex case-insensitive cobre Vite + Webpack |
-| Catch-all reordenado pelo refator | Spec explícita: `*` é a última rota |
-
----
-
-## Validação pós-aplicação
-
-1. `/auth` carrega e o Network mostra **apenas** o chunk principal + `Auth` + vendors (sem `Dashboard`, `CourseEditor` etc).
-2. Navegar para `/dashboard` dispara um chunk novo e o `PageLoader` aparece brevemente.
-3. Build de produção (`vite build`) e checar `dist/assets/`: confirmar que os arquivos têm hash no nome (padrão `[name]-[hash].js` do Vite). Se `vite.config.ts` customizar `chunkFileNames` sem hash, o `RouteErrorBoundary` não cobriria stale chunks — verificar e ajustar se necessário.
-4. Forçar erro: jogar `throw new Error("test")` em uma página lazy → ver fallback genérico com "Tentar novamente" funcionando.
-
----
-
-## Arquivos
-
-| Arquivo | Operação |
-|---|---|
-| `src/components/RouteErrorBoundary.tsx` | Criar |
-| `src/App.tsx` | Refatorar |
-
-Nenhum outro arquivo é tocado. Sem mudanças em rotas, providers, ou comportamento de auth.
+Nenhum. É uma mudança puramente defensiva em arquivo de configuração de VCS, sem impacto em build, runtime ou tipos.
