@@ -604,7 +604,12 @@ const processPaidStudentsTab = async (
     const row = values[r];
     if (!row || row.length === 0) continue;
     const status = (row[idxStatus] || "").trim();
-    if (!norm(status).startsWith("1.pago") && !norm(status).startsWith("1 pago")) continue;
+    const statusN = norm(status);
+    // Aceita qualquer variação de "Pago": "PAGO", "1.PAGO", "1 PAGO",
+    // "1- PAGO", "1º Pago", "Pago integral", etc. Rejeita variações
+    // negativas como "não pago" / "nao pago".
+    if (!statusN.includes("pago")) continue;
+    if (/\bnao\s+pago\b/.test(statusN)) continue;
     const studentName = (row[idxName] || "").trim();
     if (!studentName) continue;
     // Sanity: rejeita lixo conhecido como "1.PAGO" ou datas no campo nome
