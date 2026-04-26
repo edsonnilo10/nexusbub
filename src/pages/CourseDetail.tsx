@@ -170,9 +170,6 @@ const CourseDetail = () => {
           <TabsContent value="classes" className="mt-4 sm:mt-6">
             <CourseClassesTab course={course} classes={classes} onChange={setClasses} />
           </TabsContent>
-          <TabsContent value="enrollments" className="mt-4 sm:mt-6">
-            <CourseEnrollmentsTab course={course} />
-          </TabsContent>
           <TabsContent value="landing" className="mt-4 sm:mt-6">
             <CourseLandingTab course={course} modules={modules} classes={classes} />
           </TabsContent>
