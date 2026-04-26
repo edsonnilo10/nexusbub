@@ -238,10 +238,15 @@ const findCourse = (
 
 // Extrai o MNEMONICO do código de TURMA (tudo antes do primeiro ponto),
 // normaliza para comparação: minúsculo, sem acentos, sem espaços.
-// Ex.: "CM US MESQ.2601.1" -> "cmusmesq"
-//      "CM US CAVF.SP.2607.1" -> "cmuscavf"
+// Trata o sufixo de unidade paulista ".SP" no FINAL do código antes de
+// extrair o prefixo, para que "CM US MAMA.SP" e "CM US MAMA.2601.1"
+// resolvam o mesmo prefixo raiz ("cmusmama").
+// Ex.: "CM US MESQ.2601.1"     -> "cmusmesq"
+//      "CM US CAVF.SP.2607.1"  -> "cmuscavf"
+//      "CM US MAMA.SP"         -> "cmusmama"
 const turmaPrefix = (turma: string): string => {
-  const head = (turma || "").split(".")[0] || "";
+  const cleaned = (turma || "").replace(/\.SP$/i, "");
+  const head = cleaned.split(".")[0] || "";
   return norm(head).replace(/\s+/g, "");
 };
 
@@ -263,6 +268,15 @@ const unitFromTurma = (turma: string, fallback: "sao_paulo" | "brasilia"): "sao_
 // Ex.: "cm-us-cavf-bsb"   -> "cmuscavf"
 //      "cm-us-mama-sp"    -> "cmusmama"
 //      "cm-us-pedi-quadril-sp" -> "cmuspediquadril"
+// Extrai o "mnemônico normalizado" do slug do curso, removendo apenas o
+// sufixo de unidade (-sp/-bsb/-df). NÃO remove blocos curtos com dígitos no
+// fim, pois esses fazem parte de mnemônicos legítimos (ex.: "mor1", "ped1",
+// "t10" em pós-graduações).
+// Ex.: "cm-us-cavf-bsb"        -> "cmuscavf"
+//      "cm-us-mama-sp"          -> "cmusmama"
+//      "cm-us-pedi-quadril-sp"  -> "cmuspediquadril"
+//      "cm-us-mor1-bsb"         -> "cmusmor1"  (preservado)
+//      "cm-us-ped1-sp"          -> "cmusped1"  (preservado)
 const slugMnemonic = (slug: string | null | undefined): string => {
   if (!slug) return "";
   const parts = norm(slug).split("-").filter(Boolean);
@@ -274,11 +288,6 @@ const slugMnemonic = (slug: string | null | undefined): string => {
       continue;
     }
     break;
-  }
-  // Remove sufixo de hash curto (4 chars alfanumérico) que aparece em alguns slugs
-  if (parts.length > 1) {
-    const last = parts[parts.length - 1];
-    if (/^[a-z0-9]{4}$/.test(last) && /\d/.test(last)) parts.pop();
   }
   return parts.join("");
 };
@@ -434,11 +443,14 @@ const processEnrollmentsTab = async (
     return -1;
   };
 
-  // Índice das colunas relevantes em cada seção
+  // Índice das colunas relevantes em cada seção. mesFim é opcional: nem
+  // toda planilha tem a coluna de término na seção PAGOS/PRÉ. Quando existir,
+  // usamos para popular class_end_date.
   const buildSection = (start: number, end: number) => ({
     turma: findInRange(["turma"], start, end),
     nome: findInRange(["nome"], start, end),
     mesInicio: findInRange(["mes(inicio)", "mes inicio", "mês(inicio)", "mês inicio", "inicio", "início", "mes", "mês"], start, end),
+    mesFim: findInRange(["mes(fim)", "mes fim", "mês(fim)", "mês fim", "fim", "termino", "término", "data fim", "data termino", "data término", "end"], start, end),
   });
 
   const secPagos = buildSection(0, fimPagos);
@@ -447,24 +459,31 @@ const processEnrollmentsTab = async (
   console.log(`[processEnrollmentsTab] ${tabTitle}: secPagos=${JSON.stringify(secPagos)} secPre=${JSON.stringify(secPre)}`);
 
   // Agregar contagem por (turma_code, mes_inicio) — uma linha por aluno
-  type Agg = { count: number; firstRow: number };
+  type Agg = { count: number; firstRow: number; mesFim: string };
   const agg = new Map<string, Agg>();
   // Guarda o nome original da turma para preservar capitalização
   const turmaDisplay = new Map<string, string>();
 
-  const eatRow = (row: string[], section: { turma: number; nome: number; mesInicio: number }, r: number) => {
+  const eatRow = (
+    row: string[],
+    section: { turma: number; nome: number; mesInicio: number; mesFim: number },
+    r: number,
+  ) => {
     if (section.turma < 0) return;
     const turmaCode = (row[section.turma] || "").trim();
     if (!turmaCode) return;
     const nome = section.nome >= 0 ? (row[section.nome] || "").trim() : "";
     if (!nome) return; // só conta se houver aluno
     const mes = section.mesInicio >= 0 ? (row[section.mesInicio] || "").trim() : "";
+    const fim = section.mesFim >= 0 ? (row[section.mesFim] || "").trim() : "";
     const key = `${norm(turmaCode)}||${norm(mes)}`;
     const cur = agg.get(key);
     if (cur) {
       cur.count += 1;
+      // preserva primeiro fim não-vazio
+      if (!cur.mesFim && fim) cur.mesFim = fim;
     } else {
-      agg.set(key, { count: 1, firstRow: r + 1 });
+      agg.set(key, { count: 1, firstRow: r + 1, mesFim: fim });
       turmaDisplay.set(key, turmaCode);
     }
   };
@@ -481,16 +500,17 @@ const processEnrollmentsTab = async (
   const records: any[] = [];
   const now = new Date().toISOString();
   let sampleLogged = 0;
-  for (const [key, { count, firstRow }] of agg.entries()) {
+  for (const [key, { count, firstRow, mesFim }] of agg.entries()) {
     const turmaCode = turmaDisplay.get(key) || "";
     const mes = key.split("||")[1] || "";
     const start = parseDate(mes);
+    const end = mesFim ? parseDate(mesFim) : null;
     const matched = findCourseByTurma(courses, turmaCode, unit);
     if (!matched) {
       recordUnmatched(turmaCode, turmaPrefix(turmaCode), unit, courses);
     }
     if (sampleLogged < 3) {
-      console.log(`[processEnrollmentsTab] ${tabTitle} sample: turma="${turmaCode}" prefix="${turmaPrefix(turmaCode)}" course_id=${matched?.id ?? "NULL"} slug=${matched?.slug ?? "—"}`);
+      console.log(`[processEnrollmentsTab] ${tabTitle} sample: turma="${turmaCode}" prefix="${turmaPrefix(turmaCode)}" course_id=${matched?.id ?? "NULL"} slug=${matched?.slug ?? "—"} start=${start} end=${end}`);
       sampleLogged++;
     }
     records.push({
@@ -500,7 +520,7 @@ const processEnrollmentsTab = async (
       course_name: matched?.name || turmaCode,
       class_label: turmaCode || null,
       class_start_date: start,
-      class_end_date: null,
+      class_end_date: end,
       student_count: count,
       source_sheet: tabTitle,
       source_row: firstRow,
@@ -512,7 +532,7 @@ const processEnrollmentsTab = async (
         course_id: matched.id,
         course_name: matched.name,
         start_date: start,
-        end_date: start,
+        end_date: end || start,
         class_label: turmaCode || null,
       });
     }
@@ -595,7 +615,12 @@ const processPaidStudentsTab = async (
     const row = values[r];
     if (!row || row.length === 0) continue;
     const status = (row[idxStatus] || "").trim();
-    if (!norm(status).startsWith("1.pago") && !norm(status).startsWith("1 pago")) continue;
+    const statusN = norm(status);
+    // Aceita qualquer variação de "Pago": "PAGO", "1.PAGO", "1 PAGO",
+    // "1- PAGO", "1º Pago", "Pago integral", etc. Rejeita variações
+    // negativas como "não pago" / "nao pago".
+    if (!statusN.includes("pago")) continue;
+    if (/\bnao\s+pago\b/.test(statusN)) continue;
     const studentName = (row[idxName] || "").trim();
     if (!studentName) continue;
     // Sanity: rejeita lixo conhecido como "1.PAGO" ou datas no campo nome
