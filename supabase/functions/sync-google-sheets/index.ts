@@ -47,6 +47,12 @@ const parseDate = (v: any): string | null => {
   return null;
 };
 
+// Filtro de ano-alvo: a sincronização só processa registros do ano corrente
+// de operação (2026). Datas de outros anos ou nulas são descartadas.
+const TARGET_YEAR = "2026";
+const isTargetYear = (date: string | null): boolean =>
+  !!date && date.startsWith(`${TARGET_YEAR}-`);
+
 const parseInteger = (v: any): number => {
   if (v == null || v === "") return 0;
   const m = String(v).match(/-?\d+/);
