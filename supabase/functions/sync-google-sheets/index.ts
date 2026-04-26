@@ -268,6 +268,15 @@ const unitFromTurma = (turma: string, fallback: "sao_paulo" | "brasilia"): "sao_
 // Ex.: "cm-us-cavf-bsb"   -> "cmuscavf"
 //      "cm-us-mama-sp"    -> "cmusmama"
 //      "cm-us-pedi-quadril-sp" -> "cmuspediquadril"
+// Extrai o "mnemônico normalizado" do slug do curso, removendo apenas o
+// sufixo de unidade (-sp/-bsb/-df). NÃO remove blocos curtos com dígitos no
+// fim, pois esses fazem parte de mnemônicos legítimos (ex.: "mor1", "ped1",
+// "t10" em pós-graduações).
+// Ex.: "cm-us-cavf-bsb"        -> "cmuscavf"
+//      "cm-us-mama-sp"          -> "cmusmama"
+//      "cm-us-pedi-quadril-sp"  -> "cmuspediquadril"
+//      "cm-us-mor1-bsb"         -> "cmusmor1"  (preservado)
+//      "cm-us-ped1-sp"          -> "cmusped1"  (preservado)
 const slugMnemonic = (slug: string | null | undefined): string => {
   if (!slug) return "";
   const parts = norm(slug).split("-").filter(Boolean);
@@ -279,11 +288,6 @@ const slugMnemonic = (slug: string | null | undefined): string => {
       continue;
     }
     break;
-  }
-  // Remove sufixo de hash curto (4 chars alfanumérico) que aparece em alguns slugs
-  if (parts.length > 1) {
-    const last = parts[parts.length - 1];
-    if (/^[a-z0-9]{4}$/.test(last) && /\d/.test(last)) parts.pop();
   }
   return parts.join("");
 };
