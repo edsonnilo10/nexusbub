@@ -500,16 +500,17 @@ const processEnrollmentsTab = async (
   const records: any[] = [];
   const now = new Date().toISOString();
   let sampleLogged = 0;
-  for (const [key, { count, firstRow }] of agg.entries()) {
+  for (const [key, { count, firstRow, mesFim }] of agg.entries()) {
     const turmaCode = turmaDisplay.get(key) || "";
     const mes = key.split("||")[1] || "";
     const start = parseDate(mes);
+    const end = mesFim ? parseDate(mesFim) : null;
     const matched = findCourseByTurma(courses, turmaCode, unit);
     if (!matched) {
       recordUnmatched(turmaCode, turmaPrefix(turmaCode), unit, courses);
     }
     if (sampleLogged < 3) {
-      console.log(`[processEnrollmentsTab] ${tabTitle} sample: turma="${turmaCode}" prefix="${turmaPrefix(turmaCode)}" course_id=${matched?.id ?? "NULL"} slug=${matched?.slug ?? "—"}`);
+      console.log(`[processEnrollmentsTab] ${tabTitle} sample: turma="${turmaCode}" prefix="${turmaPrefix(turmaCode)}" course_id=${matched?.id ?? "NULL"} slug=${matched?.slug ?? "—"} start=${start} end=${end}`);
       sampleLogged++;
     }
     records.push({
@@ -519,7 +520,7 @@ const processEnrollmentsTab = async (
       course_name: matched?.name || turmaCode,
       class_label: turmaCode || null,
       class_start_date: start,
-      class_end_date: null,
+      class_end_date: end,
       student_count: count,
       source_sheet: tabTitle,
       source_row: firstRow,
@@ -531,7 +532,7 @@ const processEnrollmentsTab = async (
         course_id: matched.id,
         course_name: matched.name,
         start_date: start,
-        end_date: start,
+        end_date: end || start,
         class_label: turmaCode || null,
       });
     }
