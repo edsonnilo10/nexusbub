@@ -537,8 +537,10 @@ const processEnrollmentsTab = async (
 
   console.log(`[processEnrollmentsTab] ${tabTitle}: secPagos=${JSON.stringify(secPagos)} secPre=${JSON.stringify(secPre)}`);
 
-  // Agregar contagem por (turma_code, mes_inicio) — uma linha por aluno
-  type Agg = { count: number; firstRow: number; mesFim: string };
+  // Agregar contagem por (turma_code, ano-mes) — uma linha por aluno.
+  // Agrupar pelo Mês/Ano (YYYY-MM) evita duplicação quando usuários digitam
+  // dias diferentes (ex.: 15/06 vs 20/06) para a mesma turma.
+  type Agg = { count: number; firstRow: number; start: string; end: string | null };
   const agg = new Map<string, Agg>();
   // Guarda o nome original da turma para preservar capitalização
   const turmaDisplay = new Map<string, string>();
@@ -551,18 +553,34 @@ const processEnrollmentsTab = async (
     if (section.turma < 0) return;
     const turmaCode = (row[section.turma] || "").trim();
     if (!turmaCode) return;
+
+    // Só conta se houver um nome na coluna (aluno real)
     const nome = section.nome >= 0 ? (row[section.nome] || "").trim() : "";
-    if (!nome) return; // só conta se houver aluno
-    const mes = section.mesInicio >= 0 ? (row[section.mesInicio] || "").trim() : "";
-    const fim = section.mesFim >= 0 ? (row[section.mesFim] || "").trim() : "";
-    const key = `${norm(turmaCode)}||${norm(mes)}`;
+    if (!nome) return;
+
+    const rawMes = section.mesInicio >= 0 ? (row[section.mesInicio] || "").trim() : "";
+    const rawFim = section.mesFim >= 0 ? (row[section.mesFim] || "").trim() : "";
+
+    // 1. Resolve a data (via texto ou derivando do código da turma)
+    let start = parseDate(rawMes);
+    if (!start) start = deriveDateFromTurma(turmaCode);
+
+    // 2. Trava de ano: Se não for do ano alvo, aborta a contagem
+    if (!isTargetYear(start)) return;
+
+    const end = rawFim ? parseDate(rawFim) : null;
+
+    // 3. Extrai apenas YYYY-MM (ex.: "2026-06"). Garante que dias diferentes
+    // no mesmo mês não separem a turma.
+    const monthKey = (start as string).substring(0, 7);
+    const key = `${norm(turmaCode)}||${monthKey}`;
+
     const cur = agg.get(key);
     if (cur) {
       cur.count += 1;
-      // preserva primeiro fim não-vazio
-      if (!cur.mesFim && fim) cur.mesFim = fim;
+      if (!cur.end && end) cur.end = end; // Preserva data de término se achar
     } else {
-      agg.set(key, { count: 1, firstRow: r + 1, mesFim: fim });
+      agg.set(key, { count: 1, firstRow: r + 1, start: start as string, end });
       turmaDisplay.set(key, turmaCode);
     }
   };
@@ -579,16 +597,8 @@ const processEnrollmentsTab = async (
   const records: any[] = [];
   const now = new Date().toISOString();
   let sampleLogged = 0;
-  for (const [key, { count, firstRow, mesFim }] of agg.entries()) {
+  for (const [key, { count, firstRow, start, end }] of agg.entries()) {
     const turmaCode = turmaDisplay.get(key) || "";
-    const mes = key.split("||")[1] || "";
-    let start = parseDate(mes);
-    let end = mesFim ? parseDate(mesFim) : null;
-    // Fallback: se a data de início não veio (ou veio inválida), tenta derivar
-    // do próprio código da turma (ex.: "CM US MOR2.2606.1" -> "2026-06-01").
-    if (!start) start = deriveDateFromTurma(turmaCode);
-    // Filtro de ano: matrículas exigem data de início; nulas ou de outros anos são puladas.
-    if (!isTargetYear(start)) continue;
     const matched = findCourseByTurma(courses, turmaCode, unit);
     if (!matched) {
       recordUnmatched(turmaCode, turmaPrefix(turmaCode), unit, courses);
