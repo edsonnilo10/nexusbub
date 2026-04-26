@@ -142,9 +142,6 @@ const CourseDetail = () => {
               </TabsTrigger>
               <TabsTrigger value="info" className="shrink-0 text-xs sm:text-sm">Info</TabsTrigger>
               <TabsTrigger value="classes" className="shrink-0 text-xs sm:text-sm">Turmas</TabsTrigger>
-              <TabsTrigger value="enrollments" className="shrink-0 gap-1.5 text-xs sm:text-sm">
-                <Users className="h-3.5 w-3.5" /> Matrículas
-              </TabsTrigger>
               <TabsTrigger value="landing" className="shrink-0 text-xs sm:text-sm">Apresentação</TabsTrigger>
               <TabsTrigger value="whatsapp" className="shrink-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
             </TabsList>
