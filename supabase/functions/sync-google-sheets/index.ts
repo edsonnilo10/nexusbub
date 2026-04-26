@@ -644,8 +644,14 @@ const processPaidStudentsTab = async (
       recordUnmatched(classLabel, turmaPrefix(classLabel), derivedUnit, courses);
     }
 
+    const classStart = idxStart >= 0 ? parseDate(row[idxStart]) : null;
+    const payDate = idxPayDate >= 0 ? parseDate(row[idxPayDate]) : null;
+    // Filtro de ano: aceita se a data de início da turma OU a data do pagamento
+    // for de 2026. Se ambas forem nulas/de outros anos, descarta.
+    if (!isTargetYear(classStart) && !isTargetYear(payDate)) continue;
+
     if (sampleLogged < 3) {
-      console.log(`[processPaidStudentsTab] ${tabTitle} sample: name="${studentName}" turma="${classLabel}" unit=${derivedUnit} course_id=${matched?.id ?? "NULL"}`);
+      console.log(`[processPaidStudentsTab] ${tabTitle} sample: name="${studentName}" turma="${classLabel}" unit=${derivedUnit} course_id=${matched?.id ?? "NULL"} start=${classStart} pay=${payDate}`);
       sampleLogged++;
     }
 
@@ -657,11 +663,11 @@ const processPaidStudentsTab = async (
       course_id: matched?.id ?? null,
       course_name: matched?.name || courseNameRaw || null,
       class_label: classLabel || null,
-      class_start_date: idxStart >= 0 ? parseDate(row[idxStart]) : null,
+      class_start_date: classStart,
       payment_status: status || "1.PAGO",
       contract_status: idxContract >= 0 ? (row[idxContract] || "").trim() || null : null,
       amount: idxAmount >= 0 ? parseAmount(row[idxAmount]) : null,
-      payment_date: idxPayDate >= 0 ? parseDate(row[idxPayDate]) : null,
+      payment_date: payDate,
       source_sheet: tabTitle,
       source_row: r + 1,
       notes: idxNotes >= 0 ? (row[idxNotes] || "").trim() || null : null,
