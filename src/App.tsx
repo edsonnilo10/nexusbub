@@ -27,7 +27,19 @@ const GlobalDashboard = lazy(() => import("./pages/GlobalDashboard"));
 const QuickMessages = lazy(() => import("./pages/QuickMessages"));
 const CursosPlanilha = lazy(() => import("./pages/CursosPlanilha"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 const PageLoader = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
