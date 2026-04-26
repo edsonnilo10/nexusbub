@@ -582,8 +582,11 @@ const processEnrollmentsTab = async (
   for (const [key, { count, firstRow, mesFim }] of agg.entries()) {
     const turmaCode = turmaDisplay.get(key) || "";
     const mes = key.split("||")[1] || "";
-    const start = parseDate(mes);
-    const end = mesFim ? parseDate(mesFim) : null;
+    let start = parseDate(mes);
+    let end = mesFim ? parseDate(mesFim) : null;
+    // Fallback: se a data de início não veio (ou veio inválida), tenta derivar
+    // do próprio código da turma (ex.: "CM US MOR2.2606.1" -> "2026-06-01").
+    if (!start) start = deriveDateFromTurma(turmaCode);
     // Filtro de ano: matrículas exigem data de início; nulas ou de outros anos são puladas.
     if (!isTargetYear(start)) continue;
     const matched = findCourseByTurma(courses, turmaCode, unit);
