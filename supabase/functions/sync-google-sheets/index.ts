@@ -540,10 +540,26 @@ const processEnrollmentsTab = async (
   // Agregar contagem por (turma_code, ano-mes) — uma linha por aluno.
   // Agrupar pelo Mês/Ano (YYYY-MM) evita duplicação quando usuários digitam
   // dias diferentes (ex.: 15/06 vs 20/06) para a mesma turma.
-  type Agg = { count: number; firstRow: number; start: string; end: string | null };
+  type Agg = {
+    count: number;
+    firstRow: number;
+    start: string;
+    end: string | null;
+    distinctDays: Set<string>; // dias YYYY-MM-DD vistos para esta (turma, mês)
+  };
   const agg = new Map<string, Agg>();
   // Guarda o nome original da turma para preservar capitalização
   const turmaDisplay = new Map<string, string>();
+
+  // Contadores de auditoria (antes do agrupamento)
+  const audit = {
+    rowsScanned: 0,            // linhas brutas iteradas
+    rowsWithName: 0,           // linhas que tinham um nome de aluno
+    droppedNoTurma: 0,         // linha com nome mas sem código de turma
+    droppedNoDate: 0,          // não foi possível resolver nem data nem fallback
+    droppedWrongYear: 0,       // resolveu data mas não é do ano alvo
+    counted: 0,                // alunos efetivamente contabilizados (== sum(agg.count))
+  };
 
   const eatRow = (
     row: string[],
@@ -552,11 +568,13 @@ const processEnrollmentsTab = async (
   ) => {
     if (section.turma < 0) return;
     const turmaCode = (row[section.turma] || "").trim();
-    if (!turmaCode) return;
 
     // Só conta se houver um nome na coluna (aluno real)
     const nome = section.nome >= 0 ? (row[section.nome] || "").trim() : "";
     if (!nome) return;
+    audit.rowsWithName++;
+
+    if (!turmaCode) { audit.droppedNoTurma++; return; }
 
     const rawMes = section.mesInicio >= 0 ? (row[section.mesInicio] || "").trim() : "";
     const rawFim = section.mesFim >= 0 ? (row[section.mesFim] || "").trim() : "";
@@ -564,9 +582,10 @@ const processEnrollmentsTab = async (
     // 1. Resolve a data (via texto ou derivando do código da turma)
     let start = parseDate(rawMes);
     if (!start) start = deriveDateFromTurma(turmaCode);
+    if (!start) { audit.droppedNoDate++; return; }
 
     // 2. Trava de ano: Se não for do ano alvo, aborta a contagem
-    if (!isTargetYear(start)) return;
+    if (!isTargetYear(start)) { audit.droppedWrongYear++; return; }
 
     const end = rawFim ? parseDate(rawFim) : null;
 
@@ -578,21 +597,63 @@ const processEnrollmentsTab = async (
     const cur = agg.get(key);
     if (cur) {
       cur.count += 1;
+      cur.distinctDays.add(start as string);
       if (!cur.end && end) cur.end = end; // Preserva data de término se achar
     } else {
-      agg.set(key, { count: 1, firstRow: r + 1, start: start as string, end });
+      agg.set(key, {
+        count: 1,
+        firstRow: r + 1,
+        start: start as string,
+        end,
+        distinctDays: new Set([start as string]),
+      });
       turmaDisplay.set(key, turmaCode);
     }
+    audit.counted++;
   };
 
   for (let r = 2; r < values.length; r++) {
     const row = values[r];
     if (!row || row.length === 0) continue;
+    audit.rowsScanned++;
     eatRow(row, secPagos, r);
     if (secPre) eatRow(row, secPre, r);
   }
 
-  console.log(`[processEnrollmentsTab] ${tabTitle}: aggregated ${agg.size} (turma, mes) groups`);
+  // ===== VALIDAÇÃO: contagem antes vs depois do agrupamento =====
+  const aggregatedSum = Array.from(agg.values()).reduce((s, v) => s + v.count, 0);
+  const integrityOk = aggregatedSum === audit.counted;
+  console.log(
+    `[processEnrollmentsTab] ${tabTitle}: AUDIT rowsScanned=${audit.rowsScanned} rowsWithName=${audit.rowsWithName} ` +
+    `counted=${audit.counted} droppedNoTurma=${audit.droppedNoTurma} droppedNoDate=${audit.droppedNoDate} ` +
+    `droppedWrongYear=${audit.droppedWrongYear} -> groups=${agg.size} aggregatedSum=${aggregatedSum} ` +
+    `integrity=${integrityOk ? "OK ✅" : "MISMATCH ❌"}`,
+  );
+  if (!integrityOk) {
+    console.warn(
+      `[processEnrollmentsTab] ${tabTitle}: ⚠️ DIVERGÊNCIA — ${audit.counted - aggregatedSum} aluno(s) ` +
+      `entraram no contador mas não apareceram no agrupamento.`,
+    );
+  }
+
+  // Lista turmas em que o agrupamento por mês fundiu múltiplos dias distintos
+  // (justamente o caso que o YYYY-MM resolve). Útil para confirmar que nada se perdeu.
+  const merged: string[] = [];
+  for (const [key, v] of agg.entries()) {
+    if (v.distinctDays.size > 1) {
+      const turmaCode = turmaDisplay.get(key) || key;
+      const days = Array.from(v.distinctDays).sort().join(", ");
+      merged.push(`"${turmaCode}" (${key.split("||")[1]}): ${v.count} alunos, dias=[${days}]`);
+    }
+  }
+  if (merged.length > 0) {
+    console.log(
+      `[processEnrollmentsTab] ${tabTitle}: ${merged.length} turma(s) tiveram dias distintos fundidos no mesmo mês:`,
+    );
+    merged.slice(0, 20).forEach((m) => console.log(`  - ${m}`));
+    if (merged.length > 20) console.log(`  … e mais ${merged.length - 20} caso(s).`);
+  }
+
 
   const records: any[] = [];
   const now = new Date().toISOString();
