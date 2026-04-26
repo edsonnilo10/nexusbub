@@ -1,91 +1,122 @@
+## Objetivo
 
-
-## Diagnóstico — dois problemas separados
-
-### Problema 1: "Failed to send a request to the Edge Function" na aba Matrículas do curso
-
-Acontece quando clico em **Sincronizar agora** dentro de um curso (não em Configurações). Os logs da edge function mostram que a sincronização **funciona normalmente** quando chamada de Configurações — então a falha é no lado do client.
-
-**Causa raiz:** Em `CourseEnrollmentsTab.tsx`, a `handleSync` espera resposta no formato `{ alunosNovos, alunosAtualizados }`, mas a edge function retorna `{ ok, processed, unmatched_turmas, ... }`. Mais importante: provavelmente o invoke está falhando por **timeout do client** (a edge demora ~14s lendo 6.101 linhas + 1.014 + calendários — o `supabase.functions.invoke` do browser pode estar cortando antes).
-
-### Problema 2: Contagens infladas — "60 pagos no MIFE" mas só deveria ter alguns
-
-Confirmado nos números: a tela mostra **419 pagos totais**, mas o card mostra **60 no MIFE**. Olhando o banco:
-
-- `paid_students` tem **TODAS** as linhas históricas (2023, 2024, 2025, 2026) marcadas como "1.PAGO".
-- Logs mostram amostras de 2023 sendo processadas: `turma="CM US PED2.2305.1"` (ano 23, mês 05).
-- Não há filtro por ano de turma — então o curso `cm-pr-mife-bsb` está somando alunos de **todas as edições históricas** dele, não só 2026.
-
-A planilha `(GR)BASE(PREENCHER AQUI)` é o histórico completo da Cetrus desde 2021. Está correto importar tudo (rastreabilidade), mas o **resumo dos cursos (`useCursosResumo`) tem que filtrar por ano da turma atual**, senão soma 5 anos de alunos no card de 2026.
+Reduzir o bundle inicial do `/auth` (e demais entradas) com `React.lazy` em 14 páginas, e proteger contra "tela branca" em deploys novos com um `RouteErrorBoundary` específico para erros de chunk do Vite.
 
 ---
 
-## Plano de correção
+## Mudanças
 
-### 1) Corrigir botão "Sincronizar agora" dentro do curso
+### 1) Novo arquivo: `src/components/RouteErrorBoundary.tsx`
 
-Em `src/components/course/CourseEnrollmentsTab.tsx`:
+Class component que envolve o `<Suspense>` e captura erros de render + falhas de import dinâmico.
 
-- Trocar a leitura `data.alunosNovos / data.alunosAtualizados` (que não existem) pelo formato real retornado pela função (`processed.paid_students.inserted` etc.).
-- Aumentar tolerância do invoke: a edge demora ~15s. O `supabase-js` invoke usa fetch padrão sem timeout configurável, mas o erro "Failed to send a request" geralmente é o browser/CORS abortando. Vou:
-  - Adicionar headers explícitos no invoke (`headers: { "Content-Type": "application/json" }`).
-  - Logar o erro completo (`console.error(error)`) para diagnóstico se persistir.
-  - Mostrar toast com a mensagem real do erro em vez de mensagem genérica.
-
-### 2) Filtrar matrículas/pagos por ano da turma no resumo
-
-Em `src/hooks/useCursosResumo.tsx` (e/ou onde o resumo agrega):
-
-- Adicionar lógica para extrair o **ano de início da turma** do `class_label` (formato `CM PR MIFE.2606.1` → ano `2026`, mês `06`).
-- Filtrar para contar apenas turmas do **ano corrente** (ou um filtro selecionável: 2024 / 2025 / 2026).
-- Aplicar o mesmo em `paid_students`: contar apenas pagos vinculados a turmas de 2026.
-
-Adicionar utilitário em `src/lib/turmaUtils.ts`:
+**Detecção robusta de chunk error** (cobre Vite e Webpack):
 ```ts
-// "CM PR MIFE.2606.1" -> { year: 2026, month: 6, num: 1 }
-// "CM US INME.SP.2607.1" -> { unit: "sp", year: 2026, month: 7, num: 1 }
-export const parseTurmaCode = (turma: string): { year?: number; month?: number; unit?: string; num?: number };
+const isChunkError = (error: Error) =>
+  error.name === "ChunkLoadError" ||
+  /loading chunk|failed to fetch dynamically imported module/i.test(error.message);
 ```
 
-### 3) Adicionar filtro de ano na UI de Cursos
-
-Em `src/pages/CursosPlanilha.tsx`, adicionar um seletor "Ano" (default 2026) ao lado dos filtros de unidade. O hook `useCursosResumo` recebe esse ano e filtra as agregações.
-
-### 4) (Opcional) Tela de "Códigos de Curso" para cadastrar mnemônicos em massa
-
-Se você quiser me enviar a lista de códigos com nomes, posso criar uma tela em **Configurações → Códigos de curso** para você colar uma lista do tipo:
+**Reset correto** (libera o boundary após clique em "Tentar novamente"):
+```ts
+handleReset = () => this.setState({ hasError: false, error: null });
 ```
-CM US MOR1 = cm-us-morf1-bsb
-CM US INME = cm-us-inme-bsb
-PG US MEFE = pg-us-mefe-bsb
-...
+
+**Logging condicional** (evita duplicar com o log nativo do React em dev):
+```ts
+componentDidCatch(error, info) {
+  if (import.meta.env.PROD) console.error("[RouteErrorBoundary]", error, info);
+}
 ```
-e ela atualiza `courses.mnemonic` em massa. Resolveria de uma vez os 24 prefixos órfãos atuais.
+
+**UI de fallback** (dois caminhos):
+- **Chunk error** → Card "Nova versão disponível. Recarregue a página." + botão `Recarregar` (chama `window.location.reload()`).
+- **Erro genérico** → Card "Algo deu errado." + botões `Tentar novamente` (handleReset) e `Voltar ao início` (`window.location.href = "/"`).
+
+Estilo consistente com o resto do app (Card + Button do shadcn, ícone `AlertCircle` do lucide).
+
+### 2) Refator `src/App.tsx`
+
+**Imports lazy** (14 páginas):
+```ts
+const Index = lazy(() => import("./pages/Index"));
+const PendingApproval = lazy(() => import("./pages/PendingApproval"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const AdminApprovals = lazy(() => import("./pages/AdminApprovals"));
+const AdminAudit = lazy(() => import("./pages/AdminAudit"));
+const CourseDetail = lazy(() => import("./pages/CourseDetail"));
+const CourseEditor = lazy(() => import("./pages/CourseEditor"));
+const ImportCourses = lazy(() => import("./pages/ImportCourses"));
+const Settings = lazy(() => import("./pages/Settings"));
+const CourseCalendar = lazy(() => import("./pages/CourseCalendar"));
+const ClassGroups = lazy(() => import("./pages/ClassGroups"));
+const GlobalDashboard = lazy(() => import("./pages/GlobalDashboard"));
+const QuickMessages = lazy(() => import("./pages/QuickMessages"));
+const CursosPlanilha = lazy(() => import("./pages/CursosPlanilha"));
+```
+
+**Imports estáticos** (intencionais):
+- `Auth` — entrada principal de usuários deslogados, não pode ter latência de chunk.
+- `NotFound` — leve, e precisa estar sempre disponível como fallback do catch-all.
+
+**PageLoader inline** (mesma estética do loader do `ProtectedRoute`):
+```tsx
+const PageLoader = () => (
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
+```
+
+**Hierarquia dentro de `AuthProvider`**:
+```
+<AuthProvider>
+  <RouteErrorBoundary>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        ... 16 rotas ...
+      </Routes>
+    </Suspense>
+  </RouteErrorBoundary>
+</AuthProvider>
+```
+
+**Preservação integral**:
+- Todos os providers atuais: `QueryClientProvider`, `TooltipProvider`, `Toaster`, `Sonner`, `BrowserRouter`, `AuthProvider`.
+- Todas as 16 rotas atuais com suas guardas (`ProtectedRoute`, `adminOnly`).
+- `ProtectedRoute` continua importado como **named export** (`import { ProtectedRoute } from "@/components/ProtectedRoute"`).
+- Catch-all `<Route path="*" element={<NotFound />} />` permanece como **última rota** dentro de `<Routes>`.
 
 ---
 
-## Arquivos tocados
+## Tabela de riscos cobertos
 
-| Arquivo | Mudança |
+| Risco | Mitigação |
 |---|---|
-| `src/components/course/CourseEnrollmentsTab.tsx` | Corrigir handler do toast + log do erro real |
-| `src/lib/turmaUtils.ts` (novo) | Parser de código de turma → ano/mês/unit |
-| `src/hooks/useCursosResumo.tsx` | Filtrar por ano da turma |
-| `src/pages/CursosPlanilha.tsx` | Seletor de ano no header |
+| Tela branca em deploy novo (chunk antigo no cache) | `RouteErrorBoundary` detecta e oferece reload |
+| Boundary preso após clicar "Tentar novamente" | `handleReset` limpa `hasError` e `error` |
+| Log duplicado de erro em dev | `if (import.meta.env.PROD)` antes do `console.error` |
+| Latência adicional no `/auth` | `Auth` permanece estático |
+| Flash visual entre loader de auth e loader de chunk | `PageLoader` usa o mesmo `Loader2` + layout do `ProtectedRoute` |
+| String fragil para detectar chunk error | Regex case-insensitive cobre Vite + Webpack |
+| Catch-all reordenado pelo refator | Spec explícita: `*` é a última rota |
 
 ---
 
-## Validação
+## Validação pós-aplicação
 
-1. Recarregar a aba Matrículas dentro do curso e clicar **Sincronizar agora** — deve mostrar resultado real ou erro detalhado.
-2. Em **Cursos (Planilha)** com filtro **2026**, MIFE não deve mais mostrar 60 — deve mostrar só os pagos de turmas `CM PR MIFE.26xx.x`.
-3. Trocar filtro para **2025** mostra os pagos antigos.
+1. `/auth` carrega e o Network mostra **apenas** o chunk principal + `Auth` + vendors (sem `Dashboard`, `CourseEditor` etc).
+2. Navegar para `/dashboard` dispara um chunk novo e o `PageLoader` aparece brevemente.
+3. Build de produção (`vite build`) e checar `dist/assets/`: confirmar que os arquivos têm hash no nome (padrão `[name]-[hash].js` do Vite). Se `vite.config.ts` customizar `chunkFileNames` sem hash, o `RouteErrorBoundary` não cobriria stale chunks — verificar e ajustar se necessário.
+4. Forçar erro: jogar `throw new Error("test")` em uma página lazy → ver fallback genérico com "Tentar novamente" funcionando.
 
 ---
 
-## Pergunta
+## Arquivos
 
-Você quer que eu **já inclua** o seletor de ano (Passo 3) ou prefere começar só com o **filtro automático em 2026** (mais simples) e adicionamos seletor depois? Eu recomendo começar com filtro fixo em 2026 e iterar.
+| Arquivo | Operação |
+|---|---|
+| `src/components/RouteErrorBoundary.tsx` | Criar |
+| `src/App.tsx` | Refatorar |
 
-Também: quer que eu prepare a tela de **cadastro em massa de mnemônicos** (Passo 4) já agora, ou você vai preencher um a um pelo editor de curso?
-
+Nenhum outro arquivo é tocado. Sem mudanças em rotas, providers, ou comportamento de auth.
