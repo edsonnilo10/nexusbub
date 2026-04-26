@@ -13,7 +13,7 @@ import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
 import { CourseClassesTab } from "@/components/course/CourseClassesTab";
 import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
-import { CourseEnrollmentsTab } from "@/components/course/CourseEnrollmentsTab";
+
 import { CourseOperationsTab } from "@/components/course/CourseOperationsTab";
 import { ComboTabs } from "@/components/course/ComboTabs";
 import { loadCourseClasses } from "@/lib/classGroupsResolver";
