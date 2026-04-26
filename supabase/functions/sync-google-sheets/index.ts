@@ -720,8 +720,10 @@ const processPaidStudentsTab = async (
       recordUnmatched(classLabel, turmaPrefix(classLabel), derivedUnit, courses);
     }
 
-    const classStart = idxStart >= 0 ? parseDate(row[idxStart]) : null;
+    const classStart0 = idxStart >= 0 ? parseDate(row[idxStart]) : null;
     const payDate = idxPayDate >= 0 ? parseDate(row[idxPayDate]) : null;
+    // Fallback: se não há data da turma, deriva do código da turma.
+    const classStart = classStart0 || deriveDateFromTurma(classLabel);
     // Filtro de ano: aceita se a data de início da turma OU a data do pagamento
     // for de 2026. Se ambas forem nulas/de outros anos, descarta.
     if (!isTargetYear(classStart) && !isTargetYear(payDate)) continue;
