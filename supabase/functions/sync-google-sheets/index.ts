@@ -34,16 +34,69 @@ const findIdx = (header: string[], candidates: string[]): number => {
   return -1;
 };
 
+// Mapa de meses em português (com e sem acento, abreviado e completo).
+const MONTHS_PT: Record<string, number> = {
+  jan: 1, janeiro: 1,
+  fev: 2, fevereiro: 2,
+  mar: 3, marco: 3, "março": 3,
+  abr: 4, abril: 4,
+  mai: 5, maio: 5,
+  jun: 6, junho: 6,
+  jul: 7, julho: 7,
+  ago: 8, agosto: 8,
+  set: 9, setembro: 9,
+  out: 10, outubro: 10,
+  nov: 11, novembro: 11,
+  dez: 12, dezembro: 12,
+};
+
 const parseDate = (v: any): string | null => {
   if (v == null || v === "") return null;
   const s = String(v).trim();
+  if (!s) return null;
+
+  // 1) Formatos numéricos com separadores: dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa
   const br = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (br) {
     const yyyy = br[3].length === 2 ? `20${br[3]}` : br[3];
     return `${yyyy}-${br[2].padStart(2, "0")}-${br[1].padStart(2, "0")}`;
   }
+
+  // 2) ISO: aaaa-mm-dd
   const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
+
+  // 3) dd/mm sem ano (assume ano-alvo)
+  const ddmm = s.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
+  if (ddmm) {
+    return `${TARGET_YEAR}-${ddmm[2].padStart(2, "0")}-${ddmm[1].padStart(2, "0")}`;
+  }
+
+  // 4) Mês em português: "junho", "jun", "06/jun/2026", "jun/26", "junho 2026", "01 jun 2026"
+  const sn = norm(s);
+  // 4a) "dd <mes> aaaa" ou "dd-<mes>-aaaa"
+  const dMonY = sn.match(/^(\d{1,2})[\s\/\-.]+([a-z]+)[\s\/\-.]+(\d{2,4})$/);
+  if (dMonY && MONTHS_PT[dMonY[2]]) {
+    const yy = dMonY[3].length === 2 ? `20${dMonY[3]}` : dMonY[3];
+    return `${yy}-${String(MONTHS_PT[dMonY[2]]).padStart(2, "0")}-${dMonY[1].padStart(2, "0")}`;
+  }
+  // 4b) "<mes> aaaa" ou "<mes>/aaaa"
+  const monY = sn.match(/^([a-z]+)[\s\/\-.]+(\d{2,4})$/);
+  if (monY && MONTHS_PT[monY[1]]) {
+    const yy = monY[2].length === 2 ? `20${monY[2]}` : monY[2];
+    return `${yy}-${String(MONTHS_PT[monY[1]]).padStart(2, "0")}-01`;
+  }
+  // 4c) só nome do mês (assume ano-alvo, dia 01)
+  if (MONTHS_PT[sn]) {
+    return `${TARGET_YEAR}-${String(MONTHS_PT[sn]).padStart(2, "0")}-01`;
+  }
+
+  // 5) "mm/aaaa" puramente numérico
+  const mY = s.match(/^(\d{1,2})[\/\-.](\d{4})$/);
+  if (mY) {
+    return `${mY[2]}-${mY[1].padStart(2, "0")}-01`;
+  }
+
   return null;
 };
 
@@ -52,6 +105,26 @@ const parseDate = (v: any): string | null => {
 const TARGET_YEAR = "2026";
 const isTargetYear = (date: string | null): boolean =>
   !!date && date.startsWith(`${TARGET_YEAR}-`);
+
+// Fallback: deriva uma data aproximada (dia 01) a partir do código da turma.
+// Formato esperado: [MNEMONICO].[UNIT?].[AAMM].[NUM]
+// Ex.: "CM US MOR2.2606.1"     -> "2026-06-01"
+//      "CM US INME.SP.2607.1"  -> "2026-07-01"
+//      "CM US PED2.2305.1"     -> "2023-05-01"
+const deriveDateFromTurma = (turma: string | null | undefined): string | null => {
+  if (!turma) return null;
+  const parts = String(turma).trim().split(".").map((s) => s.trim()).filter(Boolean);
+  for (const p of parts) {
+    if (/^\d{4}$/.test(p)) {
+      const yy = parseInt(p.slice(0, 2), 10);
+      const mm = parseInt(p.slice(2, 4), 10);
+      if (mm >= 1 && mm <= 12 && yy >= 0 && yy <= 99) {
+        return `20${String(yy).padStart(2, "0")}-${String(mm).padStart(2, "0")}-01`;
+      }
+    }
+  }
+  return null;
+};
 
 const parseInteger = (v: any): number => {
   if (v == null || v === "") return 0;
@@ -509,8 +582,11 @@ const processEnrollmentsTab = async (
   for (const [key, { count, firstRow, mesFim }] of agg.entries()) {
     const turmaCode = turmaDisplay.get(key) || "";
     const mes = key.split("||")[1] || "";
-    const start = parseDate(mes);
-    const end = mesFim ? parseDate(mesFim) : null;
+    let start = parseDate(mes);
+    let end = mesFim ? parseDate(mesFim) : null;
+    // Fallback: se a data de início não veio (ou veio inválida), tenta derivar
+    // do próprio código da turma (ex.: "CM US MOR2.2606.1" -> "2026-06-01").
+    if (!start) start = deriveDateFromTurma(turmaCode);
     // Filtro de ano: matrículas exigem data de início; nulas ou de outros anos são puladas.
     if (!isTargetYear(start)) continue;
     const matched = findCourseByTurma(courses, turmaCode, unit);
@@ -644,8 +720,10 @@ const processPaidStudentsTab = async (
       recordUnmatched(classLabel, turmaPrefix(classLabel), derivedUnit, courses);
     }
 
-    const classStart = idxStart >= 0 ? parseDate(row[idxStart]) : null;
+    const classStart0 = idxStart >= 0 ? parseDate(row[idxStart]) : null;
     const payDate = idxPayDate >= 0 ? parseDate(row[idxPayDate]) : null;
+    // Fallback: se não há data da turma, deriva do código da turma.
+    const classStart = classStart0 || deriveDateFromTurma(classLabel);
     // Filtro de ano: aceita se a data de início da turma OU a data do pagamento
     // for de 2026. Se ambas forem nulas/de outros anos, descarta.
     if (!isTargetYear(classStart) && !isTargetYear(payDate)) continue;
