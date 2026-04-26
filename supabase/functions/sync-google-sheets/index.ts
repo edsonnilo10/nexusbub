@@ -238,10 +238,15 @@ const findCourse = (
 
 // Extrai o MNEMONICO do código de TURMA (tudo antes do primeiro ponto),
 // normaliza para comparação: minúsculo, sem acentos, sem espaços.
-// Ex.: "CM US MESQ.2601.1" -> "cmusmesq"
-//      "CM US CAVF.SP.2607.1" -> "cmuscavf"
+// Trata o sufixo de unidade paulista ".SP" no FINAL do código antes de
+// extrair o prefixo, para que "CM US MAMA.SP" e "CM US MAMA.2601.1"
+// resolvam o mesmo prefixo raiz ("cmusmama").
+// Ex.: "CM US MESQ.2601.1"     -> "cmusmesq"
+//      "CM US CAVF.SP.2607.1"  -> "cmuscavf"
+//      "CM US MAMA.SP"         -> "cmusmama"
 const turmaPrefix = (turma: string): string => {
-  const head = (turma || "").split(".")[0] || "";
+  const cleaned = (turma || "").replace(/\.SP$/i, "");
+  const head = cleaned.split(".")[0] || "";
   return norm(head).replace(/\s+/g, "");
 };
 
