@@ -443,11 +443,14 @@ const processEnrollmentsTab = async (
     return -1;
   };
 
-  // Índice das colunas relevantes em cada seção
+  // Índice das colunas relevantes em cada seção. mesFim é opcional: nem
+  // toda planilha tem a coluna de término na seção PAGOS/PRÉ. Quando existir,
+  // usamos para popular class_end_date.
   const buildSection = (start: number, end: number) => ({
     turma: findInRange(["turma"], start, end),
     nome: findInRange(["nome"], start, end),
     mesInicio: findInRange(["mes(inicio)", "mes inicio", "mês(inicio)", "mês inicio", "inicio", "início", "mes", "mês"], start, end),
+    mesFim: findInRange(["mes(fim)", "mes fim", "mês(fim)", "mês fim", "fim", "termino", "término", "data fim", "data termino", "data término", "end"], start, end),
   });
 
   const secPagos = buildSection(0, fimPagos);
@@ -456,24 +459,31 @@ const processEnrollmentsTab = async (
   console.log(`[processEnrollmentsTab] ${tabTitle}: secPagos=${JSON.stringify(secPagos)} secPre=${JSON.stringify(secPre)}`);
 
   // Agregar contagem por (turma_code, mes_inicio) — uma linha por aluno
-  type Agg = { count: number; firstRow: number };
+  type Agg = { count: number; firstRow: number; mesFim: string };
   const agg = new Map<string, Agg>();
   // Guarda o nome original da turma para preservar capitalização
   const turmaDisplay = new Map<string, string>();
 
-  const eatRow = (row: string[], section: { turma: number; nome: number; mesInicio: number }, r: number) => {
+  const eatRow = (
+    row: string[],
+    section: { turma: number; nome: number; mesInicio: number; mesFim: number },
+    r: number,
+  ) => {
     if (section.turma < 0) return;
     const turmaCode = (row[section.turma] || "").trim();
     if (!turmaCode) return;
     const nome = section.nome >= 0 ? (row[section.nome] || "").trim() : "";
     if (!nome) return; // só conta se houver aluno
     const mes = section.mesInicio >= 0 ? (row[section.mesInicio] || "").trim() : "";
+    const fim = section.mesFim >= 0 ? (row[section.mesFim] || "").trim() : "";
     const key = `${norm(turmaCode)}||${norm(mes)}`;
     const cur = agg.get(key);
     if (cur) {
       cur.count += 1;
+      // preserva primeiro fim não-vazio
+      if (!cur.mesFim && fim) cur.mesFim = fim;
     } else {
-      agg.set(key, { count: 1, firstRow: r + 1 });
+      agg.set(key, { count: 1, firstRow: r + 1, mesFim: fim });
       turmaDisplay.set(key, turmaCode);
     }
   };
