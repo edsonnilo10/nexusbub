@@ -716,6 +716,10 @@ const processCalendarTab = async (
     if (!row || row.length === 0) continue;
     const courseName = (row[idxCourse] || "").trim();
     if (!courseName) continue;
+    const startDate = idxStart >= 0 ? parseDate(row[idxStart]) : null;
+    const endDate = idxEnd >= 0 ? parseDate(row[idxEnd]) : null;
+    // Filtro de ano: eventos de calendário só entram se a data de início for de 2026.
+    if (!isTargetYear(startDate)) continue;
     const matched = findCourse(courses, courseName, unit);
     records.push({
       user_id: userId,
@@ -723,8 +727,8 @@ const processCalendarTab = async (
       course_id: matched?.id ?? null,
       course_name: courseName,
       event_label: idxLabel >= 0 ? (row[idxLabel] || "").trim() || null : null,
-      start_date: idxStart >= 0 ? parseDate(row[idxStart]) : null,
-      end_date: idxEnd >= 0 ? parseDate(row[idxEnd]) : null,
+      start_date: startDate,
+      end_date: endDate,
       location: idxLocation >= 0 ? (row[idxLocation] || "").trim() || null : null,
       coordinator: idxCoord >= 0 ? (row[idxCoord] || "").trim() || null : null,
       source_sheet: tabTitle,
