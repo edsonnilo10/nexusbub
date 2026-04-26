@@ -47,6 +47,12 @@ const parseDate = (v: any): string | null => {
   return null;
 };
 
+// Filtro de ano-alvo: a sincronização só processa registros do ano corrente
+// de operação (2026). Datas de outros anos ou nulas são descartadas.
+const TARGET_YEAR = "2026";
+const isTargetYear = (date: string | null): boolean =>
+  !!date && date.startsWith(`${TARGET_YEAR}-`);
+
 const parseInteger = (v: any): number => {
   if (v == null || v === "") return 0;
   const m = String(v).match(/-?\d+/);
@@ -505,6 +511,8 @@ const processEnrollmentsTab = async (
     const mes = key.split("||")[1] || "";
     const start = parseDate(mes);
     const end = mesFim ? parseDate(mesFim) : null;
+    // Filtro de ano: matrículas exigem data de início; nulas ou de outros anos são puladas.
+    if (!isTargetYear(start)) continue;
     const matched = findCourseByTurma(courses, turmaCode, unit);
     if (!matched) {
       recordUnmatched(turmaCode, turmaPrefix(turmaCode), unit, courses);
@@ -636,8 +644,14 @@ const processPaidStudentsTab = async (
       recordUnmatched(classLabel, turmaPrefix(classLabel), derivedUnit, courses);
     }
 
+    const classStart = idxStart >= 0 ? parseDate(row[idxStart]) : null;
+    const payDate = idxPayDate >= 0 ? parseDate(row[idxPayDate]) : null;
+    // Filtro de ano: aceita se a data de início da turma OU a data do pagamento
+    // for de 2026. Se ambas forem nulas/de outros anos, descarta.
+    if (!isTargetYear(classStart) && !isTargetYear(payDate)) continue;
+
     if (sampleLogged < 3) {
-      console.log(`[processPaidStudentsTab] ${tabTitle} sample: name="${studentName}" turma="${classLabel}" unit=${derivedUnit} course_id=${matched?.id ?? "NULL"}`);
+      console.log(`[processPaidStudentsTab] ${tabTitle} sample: name="${studentName}" turma="${classLabel}" unit=${derivedUnit} course_id=${matched?.id ?? "NULL"} start=${classStart} pay=${payDate}`);
       sampleLogged++;
     }
 
@@ -649,11 +663,11 @@ const processPaidStudentsTab = async (
       course_id: matched?.id ?? null,
       course_name: matched?.name || courseNameRaw || null,
       class_label: classLabel || null,
-      class_start_date: idxStart >= 0 ? parseDate(row[idxStart]) : null,
+      class_start_date: classStart,
       payment_status: status || "1.PAGO",
       contract_status: idxContract >= 0 ? (row[idxContract] || "").trim() || null : null,
       amount: idxAmount >= 0 ? parseAmount(row[idxAmount]) : null,
-      payment_date: idxPayDate >= 0 ? parseDate(row[idxPayDate]) : null,
+      payment_date: payDate,
       source_sheet: tabTitle,
       source_row: r + 1,
       notes: idxNotes >= 0 ? (row[idxNotes] || "").trim() || null : null,
@@ -702,6 +716,10 @@ const processCalendarTab = async (
     if (!row || row.length === 0) continue;
     const courseName = (row[idxCourse] || "").trim();
     if (!courseName) continue;
+    const startDate = idxStart >= 0 ? parseDate(row[idxStart]) : null;
+    const endDate = idxEnd >= 0 ? parseDate(row[idxEnd]) : null;
+    // Filtro de ano: eventos de calendário só entram se a data de início for de 2026.
+    if (!isTargetYear(startDate)) continue;
     const matched = findCourse(courses, courseName, unit);
     records.push({
       user_id: userId,
@@ -709,8 +727,8 @@ const processCalendarTab = async (
       course_id: matched?.id ?? null,
       course_name: courseName,
       event_label: idxLabel >= 0 ? (row[idxLabel] || "").trim() || null : null,
-      start_date: idxStart >= 0 ? parseDate(row[idxStart]) : null,
-      end_date: idxEnd >= 0 ? parseDate(row[idxEnd]) : null,
+      start_date: startDate,
+      end_date: endDate,
       location: idxLocation >= 0 ? (row[idxLocation] || "").trim() || null : null,
       coordinator: idxCoord >= 0 ? (row[idxCoord] || "").trim() || null : null,
       source_sheet: tabTitle,
