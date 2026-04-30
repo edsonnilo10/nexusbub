@@ -1,73 +1,35 @@
-# Plano: Reforçar `.gitignore` com entradas de variáveis de ambiente
+## Objetivo
 
-## Contexto
+Substituir **todas** as turmas de São Paulo de 2026 pelo conjunto oficial enviado (JSON com 32 cursos / ~50 edições), corrigindo as datas erradas que aparecem hoje no Calendário, Dashboard e Mensagens.
 
-O `.gitignore` atual cobre `*.local` (linha 13), o que já bloqueia arquivos como `.env.local` e `.env.production.local`. Porém, **não cobre explicitamente** `.env`, `.env.production` e `.env.development` — esses arquivos podem conter chaves sensíveis (Supabase service role, tokens de API, secrets) e seriam versionados acidentalmente se criados.
+## Estado atual
 
-A ressalva do usuário em rodadas anteriores reforça a importância dessa proteção: variáveis de ambiente nunca devem ser versionadas.
+- ~50 grupos de turma SP em `class_groups` (com vínculos em `class_group_courses`) referentes a 2026, vários com datas incorretas.
+- Mnemônicos no banco usam o sufixo curto (ex.: `CM US MAMA`); o JSON usa o sufixo `.SP` (ex.: `CM US MAMA.SP`). O mapeamento é direto removendo `.SP`.
+- Todos os 32 códigos do JSON têm curso correspondente na tabela `courses`, exceto:
+  - `CM US CAVF.SP` → mapear para o existente `CM US CAVE` (Carótidas e Vertebrais).
+  - `CM US URGI.SP` (Urogineco) → não existe curso correspondente; tem mesma janela de `CM US DOGO.SP` (04–06/09). Precisa decisão.
 
-## Mudança proposta
+## Plano de execução
 
-**Arquivo:** `.gitignore` (único arquivo modificado)
+1. **Limpar 2026 SP**: deletar de `class_group_courses` e `class_groups` todos os grupos com `unit='sao_paulo'` e `start_date >= 2026-01-01 AND start_date < 2027-01-01`. Isso remove todas as datas erradas e duplicadas.
+2. **Inserir as ~50 edições do JSON** em `class_groups` (uma linha por edição) com:
+   - `unit = 'sao_paulo'`
+   - `start_date` / `end_date` do JSON
+   - `status = 'atual'` se `start_date <= hoje <= end_date`, senão `'proxima'` (todas as datas são futuras → todas ficam `proxima`).
+3. **Vincular cada edição ao curso** correspondente em `class_group_courses` com `display_mode = 'individual'` (mapeando código `.SP` → mnemonic sem `.SP`).
+4. **Casos especiais**:
+   - `CAVF` → vincular ao curso `CM US CAVE`.
+   - `URGI` → conforme decisão abaixo.
+5. **Não tocar** em `course_classes` (legado) nem em outras unidades (Brasília). Combos existentes em SP serão removidos junto com os grupos do passo 1; se algum combo precisar ser recriado a partir do JSON, será feito caso a caso.
 
-Inserir um bloco com 5 linhas **antes** da linha final `*.sw?` (linha 24), preservando o restante do arquivo intacto.
+## Decisão pendente
 
-### Conteúdo a inserir (após linha 23 `*.sln`, antes de `*.sw?`):
+Vou perguntar antes de migrar como tratar **CM US URGI.SP** (Urogineco), que não tem curso cadastrado e divide a janela 04–06/09 com DOGO.
 
-```
-# Variáveis de ambiente — NUNCA versionar
-.env
-.env.local
-.env.*.local
-.env.production
-.env.development
-```
+## Detalhes técnicos
 
-> Observação: incluí o comentário `# Variáveis de ambiente — NUNCA versionar` para deixar a intenção explícita no arquivo (consistente com o padrão do projeto, que já usa cabeçalhos de seção como `# Logs` e `# Editor directories and files`). Se preferir adicionar apenas as 5 linhas sem o comentário, é só sinalizar.
-
-## Resultado final do `.gitignore`
-
-```
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-
-# Variáveis de ambiente — NUNCA versionar
-.env
-.env.local
-.env.*.local
-.env.production
-.env.development
-
-*.sw?
-```
-
-## Notas
-
-- `.env.local` e `.env.*.local` já são cobertos por `*.local`, mas mantê-los explícitos torna a regra autoexplicativa e resistente a refatorações futuras do `.gitignore`.
-- Nenhum outro arquivo será tocado.
-- O `.env` atual do projeto (com `VITE_SUPABASE_*`) é gerado/gerenciado automaticamente pela plataforma — essa mudança apenas garante que ele e variantes futuras não sejam commitados.
-
-## Risco
-
-Nenhum. É uma mudança puramente defensiva em arquivo de configuração de VCS, sem impacto em build, runtime ou tipos.
+- Operação executada via tool de inserção SQL (DELETE + INSERT), não migração de schema.
+- Mapeamento `.SP` → mnemonic: simples `replace('.SP','')`.
+- Após executar, validar com query agregada que cada edição do JSON resultou em exatamente 1 grupo + 1 vínculo, e que nenhuma data 01/01 ou fora de 2026 sobrou.
+- Calendário (`CourseCalendar`), Dashboard, `QuickMessages` e abas de detalhe leem de `loadAllCourseClasses` / `useSyncedData`, então puxarão automaticamente os novos dados sem mudança de código.
