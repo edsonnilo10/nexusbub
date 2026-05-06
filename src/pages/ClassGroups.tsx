@@ -61,14 +61,14 @@ const ClassGroups = () => {
   const [groups, setGroups] = useState<ClassGroupRow[]>([]);
   const [groupCourses, setGroupCourses] = useState<GroupCourseRow[]>([]);
   const [courses, setCourses] = useState<CourseOption[]>([]);
-  const [unitFilter, setUnitFilter] = useState<"all" | CourseUnit>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | ClassStatus>("all");
+  const [unitFilter, setUnitFilter] = usePersistentSelection<"all" | CourseUnit>("groups_unit", "all");
+  const [statusFilter, setStatusFilter] = usePersistentSelection<"all" | ClassStatus>("groups_status", "all");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ClassGroupRow | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsGroup, setDetailsGroup] = useState<ClassGroupRow | null>(null);
-  const [comboFilter, setComboFilter] = useState<"all" | "combo" | "single">("all");
+  const [comboFilter, setComboFilter] = usePersistentSelection<"all" | "combo" | "single">("groups_combo", "all");
 
   useEffect(() => {
     document.title = "Turmas | Nexus Ultrassonografia";
