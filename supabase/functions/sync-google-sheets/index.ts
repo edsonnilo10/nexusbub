@@ -386,10 +386,9 @@ const slugMnemonic = (slug: string | null | undefined): string => {
 const normMnemonic = (m: string | null | undefined): string =>
   norm(m || "").replace(/\s+/g, "");
 
-const COURSE_CODE_ALIASES: Record<string, string> = {
-  // Na planilha, o curso de Elastografia Hepática em SP aparece como QMPF.
-  "sao_paulo|cmusqmpf": "cmuselag",
-};
+// Aliases de códigos da planilha -> mnemonic do banco (dupla checagem com nome).
+// Mantenha vazio quando o catálogo oficial bater 1:1 com os mnemonics do DB.
+const COURSE_CODE_ALIASES: Record<string, string> = {};
 
 const findCourseByTurma = (
   courses: Course[],
@@ -400,15 +399,29 @@ const findCourseByTurma = (
   const prefix = turmaPrefix(turma);
   if (!prefix) return undefined;
 
+  // Dupla checagem: primeiro tenta por código (mnemonic) na unidade.
+  const byMnemonicSameUnit = courses.find(
+    (c) => c.unit === unit && c.mnemonic && normMnemonic(c.mnemonic) === prefix,
+  );
+  // Em paralelo, tenta por nome quando fornecido.
+  const byName = courseName ? findCourse(courses, courseName, unit) : undefined;
+
+  // Se ambos batem e apontam para cursos diferentes, o nome vence (mais específico).
+  if (byMnemonicSameUnit && byName && byMnemonicSameUnit.id !== byName.id) {
+    console.log(
+      `[findCourseByTurma] divergência código x nome: turma="${turma}" code->${byMnemonicSameUnit.name} | name->${byName.name} — usando nome`,
+    );
+    return byName;
+  }
+  if (byMnemonicSameUnit) return byMnemonicSameUnit;
+  if (byName) return byName;
+
+  // Aliases manuais (último recurso)
   const byAliasTarget = COURSE_CODE_ALIASES[`${unit}|${prefix}`];
   const byAlias = byAliasTarget
     ? courses.find((c) => c.unit === unit && normMnemonic(c.mnemonic) === byAliasTarget)
     : undefined;
-  const byName = courseName ? findCourse(courses, courseName, unit) : undefined;
-  if (byAlias && (!byName || byName.id === byAlias.id || norm(courseName || "").includes("elast"))) {
-    return byAlias;
-  }
-  if (byName) return byName;
+  if (byAlias) return byAlias;
 
   // 1) match por mnemonic explícito (prioridade) + mesma unidade
   const byMnemonic = courses.find(
