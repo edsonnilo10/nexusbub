@@ -1,27 +1,32 @@
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 
 /**
  * Persiste a seleção (ex.: aba ativa) na URL (?key=valor) e no localStorage.
+ *
+ * Usa o useSearchParams do react-router-dom para manter o roteador
+ * sincronizado (evita que o React Router sobrescreva mudanças feitas via
+ * window.history.replaceState ao desmontar/montar a página).
  *
  * Ordem de resolução do estado inicial:
  *  1) URL param (?key=...)        — permite compartilhar link
  *  2) localStorage                — sobrevive a fechar/reabrir aba
  *  3) defaultValue                — primeiro acesso
- *
- * Ao mudar a seleção, sincroniza ambos sem recarregar a página.
  */
 export function usePersistentSelection<T extends string = string>(
   key: string,
   defaultValue: T,
 ): [T, (value: T) => void] {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [selection, setSelectionState] = useState<T>(() => {
-    if (typeof window === "undefined") return defaultValue;
     try {
-      const params = new URLSearchParams(window.location.search);
-      const urlValue = params.get(key);
+      const urlValue = searchParams.get(key);
       if (urlValue) return urlValue as T;
-      const stored = window.localStorage.getItem(key);
-      if (stored) return stored as T;
+      if (typeof window !== "undefined") {
+        const stored = window.localStorage.getItem(key);
+        if (stored) return stored as T;
+      }
     } catch {
       /* ignore */
     }
@@ -29,17 +34,23 @@ export function usePersistentSelection<T extends string = string>(
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(key, selection);
-      const url = new URL(window.location.href);
-      if (url.searchParams.get(key) !== selection) {
-        url.searchParams.set(key, selection);
-        window.history.replaceState({}, "", url);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(key, selection);
+      }
+      if (searchParams.get(key) !== selection) {
+        setSearchParams(
+          (prev) => {
+            prev.set(key, selection);
+            return prev;
+          },
+          { replace: true },
+        );
       }
     } catch {
       /* ignore */
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, selection]);
 
   const setSelection = useCallback((value: T) => {
