@@ -13,6 +13,7 @@ import { loadAllCourseClasses } from "@/lib/classGroupsResolver";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GlobalAssistantButton } from "@/components/GlobalAssistantButton";
+import { usePersistentSelection } from "@/hooks/usePersistentSelection";
 import nexusLogo from "@/assets/nexus-logo.jpg";
 
 type CourseWithClass = CourseFull & { next_class?: CourseClass | null };
@@ -22,8 +23,8 @@ const Dashboard = () => {
   const [courses, setCourses] = useState<CourseWithClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "pos_graduacao" | "modular">("all");
-  const [unitFilter, setUnitFilter] = useState<"all" | CourseUnit>("all");
+  const [typeFilter, setTypeFilter] = usePersistentSelection<"all" | "pos_graduacao" | "modular">("dash_type", "all");
+  const [unitFilter, setUnitFilter] = usePersistentSelection<"all" | CourseUnit>("dash_unit", "all");
 
   useEffect(() => {
     loadCourses();
