@@ -55,6 +55,16 @@ const parseDate = (v: any): string | null => {
   const s = String(v).trim();
   if (!s) return null;
 
+  // Datas vindas do Sheets às vezes chegam como número serial do Excel/Google.
+  // Ex.: 46234 = 31/07/2026.
+  if (/^\d{5}(?:\.\d+)?$/.test(s)) {
+    const serial = Number(s);
+    if (Number.isFinite(serial) && serial > 25000 && serial < 70000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+  }
+
   // 1) Formatos numéricos com separadores: dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa
   const br = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (br) {
@@ -376,13 +386,29 @@ const slugMnemonic = (slug: string | null | undefined): string => {
 const normMnemonic = (m: string | null | undefined): string =>
   norm(m || "").replace(/\s+/g, "");
 
+const COURSE_CODE_ALIASES: Record<string, string> = {
+  // Na planilha, o curso de Elastografia Hepática em SP aparece como QMPF.
+  "sao_paulo|cmusqmpf": "cmuselag",
+};
+
 const findCourseByTurma = (
   courses: Course[],
   turma: string,
   unit: "sao_paulo" | "brasilia",
+  courseName?: string,
 ): Course | undefined => {
   const prefix = turmaPrefix(turma);
   if (!prefix) return undefined;
+
+  const byAliasTarget = COURSE_CODE_ALIASES[`${unit}|${prefix}`];
+  const byAlias = byAliasTarget
+    ? courses.find((c) => c.unit === unit && normMnemonic(c.mnemonic) === byAliasTarget)
+    : undefined;
+  const byName = courseName ? findCourse(courses, courseName, unit) : undefined;
+  if (byAlias && (!byName || byName.id === byAlias.id || norm(courseName || "").includes("elast"))) {
+    return byAlias;
+  }
+  if (byName) return byName;
 
   // 1) match por mnemonic explícito (prioridade) + mesma unidade
   const byMnemonic = courses.find(
@@ -786,7 +812,7 @@ const processPaidStudentsTab = async (
     // Derivar unit a partir da TURMA; fallback DF (DF é o padrão histórico,
     // SP sempre vem marcado explicitamente com .SP. no código da turma)
     const derivedUnit = unitFromTurma(classLabel, "brasilia");
-    const matched = classLabel ? findCourseByTurma(courses, classLabel, derivedUnit) : undefined;
+    const matched = classLabel ? findCourseByTurma(courses, classLabel, derivedUnit, courseNameRaw) : undefined;
     if (classLabel && !matched) {
       recordUnmatched(classLabel, turmaPrefix(classLabel), derivedUnit, courses);
     }
