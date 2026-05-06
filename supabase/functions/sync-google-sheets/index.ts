@@ -446,12 +446,12 @@ const findCourseByTurma = (
   if (anyUnit) return anyUnit;
 
   // 5) fallback por nome: mnemônico do início do nome (ex.: "CM US CAVF: ...")
-  const byName = courses.find((c) => {
+  const byNameHead = courses.find((c) => {
     if (c.unit !== unit) return false;
     const head = norm(c.name).split(":")[0] || "";
     return head.replace(/\s+/g, "") === prefix;
   });
-  return byName;
+  return byNameHead;
 };
 
 interface UpsertCounters { inserted: number; updated: number; errors: string[] }
