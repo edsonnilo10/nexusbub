@@ -27,6 +27,7 @@ import {
 import { ClassGroupDialog } from "@/components/classGroups/ClassGroupDialog";
 import { ClassGroupDetailsDialog } from "@/components/classGroups/ClassGroupDetailsDialog";
 import { UpcomingClassesPanel } from "@/components/classGroups/UpcomingClassesPanel";
+import { usePersistentSelection } from "@/hooks/usePersistentSelection";
 
 export interface ClassGroupRow {
   id: string;
