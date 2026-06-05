@@ -40,6 +40,7 @@ export const COURSES_SP: Course[] = [
   { code: "CM US SLPA.SP", name: "Ultrassonografia na Sala de Parto", tab: "SP" },
   { code: "CM US ECOA.SP", name: "Ecocardiografia Adulto", tab: "SP" },
   { code: "CM US URGI.SP", name: "Ultrassonografia Urogineco", tab: "SP" },
+  { code: "CM US FEOG.SP", name: "Ultrassonografia como ferramenta para o Obstetra e Ginecologista", tab: "SP" },
   { code: "CM US PUVA.SP", name: "Punção Vascular Ecoguiada", tab: "SP" },
   { code: "PG US ECOF.SP", name: "PG US ECOF T1 - Pós-Graduação em Ecocardiografia Fetal", tab: "SP" },
   { code: "PG US ECOV.SP", name: "PG US ECOV T1 - Pós-Graduação em Ultrassonografia Vascular", tab: "SP" },
