@@ -1,0 +1,1 @@
+ALTER TABLE public.user_course_overrides ADD COLUMN IF NOT EXISTS wa_investment text;

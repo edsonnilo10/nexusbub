@@ -729,6 +729,7 @@ export type Database = {
           user_id: string
           wa_followup: string | null
           wa_full: string | null
+          wa_investment: string | null
           wa_short: string | null
         }
         Insert: {
@@ -745,6 +746,7 @@ export type Database = {
           user_id: string
           wa_followup?: string | null
           wa_full?: string | null
+          wa_investment?: string | null
           wa_short?: string | null
         }
         Update: {
@@ -761,6 +763,7 @@ export type Database = {
           user_id?: string
           wa_followup?: string | null
           wa_full?: string | null
+          wa_investment?: string | null
           wa_short?: string | null
         }
         Relationships: [
