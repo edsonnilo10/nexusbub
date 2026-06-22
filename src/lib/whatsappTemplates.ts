@@ -354,3 +354,28 @@ export const programaticContentMessage = (
   return lines.join("\n");
 };
 
+/** Mensagem de Investimento — valores em aberto, prontos para preencher */
+export const investmentMessage = (
+  course: CourseFull,
+  classes: CourseClass[],
+  selectedClass?: CourseClass | null,
+): string => {
+  const year = referenceYear(classes, selectedClass);
+  const wl = course.workload_hours ? `${course.workload_hours} horas` : "Carga horária a confirmar";
+  const lines: string[] = [];
+
+  lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
+  lines.push(`🕒 *Carga Horária:* ${wl}`);
+  lines.push("");
+  lines.push(`💰 *INVESTIMENTO*`);
+  lines.push("");
+  lines.push(`✔️ *Valor ${year}:* R$ _________`);
+  lines.push("");
+  lines.push(`✔️ *Valor com desconto e parcelamento:*`);
+  lines.push(`( ) R$ _________ em ___x de R$ _________`);
+  lines.push("");
+  lines.push(`_Posso te ajudar a fechar sua vaga?_ 🎯`);
+
+  return lines.join("\n");
+};
+

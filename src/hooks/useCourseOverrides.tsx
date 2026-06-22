@@ -6,6 +6,7 @@ export interface CourseOverrides {
   wa_short: string | null;
   wa_full: string | null;
   wa_followup: string | null;
+  wa_investment: string | null;
   proposal_price: string | null;
   proposal_start_date: string | null;
   proposal_end_date: string | null;
@@ -18,6 +19,7 @@ const EMPTY: CourseOverrides = {
   wa_short: null,
   wa_full: null,
   wa_followup: null,
+  wa_investment: null,
   proposal_price: null,
   proposal_start_date: null,
   proposal_end_date: null,
@@ -56,6 +58,7 @@ export const useCourseOverrides = (courseId: string | undefined) => {
           wa_short: data.wa_short,
           wa_full: data.wa_full,
           wa_followup: data.wa_followup,
+          wa_investment: (data as any).wa_investment ?? null,
           proposal_price: data.proposal_price,
           proposal_start_date: data.proposal_start_date,
           proposal_end_date: data.proposal_end_date,

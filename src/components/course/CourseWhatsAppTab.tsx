@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CourseFull, CourseModule, CourseClass, formatClassDateRange, classStatusLabel } from "@/lib/courseHelpers";
-import { shortMessage, fullMessage, followUpMessage, programaticContentMessage } from "@/lib/whatsappTemplates";
+import { shortMessage, fullMessage, followUpMessage, programaticContentMessage, investmentMessage } from "@/lib/whatsappTemplates";
 import { useCourseOverrides, CourseOverrides } from "@/hooks/useCourseOverrides";
 import { toast } from "@/hooks/use-toast";
 
@@ -17,7 +17,7 @@ interface Props {
   classes: CourseClass[];
 }
 
-type WaKey = "wa_short" | "wa_full" | "wa_followup" | "wa_content";
+type WaKey = "wa_short" | "wa_full" | "wa_followup" | "wa_content" | "wa_investment";
 
 export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
   const { overrides, loaded, save } = useCourseOverrides(course.id);
@@ -77,6 +77,14 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
         defaultText: programaticContentMessage(course, modules, classes, selectedClass),
         // Não tem coluna no banco para isso ainda — sempre regenera do template
         savedKey: null as keyof CourseOverrides | null,
+      },
+      {
+        id: "wa_investment" as WaKey,
+        label: "Investimento",
+        desc: "Nome, carga horária e valores em aberto",
+        icon: MessageCircle,
+        defaultText: investmentMessage(course, classes, selectedClass),
+        savedKey: "wa_investment" as keyof CourseOverrides,
       },
     ],
     [course, modules, classes, selectedClass],
