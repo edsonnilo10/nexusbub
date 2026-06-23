@@ -1279,9 +1279,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(summary), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e: any) {
+  } catch (e) {
     console.error("sync-google-sheets error", e);
-    return new Response(JSON.stringify({ error: e?.message || "Erro inesperado" }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
