@@ -46,6 +46,7 @@ interface CourseRow {
 }
 
 type UnitFilter = "all" | "sao_paulo" | "brasilia";
+type TypeFilter = "all" | "modular" | "pos_graduacao";
 type PeriodKind =
   | "month"
   | "this_semester"
