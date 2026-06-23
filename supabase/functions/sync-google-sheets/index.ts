@@ -1126,6 +1126,13 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
+    const { data: approved } = await supabase.rpc("is_approved", { _user_id: userId });
+    if (!approved) {
+      return new Response(JSON.stringify({ error: "Forbidden: aguardando aprovação" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Load sheet URL from sheet_config
     const { data: cfg } = await supabase
       .from("sheet_config").select("sheet_url").eq("user_id", userId).maybeSingle();
@@ -1279,9 +1286,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(summary), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e: any) {
+  } catch (e) {
     console.error("sync-google-sheets error", e);
-    return new Response(JSON.stringify({ error: e?.message || "Erro inesperado" }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

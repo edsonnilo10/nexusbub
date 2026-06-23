@@ -274,7 +274,7 @@ ${mode === "global" ? `> Modo atual: **VISÃO GERAL**. Responda perguntas factua
     });
   } catch (e) {
     console.error("course-assistant error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
