@@ -1126,6 +1126,13 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
+    const { data: approved } = await supabase.rpc("is_approved", { _user_id: userId });
+    if (!approved) {
+      return new Response(JSON.stringify({ error: "Forbidden: aguardando aprovação" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Load sheet URL from sheet_config
     const { data: cfg } = await supabase
       .from("sheet_config").select("sheet_url").eq("user_id", userId).maybeSingle();
