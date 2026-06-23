@@ -160,6 +160,7 @@ const QuickMessages = () => {
   const [monthIdx, setMonthIdx] = useState<number>(new Date().getMonth());
   const [yearRef, setYearRef] = useState<number>(new Date().getFullYear());
   const [unitFilter, setUnitFilter] = useState<UnitFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [includeUnit, setIncludeUnit] = useState(true);
   const [includeType, setIncludeType] = useState(true);
   const [intro, setIntro] = useState("Olá! Veja abaixo os cursos disponíveis:");
