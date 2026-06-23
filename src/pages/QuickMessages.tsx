@@ -491,6 +491,19 @@ const QuickMessages = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label>Tipo de curso</Label>
+                    <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="modular">Apenas cursos modulares</SelectItem>
+                        <SelectItem value="pos_graduacao">Apenas pós-graduação</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+
+                  <div className="space-y-2">
                     <Label>Mostrar nos itens</Label>
                     <div className="flex flex-wrap gap-2">
                       <Button
