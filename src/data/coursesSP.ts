@@ -43,6 +43,7 @@ export const COURSES_SP: Course[] = [
   { code: "CM US FEOG.SP", name: "Ultrassonografia como ferramenta para o Obstetra e Ginecologista", tab: "SP" },
   { code: "CM US ENDA.SP", name: "Avançado de Ultrassonografia em Endometriose", tab: "SP" },
   { code: "CM US PUVA.SP", name: "Punção Vascular Ecoguiada", tab: "SP" },
+  { code: "CM US DAPO.SP", name: "Doppler Avançado em Patologias Obstétricas", tab: "SP" },
   { code: "PG US ECOF.SP", name: "PG US ECOF T1 - Pós-Graduação em Ecocardiografia Fetal", tab: "SP" },
   { code: "PG US ECOV.SP", name: "PG US ECOV T1 - Pós-Graduação em Ultrassonografia Vascular", tab: "SP" },
   { code: "PG US GIOB.SP", name: "PG US GIOB T1 - Pós-Graduação Ultrassonografia em Ginecologia e Obstetrícia", tab: "SP" },
