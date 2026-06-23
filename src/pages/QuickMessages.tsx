@@ -46,6 +46,7 @@ interface CourseRow {
 }
 
 type UnitFilter = "all" | "sao_paulo" | "brasilia";
+type TypeFilter = "all" | "modular" | "pos_graduacao";
 type PeriodKind =
   | "month"
   | "this_semester"
@@ -159,6 +160,7 @@ const QuickMessages = () => {
   const [monthIdx, setMonthIdx] = useState<number>(new Date().getMonth());
   const [yearRef, setYearRef] = useState<number>(new Date().getFullYear());
   const [unitFilter, setUnitFilter] = useState<UnitFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [includeUnit, setIncludeUnit] = useState(true);
   const [includeType, setIncludeType] = useState(true);
   const [intro, setIntro] = useState("Olá! Veja abaixo os cursos disponíveis:");
@@ -257,10 +259,11 @@ const QuickMessages = () => {
         const d = new Date(e.start_date + "T00:00:00");
         if (d < start || d > end) return false;
         if (unitFilter !== "all" && e.unit !== unitFilter) return false;
+        if (typeFilter !== "all" && e.type !== typeFilter) return false;
         return true;
       })
       .sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
-  }, [classEvents, periodRange, unitFilter]);
+  }, [classEvents, periodRange, unitFilter, typeFilter]);
 
   const generatedItems = useMemo(() => {
     const isGiob = (name: string) => name.includes("GIOB") || name.includes("Ginecologia e Obstetrícia");
@@ -486,6 +489,19 @@ const QuickMessages = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label>Tipo de curso</Label>
+                    <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="modular">Apenas cursos modulares</SelectItem>
+                        <SelectItem value="pos_graduacao">Apenas pós-graduação</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
 
                   <div className="space-y-2">
                     <Label>Mostrar nos itens</Label>
