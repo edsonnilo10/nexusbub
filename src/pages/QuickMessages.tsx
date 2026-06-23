@@ -259,10 +259,11 @@ const QuickMessages = () => {
         const d = new Date(e.start_date + "T00:00:00");
         if (d < start || d > end) return false;
         if (unitFilter !== "all" && e.unit !== unitFilter) return false;
+        if (typeFilter !== "all" && e.type !== typeFilter) return false;
         return true;
       })
       .sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
-  }, [classEvents, periodRange, unitFilter]);
+  }, [classEvents, periodRange, unitFilter, typeFilter]);
 
   const generatedItems = useMemo(() => {
     const isGiob = (name: string) => name.includes("GIOB") || name.includes("Ginecologia e Obstetrícia");
