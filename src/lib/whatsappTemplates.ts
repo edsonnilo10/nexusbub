@@ -373,8 +373,6 @@ export const investmentMessage = (
   lines.push("");
   lines.push(`✔️ *Valor com desconto e parcelamento:*`);
   lines.push(`( ) R$ _________ em ___x de R$ _________`);
-  lines.push("");
-  lines.push(`_Posso te ajudar a fechar sua vaga?_ 🎯`);
 
   return lines.join("\n");
 };
