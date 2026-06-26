@@ -1,35 +1,38 @@
 ## Objetivo
 
-Substituir **todas** as turmas de São Paulo de 2026 pelo conjunto oficial enviado (JSON com 32 cursos / ~50 edições), corrigindo as datas erradas que aparecem hoje no Calendário, Dashboard e Mensagens.
+Atualizar a aba do curso **CM US POCE – POCUS Essencial: Ultrassom em Urgências e Emergências** nas duas unidades (Brasília e São Paulo) com base no PDF enviado, replicando o mesmo padrão usado no DAPO.
 
-## Estado atual
+## Cursos identificados no banco
 
-- ~50 grupos de turma SP em `class_groups` (com vínculos em `class_group_courses`) referentes a 2026, vários com datas incorretas.
-- Mnemônicos no banco usam o sufixo curto (ex.: `CM US MAMA`); o JSON usa o sufixo `.SP` (ex.: `CM US MAMA.SP`). O mapeamento é direto removendo `.SP`.
-- Todos os 32 códigos do JSON têm curso correspondente na tabela `courses`, exceto:
-  - `CM US CAVF.SP` → mapear para o existente `CM US CAVE` (Carótidas e Vertebrais).
-  - `CM US URGI.SP` (Urogineco) → não existe curso correspondente; tem mesma janela de `CM US DOGO.SP` (04–06/09). Precisa decisão.
+- Brasília: `c155b402-118f-4e35-b778-f712edbe47ed` — "CM US POCE: Essencial: Ultrassom em Urgências e Emergências"
+- São Paulo: `d44295e8-f290-445a-aee4-e89599cfa525` — "Essencial: Ultrassom em Urgências e Emergências"
 
-## Plano de execução
+## Alterações em `courses` (ambas unidades)
 
-1. **Limpar 2026 SP**: deletar de `class_group_courses` e `class_groups` todos os grupos com `unit='sao_paulo'` e `start_date >= 2026-01-01 AND start_date < 2027-01-01`. Isso remove todas as datas erradas e duplicadas.
-2. **Inserir as ~50 edições do JSON** em `class_groups` (uma linha por edição) com:
-   - `unit = 'sao_paulo'`
-   - `start_date` / `end_date` do JSON
-   - `status = 'atual'` se `start_date <= hoje <= end_date`, senão `'proxima'` (todas as datas são futuras → todas ficam `proxima`).
-3. **Vincular cada edição ao curso** correspondente em `class_group_courses` com `display_mode = 'individual'` (mapeando código `.SP` → mnemonic sem `.SP`).
-4. **Casos especiais**:
-   - `CAVF` → vincular ao curso `CM US CAVE`.
-   - `URGI` → conforme decisão abaixo.
-5. **Não tocar** em `course_classes` (legado) nem em outras unidades (Brasília). Combos existentes em SP serão removidos junto com os grupos do passo 1; se algum combo precisar ser recriado a partir do JSON, será feito caso a caso.
+- `name`: "CM US POCE: POCUS Essencial – Ultrassom em Urgências e Emergências"
+- `description`: parágrafo sucinto destacando POCUS como extensão do exame físico, raciocínio clínico à beira-leito e tomada de decisão em urgência/emergência/UTI
+- `workload_hours`: 30 (15h teóricas online + 15h práticas presenciais; 20h presenciais no total)
+- `modality`: "Híbrido"
+- `highlights`: público-alvo (médicos generalistas, residentes, emergencistas, intensivistas, internos a partir do 9º semestre), diferenciais (teoria online libera tempo para prática, equipamentos de última geração de diferentes fabricantes, mentoria em grupo mensal por 3 meses pós-curso), turmas com até 24 alunos
 
-## Decisão pendente
+## Módulos (`course_modules`) — apagar e reinserir os 7 do PDF
 
-Vou perguntar antes de migrar como tratar **CM US URGI.SP** (Urogineco), que não tem curso cadastrado e divide a janela 04–06/09 com DOGO.
+1. Fundamentos do Ultrassom — princípios, transdutores, ajustes, artefatos, orientação e posicionamento
+2. POCUS Abdominal — anatomia, líquido livre, vesícula biliar, aorta abdominal
+3. POCUS Pulmonar — linhas A/B, consolidação, derrame pleural, pneumotórax
+4. POCUS Vascular — anatomia, TVP, acesso vascular guiado
+5. POCUS Cardíaco — janelas ecocardiográficas, análise qualitativa, derrame pericárdico, volemia
+6. Protocolos em Emergência — FAST, e-FAST, BLUE, RUSH, CAUSE
+7. Procedimentos Guiados por Ultrassom + aulas bônus (ajustes de imagem, anatomia aplicada, bioética do POCUS)
+
+Cada módulo recebe carga horária estimada coerente com o total de 30h.
+
+## Catálogo SP
+
+Confirmar que `src/data/coursesSP.ts` já tem `CM US POCE.SP` com o nome correto (já presente — sem alteração necessária).
 
 ## Detalhes técnicos
 
-- Operação executada via tool de inserção SQL (DELETE + INSERT), não migração de schema.
-- Mapeamento `.SP` → mnemonic: simples `replace('.SP','')`.
-- Após executar, validar com query agregada que cada edição do JSON resultou em exatamente 1 grupo + 1 vínculo, e que nenhuma data 01/01 ou fora de 2026 sobrou.
-- Calendário (`CourseCalendar`), Dashboard, `QuickMessages` e abas de detalhe leem de `loadAllCourseClasses` / `useSyncedData`, então puxarão automaticamente os novos dados sem mudança de código.
+- Uma única migração SQL com `UPDATE` nos dois `courses` + `DELETE`/`INSERT` em `course_modules` via CTE referenciando os dois `course_id`.
+- As mensagens do WhatsApp (curta, completa, follow-up, conteúdo programático, investimento) regeneram automaticamente a partir dos novos dados em ambas as unidades.
+- Datas das turmas não são alteradas.
