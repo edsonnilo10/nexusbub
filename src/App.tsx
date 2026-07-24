@@ -26,6 +26,7 @@ const ClassGroups = lazy(() => import("./pages/ClassGroups"));
 const GlobalDashboard = lazy(() => import("./pages/GlobalDashboard"));
 const QuickMessages = lazy(() => import("./pages/QuickMessages"));
 const CursosPlanilha = lazy(() => import("./pages/CursosPlanilha"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +59,7 @@ const App = () => (
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="/pending" element={<PendingApproval />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
