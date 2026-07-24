@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +19,7 @@ const nameSchema = z.string().trim().min(2, "Nome muito curto").max(100);
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -28,9 +29,17 @@ const Auth = () => {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
 
+  // Same-origin relative next path (used for OAuth consent redirect preservation).
+  const nextPath = useMemo(() => {
+    const raw = searchParams.get("next");
+    if (!raw) return "/";
+    if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+    return "/";
+  }, [searchParams]);
+
   useEffect(() => {
-    if (!authLoading && user) navigate("/", { replace: true });
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user) navigate(nextPath, { replace: true });
+  }, [user, authLoading, navigate, nextPath]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +108,7 @@ const Auth = () => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}${nextPath}`,
         data: { full_name: fullName },
       },
     });
