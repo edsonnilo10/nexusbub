@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://gstetvmsgjsbgilharjb.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "nexus-hub-mcp",
+      "version": "0.1.0",
+      "title": "Nexus Ultrassonografia — Hub"
+    },
+    "tools": [
+      {
+        "name": "list_courses",
+        "title": "Listar cursos",
+        "description": "Lista cursos do Nexus com filtros opcionais por unidade (sp/bsb), tipo (modular/pos_graduacao) e busca por nome/mnemônico.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "unit": {
+              "description": "Unidade: sp ou bsb",
+              "type": "string",
+              "enum": [
+                "sp",
+                "bsb"
+              ]
+            },
+            "type": {
+              "description": "Tipo de curso",
+              "type": "string",
+              "enum": [
+                "modular",
+                "pos_graduacao"
+              ]
+            },
+            "search": {
+              "description": "Termo para buscar em nome ou mnemônico",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Máximo de resultados (padrão 50)",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_course",
+        "title": "Detalhes do curso",
+        "description": "Retorna informações completas de um curso (por id OU mnemônico + unidade), incluindo módulos e próximas turmas.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "description": "ID do curso",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "mnemonic": {
+              "description": "Mnemônico (ex.: CM US MORF)",
+              "type": "string"
+            },
+            "unit": {
+              "description": "Unidade — obrigatória quando usar mnemônico",
+              "type": "string",
+              "enum": [
+                "sp",
+                "bsb"
+              ]
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_upcoming_classes",
+        "title": "Próximas turmas",
+        "description": "Lista as próximas turmas (class_groups) com filtro opcional por unidade e janela em dias.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "unit": {
+              "description": "Unidade: sp ou bsb",
+              "type": "string",
+              "enum": [
+                "sp",
+                "bsb"
+              ]
+            },
+            "days_ahead": {
+              "description": "Janela em dias a partir de hoje (padrão 90)",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
