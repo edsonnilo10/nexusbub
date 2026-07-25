@@ -65,9 +65,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { courseId, messages } = await req.json() as { courseId?: string | null; messages: IncomingMessage[] };
+    const body = await req.json() as {
+      courseId?: string | null;
+      messages: IncomingMessage[];
+      mode?: "assistant" | "faq";
+    };
+    const { courseId, messages } = body;
+    const requestMode: "assistant" | "faq" = body.mode === "faq" ? "faq" : "assistant";
     if (!Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages é obrigatório" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (requestMode === "faq" && !courseId) {
+      return new Response(JSON.stringify({ error: "courseId é obrigatório no modo FAQ" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -110,9 +121,21 @@ Deno.serve(async (req) => {
 
       if (modules?.length) {
         ctx.push(`\n## MÓDULOS / CONTEÚDO PROGRAMÁTICO`);
-        for (const m of modules) {
+        // No modo FAQ trunca para não estourar o contexto (pós-graduações têm 30+ módulos)
+        const maxItems = requestMode === "faq" ? 20 : modules.length;
+        const maxChars = requestMode === "faq" ? 3000 : Infinity;
+        let used = 0;
+        let shown = 0;
+        for (const m of modules.slice(0, maxItems)) {
           const wl = m.workload_hours ? ` (${m.workload_hours}h)` : "";
-          ctx.push(`- ${m.title}${wl}${m.description ? `: ${m.description}` : ""}`);
+          const line = `- ${m.title}${wl}${m.description ? `: ${m.description}` : ""}`;
+          if (used + line.length > maxChars) break;
+          ctx.push(line);
+          used += line.length + 1;
+          shown += 1;
+        }
+        if (shown < modules.length) {
+          ctx.push(`- (+${modules.length - shown} módulos adicionais não listados)`);
         }
       }
 
@@ -161,7 +184,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    const systemPrompt = `Você é o **Copiloto de Vendas da Nexus Ultrassonografia**, um assistente de IA exclusivo para Executivos de Vendas (Closers).
+    const faqSystemPrompt = `Você é o assistente de perguntas frequentes da **Escola Nexus de Ultrassonografia**.
+Responda dúvidas de alunos e leads sobre este curso específico.
+
+# REGRAS INEGOCIÁVEIS
+- Use APENAS os dados do curso abaixo. NUNCA invente.
+- Se a informação não estiver nos dados, responda exatamente: "Essa informação não está cadastrada — consulte a secretaria."
+- Português do Brasil, tom acolhedor e profissional.
+- Máximo de **4 linhas** por resposta. Direto ao ponto.
+- Formatação simples (pode usar *negrito* e _itálico_ estilo WhatsApp).
+- Sem emojis excessivos (no máximo 1 por resposta, se fizer sentido).
+- Não inclua saudações ("Olá!", "Oi!"), não inclua CTAs de venda ("Posso te ajudar?"), não inclua marcadores tipo "---WHATSAPP---".
+
+# CONTEXTO DO CURSO — fonte única da verdade
+${ctx.join("\n")}`;
+
+    const assistantSystemPrompt = `Você é o **Copiloto de Vendas da Nexus Ultrassonografia**, um assistente de IA exclusivo para Executivos de Vendas (Closers).
 Você apoia a equipe comercial fornecendo **dados precisos** e, quando solicitado, **roteiros de persuasão**.
 
 # REGRA Nº 1 — RESPONDA SÓ O QUE FOI PERGUNTADO (INEGOCIÁVEL)
@@ -219,6 +257,8 @@ ${ctx.join("\n")}
 
 ${mode === "global" ? `> Modo atual: **VISÃO GERAL**. Responda perguntas factuais sobre catálogo/agenda de forma direta. Só monte pitch quando pedido.` : `> Modo atual: **CURSO ESPECÍFICO**. Mesma regra: responda só o que foi perguntado. Pitch completo só quando o Closer pedir.`}`;
 
+    const systemPrompt = requestMode === "faq" ? faqSystemPrompt : assistantSystemPrompt;
+
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -260,6 +300,14 @@ ${mode === "global" ? `> Modo atual: **VISÃO GERAL**. Responda perguntas factua
         .replace(/^\s*\[?Resposta interna[^\]\n]*\]?\s*\n?/i, "")
         .replace(/^\s*\[?Mensagem (pronta )?para[^\]\n]*\]?\s*\n?/i, "")
         .trim();
+
+    if (requestMode === "faq") {
+      // Modo FAQ: resposta única, texto limpo — o cliente formata para WhatsApp
+      const answer = stripMarkers(fullText).replace(/---WHATSAPP---[\s\S]*$/i, "").trim();
+      return new Response(JSON.stringify({ answer }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let internal = stripMarkers(fullText);
     let whatsapp = "";
