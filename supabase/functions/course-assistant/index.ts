@@ -65,9 +65,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { courseId, messages } = await req.json() as { courseId?: string | null; messages: IncomingMessage[] };
+    const body = await req.json() as {
+      courseId?: string | null;
+      messages: IncomingMessage[];
+      mode?: "assistant" | "faq";
+    };
+    const { courseId, messages } = body;
+    const requestMode: "assistant" | "faq" = body.mode === "faq" ? "faq" : "assistant";
     if (!Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages é obrigatório" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (requestMode === "faq" && !courseId) {
+      return new Response(JSON.stringify({ error: "courseId é obrigatório no modo FAQ" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
