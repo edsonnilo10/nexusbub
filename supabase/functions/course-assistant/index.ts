@@ -121,9 +121,21 @@ Deno.serve(async (req) => {
 
       if (modules?.length) {
         ctx.push(`\n## MÓDULOS / CONTEÚDO PROGRAMÁTICO`);
-        for (const m of modules) {
+        // No modo FAQ trunca para não estourar o contexto (pós-graduações têm 30+ módulos)
+        const maxItems = requestMode === "faq" ? 20 : modules.length;
+        const maxChars = requestMode === "faq" ? 3000 : Infinity;
+        let used = 0;
+        let shown = 0;
+        for (const m of modules.slice(0, maxItems)) {
           const wl = m.workload_hours ? ` (${m.workload_hours}h)` : "";
-          ctx.push(`- ${m.title}${wl}${m.description ? `: ${m.description}` : ""}`);
+          const line = `- ${m.title}${wl}${m.description ? `: ${m.description}` : ""}`;
+          if (used + line.length > maxChars) break;
+          ctx.push(line);
+          used += line.length + 1;
+          shown += 1;
+        }
+        if (shown < modules.length) {
+          ctx.push(`- (+${modules.length - shown} módulos adicionais não listados)`);
         }
       }
 
