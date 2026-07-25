@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CourseFull, CourseModule, CourseClass, formatClassDateRange, classStatusLabel } from "@/lib/courseHelpers";
 import { shortMessage, fullMessage, followUpMessage, programaticContentMessage, investmentMessage } from "@/lib/whatsappTemplates";
 import { useCourseOverrides, CourseOverrides } from "@/hooks/useCourseOverrides";
+import { CourseFaqCard } from "@/components/course/CourseFaqCard";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
