@@ -1,26 +1,9 @@
+import type { LucideIcon } from "lucide-react";
 import {
-  CircleDollarSign,
-  Clock,
-  MapPin,
-  Calendar,
-  BookOpen,
-  Award,
-  CreditCard,
-  UserPlus,
-  FileText,
-  Users,
-  Building2,
-  HelpCircle,
-  type LucideIcon,
+  DollarSign, Users, Clock, MapPin, Calendar, ListChecks,
+  Award, CreditCard, UserPlus, PlayCircle, Building2, GraduationCap,
 } from "lucide-react";
-import {
-  CourseFull,
-  CourseModule,
-  CourseClass,
-  formatBRL,
-  formatClassDateRange,
-  courseTypeLabel,
-} from "@/lib/courseHelpers";
+import { CourseFull, CourseModule, CourseClass, formatClassDateRange, classStatusLabel } from "./courseHelpers";
 
 export type FaqMode = "local" | "ai";
 
@@ -29,122 +12,109 @@ export interface FaqPreset {
   question: string;
   icon: LucideIcon;
   mode: FaqMode;
-  /** Resposta local determinística (obrigatória se mode === "local") */
   answer?: (course: CourseFull, modules: CourseModule[], classes: CourseClass[]) => string;
 }
 
-const upcomingClasses = (classes: CourseClass[]) =>
-  classes
-    .filter((c) => c.status !== "encerrada")
+const formatPrice = (v: number | null) =>
+  v == null ? null : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const upcoming = (classes: CourseClass[]) =>
+  [...classes]
+    .filter((c) => c.status !== "encerrada" && c.start_date)
     .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
 
-/* ─────────── Respostas locais ─────────── */
-
-const answerPrice = (course: CourseFull): string => {
-  if (course.price == null) {
-    return "O valor deste curso ainda não está cadastrado — consulte a secretaria.";
-  }
-  const lines = [`Investimento: *${formatBRL(course.price)}*`];
-  if (course.installments && course.installments > 1) {
-    lines.push(`Parcelado em até *${course.installments}x de ${formatBRL(course.price / course.installments)}*`);
-  }
-  if (course.payment_methods) {
-    lines.push(`Formas de pagamento: ${course.payment_methods}`);
-  }
-  return lines.join("\n");
-};
-
-const answerDuration = (course: CourseFull, _m: CourseModule[], classes: CourseClass[]): string => {
+const priceAnswer = (course: CourseFull) => {
+  const price = formatPrice(course.price);
   const parts: string[] = [];
-  if (course.workload_hours) {
-    parts.push(`Carga horária total: *${course.workload_hours} horas*`);
-  }
-  const nextClasses = upcomingClasses(classes).slice(0, 3);
-  if (nextClasses.length) {
-    parts.push("");
-    parts.push("Próximas turmas:");
-    for (const c of nextClasses) {
-      parts.push(`• ${formatClassDateRange(c.start_date, c.end_date)}`);
+  if (price) {
+    if (course.installments && course.installments > 1) {
+      const installment = course.price! / course.installments;
+      parts.push(
+        `*Investimento:* ${price} — em até *${course.installments}x* de ${formatPrice(installment)}.`,
+      );
+    } else {
+      parts.push(`*Investimento:* ${price}.`);
     }
+  } else {
+    parts.push("Valores sob consulta — confirme com a secretaria para receber a proposta atualizada.");
   }
-  if (!parts.length) return "As informações de duração ainda não estão cadastradas — consulte a secretaria.";
+  if (course.payment_methods) parts.push(`_Formas de pagamento:_ ${course.payment_methods}.`);
   return parts.join("\n");
 };
 
-const answerModality = (course: CourseFull): string => {
-  if (!course.modality) return "A modalidade ainda não está cadastrada — consulte a secretaria.";
-  return `Modalidade: *${course.modality}*`;
-};
-
-const answerNextClasses = (_c: CourseFull, _m: CourseModule[], classes: CourseClass[]): string => {
-  const nextClasses = upcomingClasses(classes);
-  if (!nextClasses.length) {
-    return "Ainda não temos turmas confirmadas para este curso — consulte a secretaria para novidades.";
-  }
-  const lines = ["Próximas turmas confirmadas:"];
-  for (const c of nextClasses.slice(0, 5)) {
-    const loc = c.location ? ` — ${c.location}` : "";
-    lines.push(`• ${formatClassDateRange(c.start_date, c.end_date)}${loc}`);
-  }
-  return lines.join("\n");
-};
-
-const answerCertificate = (course: CourseFull): string => {
-  const wl = course.workload_hours ? ` de *${course.workload_hours} horas*` : "";
-  const tipo = courseTypeLabel(course.type);
-  return `Sim, todos os alunos recebem certificado${wl} ao concluir o curso (${tipo}).`;
-};
-
-const answerPayment = (course: CourseFull): string => {
+const durationAnswer = (course: CourseFull, _m: CourseModule[], classes: CourseClass[]) => {
   const parts: string[] = [];
-  if (course.payment_methods) parts.push(`Formas de pagamento: ${course.payment_methods}`);
-  if (course.price != null && course.installments && course.installments > 1) {
-    parts.push(`Parcelamos em até *${course.installments}x de ${formatBRL(course.price / course.installments)}*.`);
+  if (course.workload_hours) parts.push(`*Carga horária:* ${course.workload_hours}h.`);
+  const next = upcoming(classes)[0];
+  if (next) {
+    parts.push(`_Próxima turma:_ ${formatClassDateRange(next.start_date, next.end_date)}.`);
   }
-  if (!parts.length) return "As formas de pagamento ainda não estão cadastradas — consulte a secretaria.";
-  return parts.join("\n");
+  return parts.length ? parts.join("\n") : "Duração ainda não cadastrada — confirme com a secretaria.";
 };
 
-const answerLocation = (_c: CourseFull, _m: CourseModule[], classes: CourseClass[]): string => {
-  const nextClasses = upcomingClasses(classes);
-  const withLoc = nextClasses.filter((c) => c.location);
-  if (!withLoc.length) {
-    return "O local das aulas ainda não está cadastrado — consulte a secretaria.";
-  }
-  const unique = Array.from(new Set(withLoc.map((c) => c.location!)));
-  if (unique.length === 1) return `As aulas acontecem em: *${unique[0]}*`;
-  const lines = ["Locais das próximas turmas:"];
-  for (const c of withLoc.slice(0, 5)) {
-    lines.push(`• ${formatClassDateRange(c.start_date, c.end_date)} — ${c.location}`);
-  }
-  return lines.join("\n");
+const modalityAnswer = (course: CourseFull) => {
+  if (!course.modality) return "Modalidade não cadastrada — confirme com a secretaria.";
+  return `*Modalidade:* ${course.modality}.`;
 };
 
-/* ─────────── Presets ─────────── */
+const nextClassesAnswer = (_c: CourseFull, _m: CourseModule[], classes: CourseClass[]) => {
+  const up = upcoming(classes).slice(0, 5);
+  if (!up.length) return "Sem turmas confirmadas no momento — a coordenação pode te avisar assim que abrirem novas datas.";
+  const lines = up.map(
+    (c) => `• ${formatClassDateRange(c.start_date, c.end_date)} — _${classStatusLabel(c.status)}_${c.location ? ` (${c.location})` : ""}`,
+  );
+  return `*Próximas turmas:*\n${lines.join("\n")}`;
+};
+
+const certificateAnswer = (course: CourseFull) => {
+  const hours = course.workload_hours ? `com *${course.workload_hours}h* certificadas` : "com a carga horária cadastrada";
+  const type = course.type === "pos_graduacao" ? "certificado de pós-graduação" : "certificado de conclusão";
+  return `Sim — emitimos ${type} ${hours} ao final do curso.`;
+};
+
+const paymentAnswer = (course: CourseFull) => {
+  if (!course.payment_methods) {
+    return "Formas de pagamento não cadastradas — a secretaria envia todas as opções (Pix, cartão, boleto).";
+  }
+  return `*Formas de pagamento aceitas:*\n${course.payment_methods}`;
+};
+
+const locationAnswer = (course: CourseFull, _m: CourseModule[], classes: CourseClass[]) => {
+  const up = upcoming(classes);
+  const withLoc = up.find((c) => c.location) || up[0];
+  const unit = course.unit === "SP" ? "São Paulo" : "Brasília";
+  if (course.modality?.toLowerCase().includes("online") || course.modality?.toLowerCase().includes("ead")) {
+    return `As aulas são *online*${withLoc?.location ? ` (${withLoc.location})` : ""}.`;
+  }
+  if (withLoc?.location) return `As aulas acontecem em *${withLoc.location}* — unidade ${unit}.`;
+  return `As aulas acontecem na unidade *${unit}*. A secretaria confirma o endereço completo antes do início.`;
+};
 
 export const FAQ_PRESETS: FaqPreset[] = [
-  { id: "price", question: "Quanto custa?", icon: CircleDollarSign, mode: "local", answer: answerPrice },
-  { id: "who", question: "Quem pode fazer este curso?", icon: Users, mode: "ai" },
-  { id: "duration", question: "Quanto tempo dura?", icon: Clock, mode: "local", answer: answerDuration },
-  { id: "modality", question: "É presencial, online ou híbrido?", icon: MapPin, mode: "local", answer: answerModality },
-  { id: "next", question: "Quais as próximas turmas?", icon: Calendar, mode: "local", answer: answerNextClasses },
-  { id: "content", question: "Qual o conteúdo programático?", icon: BookOpen, mode: "ai" },
-  { id: "certificate", question: "Emite certificado?", icon: Award, mode: "local", answer: answerCertificate },
-  { id: "payment", question: "Formas de pagamento aceitas?", icon: CreditCard, mode: "local", answer: answerPayment },
+  { id: "price", question: "Quanto custa?", icon: DollarSign, mode: "local", answer: priceAnswer },
+  { id: "audience", question: "Quem pode fazer este curso?", icon: Users, mode: "ai" },
+  { id: "duration", question: "Quanto tempo dura?", icon: Clock, mode: "local", answer: durationAnswer },
+  { id: "modality", question: "É presencial, online ou híbrido?", icon: PlayCircle, mode: "local", answer: modalityAnswer },
+  { id: "next", question: "Quais as próximas turmas?", icon: Calendar, mode: "local", answer: nextClassesAnswer },
+  { id: "content", question: "Qual o conteúdo programático?", icon: ListChecks, mode: "ai" },
+  { id: "certificate", question: "Emite certificado? Qual carga horária?", icon: Award, mode: "local", answer: certificateAnswer },
+  { id: "payment", question: "Formas de pagamento aceitas?", icon: CreditCard, mode: "local", answer: paymentAnswer },
   { id: "enroll", question: "Como faço para me inscrever?", icon: UserPlus, mode: "ai" },
-  { id: "material", question: "Tem material de apoio ou gravação?", icon: FileText, mode: "ai" },
-  { id: "location", question: "Onde acontecem as aulas?", icon: Building2, mode: "local", answer: answerLocation },
-  { id: "coordinator", question: "Quem é o coordenador?", icon: HelpCircle, mode: "ai" },
+  { id: "support", question: "Tem material de apoio ou gravação?", icon: PlayCircle, mode: "ai" },
+  { id: "location", question: "Onde acontecem as aulas?", icon: Building2, mode: "local", answer: locationAnswer },
+  { id: "coordinator", question: "Quem é o coordenador?", icon: GraduationCap, mode: "ai" },
 ];
 
 /**
- * Formata a resposta bruta da IA (ou local) para o padrão WhatsApp:
- * - Remove markdown Bold/Italic HTML style, mantém *bold* e _italic_ do WhatsApp
- * - Colapsa múltiplas quebras
+ * Ajustes leves para deixar a resposta pronta para WhatsApp:
+ * - Normaliza quebras de linha em excesso.
+ * - Remove marcadores residuais (---, ###).
+ * A IA já é instruída a usar *negrito* e _itálico_ no formato certo.
  */
-export const formatForWhatsApp = (text: string): string =>
-  text
-    .replace(/\*\*([^*\n]+)\*\*/g, "*$1*") // **bold** -> *bold*
-    .replace(/__([^_\n]+)__/g, "_$1_") // __italic__ -> _italic_
+export const formatForWhatsApp = (text: string): string => {
+  return text
+    .replace(/^#+\s*/gm, "")
+    .replace(/---+/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+};
