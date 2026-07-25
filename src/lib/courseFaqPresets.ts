@@ -82,7 +82,7 @@ const paymentAnswer = (course: CourseFull) => {
 const locationAnswer = (course: CourseFull, _m: CourseModule[], classes: CourseClass[]) => {
   const up = upcoming(classes);
   const withLoc = up.find((c) => c.location) || up[0];
-  const unit = course.unit === "SP" ? "São Paulo" : "Brasília";
+  const unit = course.unit === "sao_paulo" ? "São Paulo" : "Brasília";
   if (course.modality?.toLowerCase().includes("online") || course.modality?.toLowerCase().includes("ead")) {
     return `As aulas são *online*${withLoc?.location ? ` (${withLoc.location})` : ""}.`;
   }
