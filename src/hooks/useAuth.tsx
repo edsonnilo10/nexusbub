@@ -62,7 +62,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // TOKEN_REFRESHED só atualiza a sessão silenciosamente — sem setLoading(true),
+      // sem recarregar perfil, sem desmontar as páginas abertas.
+      if (event === "TOKEN_REFRESHED") {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+        return;
+      }
       setTimeout(() => {
         void applySession(nextSession);
       }, 0);
