@@ -997,7 +997,12 @@ const syncClassGroups = async (
     if (!groupId) {
       const { data: ins, error: insErr } = await supabase
         .from("class_groups")
-        .insert({ unit, start_date: start, end_date: end, status: "proxima" })
+        .insert({
+          unit,
+          start_date: start,
+          end_date: end && end !== start ? end : null,
+          status: "proxima",
+        })
         .select("id")
         .single();
       if (insErr || !ins) {
