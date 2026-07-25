@@ -130,13 +130,19 @@ export const formatClassDateRange = (start: string | null, end: string | null): 
   const sd = String(s.getDate()).padStart(2, "0");
   const sm = MONTHS_PT_LONG[s.getMonth()];
   const sy = s.getFullYear();
+  // Sem data de fim — mostra só o início
   if (!end) return `${sd} de ${sm} de ${sy}`;
   const e = new Date(end + "T00:00:00");
   if (isNaN(e.getTime())) return `${sd} de ${sm} de ${sy}`;
   const ed = String(e.getDate()).padStart(2, "0");
   const em = MONTHS_PT_LONG[e.getMonth()];
   const ey = e.getFullYear();
+  // Mesma data exata — mostra só uma vez (evita "01 a 01 de Junho de 2026")
+  if (sd === ed && sm === em && sy === ey) return `${sd} de ${sm} de ${sy}`;
+  // Mesmo mês e ano — "18 a 20 de Junho de 2026"
   if (sm === em && sy === ey) return `${sd} a ${ed} de ${sm} de ${sy}`;
+  // Mesmo ano, meses diferentes — "30 de Junho a 02 de Julho de 2026"
   if (sy === ey) return `${sd} de ${sm} a ${ed} de ${em} de ${sy}`;
+  // Anos diferentes
   return `${sd} de ${sm} de ${sy} a ${ed} de ${em} de ${ey}`;
 };
