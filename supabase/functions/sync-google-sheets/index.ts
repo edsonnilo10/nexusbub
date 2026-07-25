@@ -726,7 +726,7 @@ const processEnrollmentsTab = async (
         course_id: matched.id,
         course_name: matched.name,
         start_date: start,
-        end_date: end || start,
+        end_date: null,
         class_label: turmaCode || null,
       });
     }
