@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,40 +38,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loadedUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     let active = true;
 
-    const applySession = async (nextSession: Session | null) => {
+    const applySession = async (nextSession: Session | null, event?: string) => {
       if (!active) return;
 
+      const nextUser = nextSession?.user ?? null;
       setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      setUser(nextUser);
 
-      if (!nextSession?.user) {
+      if (!nextUser) {
+        loadedUserIdRef.current = null;
         setApproved(false);
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
+      // Se for apenas atualização de token OU se as flags deste usuário já foram carregadas,
+      // atualizamos a sessão silenciosamente sem disparar setLoading(true) e sem desmontar a UI.
+      if (event === "TOKEN_REFRESHED" || loadedUserIdRef.current === nextUser.id) {
+        return;
+      }
+
       setLoading(true);
-      await loadProfileFlags(nextSession.user.id);
+      await loadProfileFlags(nextUser.id);
 
       if (active) {
+        loadedUserIdRef.current = nextUser.id;
         setLoading(false);
       }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      // TOKEN_REFRESHED só atualiza a sessão silenciosamente — sem setLoading(true),
-      // sem recarregar perfil, sem desmontar as páginas abertas.
-      if (event === "TOKEN_REFRESHED") {
-        setSession(nextSession);
-        setUser(nextSession?.user ?? null);
-        return;
-      }
       setTimeout(() => {
-        void applySession(nextSession);
+        void applySession(nextSession, event);
       }, 0);
     });
 
