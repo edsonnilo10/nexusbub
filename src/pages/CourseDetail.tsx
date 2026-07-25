@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
@@ -126,7 +126,7 @@ const CourseDetail = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="assistant">
+        <Tabs value={activeTab} onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}>
           <div className="overflow-x-auto pb-1">
             <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 rounded-xl p-1 sm:min-w-0">
               <TabsTrigger value="assistant" className="shrink-0 gap-1.5 text-xs sm:text-sm">
