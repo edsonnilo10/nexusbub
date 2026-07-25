@@ -148,6 +148,8 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
           />
         ))}
       </div>
+
+      <CourseFaqCard course={course} modules={modules} classes={classes} />
     </div>
   );
 };
