@@ -31,6 +31,8 @@ const CourseDetail = () => {
   const [classes, setClasses] = useState<CourseClass[]>([]);
   const [comboComponentIds, setComboComponentIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "assistant";
 
   useEffect(() => {
     if (id) load(id);
