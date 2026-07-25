@@ -301,6 +301,14 @@ ${mode === "global" ? `> Modo atual: **VISÃO GERAL**. Responda perguntas factua
         .replace(/^\s*\[?Mensagem (pronta )?para[^\]\n]*\]?\s*\n?/i, "")
         .trim();
 
+    if (requestMode === "faq") {
+      // Modo FAQ: resposta única, texto limpo — o cliente formata para WhatsApp
+      const answer = stripMarkers(fullText).replace(/---WHATSAPP---[\s\S]*$/i, "").trim();
+      return new Response(JSON.stringify({ answer }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let internal = stripMarkers(fullText);
     let whatsapp = "";
     if (fullText.includes("---WHATSAPP---")) {
