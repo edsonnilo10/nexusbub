@@ -258,7 +258,7 @@ export const shortMessage = (
   }
 
   lines.push(`📍 *Local:* ${locationFor(course, cls)}`);
-  if (course.workload_hours) lines.push(`🕒 *Carga Horária:* ${course.workload_hours} horas`);
+  lines.push(`🕒 *Carga Horária:* ${formatWorkload(course)}`);
 
   if (course.price) {
     lines.push("");
