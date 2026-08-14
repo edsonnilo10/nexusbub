@@ -368,11 +368,10 @@ export const investmentMessage = (
   selectedClass?: CourseClass | null,
 ): string => {
   const year = referenceYear(classes, selectedClass);
-  const wl = course.workload_hours ? `${course.workload_hours} horas` : "Carga horária a confirmar";
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
-  lines.push(`🕒 *Carga Horária:* ${wl}`);
+  lines.push(`🕒 *Carga Horária:* ${formatWorkload(course)}`);
   lines.push("");
   lines.push(`💰 *INVESTIMENTO*`);
   lines.push("");
