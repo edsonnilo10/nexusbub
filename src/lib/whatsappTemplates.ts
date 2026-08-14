@@ -87,6 +87,15 @@ const locationFor = (course: CourseFull, cls: CourseClass | null): string => {
   return `Escola NEXUS de Ultrassonografia – ${unitLabel(course.unit)}/${course.unit === "brasilia" ? "DF" : "SP"}`;
 };
 
+/** Exibe a carga horária de forma sucinta, incluindo divisão teórica/prática quando disponível */
+const formatWorkload = (course: CourseFull): string => {
+  const base = course.workload_hours ? `${course.workload_hours}h` : "Carga horária a confirmar";
+  if (course.workload_breakdown) {
+    return `${base} — ${course.workload_breakdown}`;
+  }
+  return base;
+};
+
 /** Bloco de turmas formatado para WhatsApp — usado no editor e no template completo */
 export const classesBlock = (classes: CourseClass[]): string => {
   const list = allFutureOrCurrent(classes);
