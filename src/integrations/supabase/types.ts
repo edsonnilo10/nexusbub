@@ -468,6 +468,7 @@ export type Database = {
           type: Database["public"]["Enums"]["course_type"]
           unit: Database["public"]["Enums"]["course_unit"]
           updated_at: string
+          workload_breakdown: string | null
           workload_hours: number | null
         }
         Insert: {
@@ -487,6 +488,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["course_type"]
           unit?: Database["public"]["Enums"]["course_unit"]
           updated_at?: string
+          workload_breakdown?: string | null
           workload_hours?: number | null
         }
         Update: {
@@ -506,6 +508,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["course_type"]
           unit?: Database["public"]["Enums"]["course_unit"]
           updated_at?: string
+          workload_breakdown?: string | null
           workload_hours?: number | null
         }
         Relationships: []

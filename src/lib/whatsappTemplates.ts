@@ -87,6 +87,15 @@ const locationFor = (course: CourseFull, cls: CourseClass | null): string => {
   return `Escola NEXUS de Ultrassonografia – ${unitLabel(course.unit)}/${course.unit === "brasilia" ? "DF" : "SP"}`;
 };
 
+/** Exibe a carga horária de forma sucinta, incluindo divisão teórica/prática quando disponível */
+const formatWorkload = (course: CourseFull): string => {
+  const base = course.workload_hours ? `${course.workload_hours}h` : "Carga horária a confirmar";
+  if (course.workload_breakdown) {
+    return `${base} — ${course.workload_breakdown}`;
+  }
+  return base;
+};
+
 /** Bloco de turmas formatado para WhatsApp — usado no editor e no template completo */
 export const classesBlock = (classes: CourseClass[]): string => {
   const list = allFutureOrCurrent(classes);
@@ -142,7 +151,7 @@ export const fullMessage = (
     lines.push("");
   }
 
-  const wl = course.workload_hours ? `${course.workload_hours} horas` : "imersão";
+  const wl = formatWorkload(course);
   lines.push(
     `A Escola NEXUS apresenta uma imersão de *${wl}* projetada para transformar sua atuação clínica, unindo embasamento teórico robusto a uma carga prática intensiva com pacientes reais.`
   );
@@ -191,7 +200,7 @@ export const fullMessage = (
 
   lines.push(`🕒 *CRONOGRAMA E LOGÍSTICA*`);
   lines.push("");
-  if (course.workload_hours) lines.push(`*Carga Horária Total:* ${course.workload_hours} horas`);
+  lines.push(`*Carga Horária Total:* ${formatWorkload(course)}`);
   lines.push("");
 
   if (course.price) {
@@ -249,7 +258,7 @@ export const shortMessage = (
   }
 
   lines.push(`📍 *Local:* ${locationFor(course, cls)}`);
-  if (course.workload_hours) lines.push(`🕒 *Carga Horária:* ${course.workload_hours} horas`);
+  lines.push(`🕒 *Carga Horária:* ${formatWorkload(course)}`);
 
   if (course.price) {
     lines.push("");
@@ -315,9 +324,7 @@ export const programaticContentMessage = (
   }
   lines.push("");
 
-  if (course.workload_hours) {
-    lines.push(`🕒 *Carga horária total:* ${course.workload_hours} horas`);
-  }
+  lines.push(`🕒 *Carga horária total:* ${formatWorkload(course)}`);
   // Mostra turma APENAS se foi explicitamente selecionada
   if (selectedClass && cls?.start_date) {
     lines.push(`🗓️ *Turma indicada:* ${formatClassDateRange(cls.start_date, cls.end_date)}`);
@@ -361,11 +368,10 @@ export const investmentMessage = (
   selectedClass?: CourseClass | null,
 ): string => {
   const year = referenceYear(classes, selectedClass);
-  const wl = course.workload_hours ? `${course.workload_hours} horas` : "Carga horária a confirmar";
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
-  lines.push(`🕒 *Carga Horária:* ${wl}`);
+  lines.push(`🕒 *Carga Horária:* ${formatWorkload(course)}`);
   lines.push("");
   lines.push(`💰 *INVESTIMENTO*`);
   lines.push("");
