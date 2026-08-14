@@ -59,6 +59,7 @@ export interface CourseFull {
   description: string | null;
   cover_url: string | null;
   workload_hours: number | null;
+  workload_breakdown: string | null;
   modality: string | null;
   price: number | null;
   installments: number | null;
