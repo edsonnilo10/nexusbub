@@ -151,7 +151,7 @@ export const fullMessage = (
     lines.push("");
   }
 
-  const wl = course.workload_hours ? `${course.workload_hours} horas` : "imersão";
+  const wl = formatWorkload(course);
   lines.push(
     `A Escola NEXUS apresenta uma imersão de *${wl}* projetada para transformar sua atuação clínica, unindo embasamento teórico robusto a uma carga prática intensiva com pacientes reais.`
   );
