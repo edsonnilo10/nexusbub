@@ -324,9 +324,7 @@ export const programaticContentMessage = (
   }
   lines.push("");
 
-  if (course.workload_hours) {
-    lines.push(`🕒 *Carga horária total:* ${course.workload_hours} horas`);
-  }
+  lines.push(`🕒 *Carga horária total:* ${formatWorkload(course)}`);
   // Mostra turma APENAS se foi explicitamente selecionada
   if (selectedClass && cls?.start_date) {
     lines.push(`🗓️ *Turma indicada:* ${formatClassDateRange(cls.start_date, cls.end_date)}`);
