@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   CalendarDays,
-  TableProperties,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +14,7 @@ import nexusLogo from "@/assets/nexus-logo.jpg";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { to: "/turmas", label: "Turmas", icon: CalendarDays, adminOnly: false },
-  { to: "/cursos-planilha", label: "Cursos", icon: TableProperties, adminOnly: false },
+  
   { to: "/mensagens", label: "Mensagens", icon: MessageSquare, adminOnly: false },
   { to: "/admin/approvals", label: "Aprovações", icon: ShieldCheck, adminOnly: true },
   { to: "/settings", label: "Configurações", icon: SettingsIcon, adminOnly: true },
