@@ -25,7 +25,7 @@ const CourseCalendar = lazy(() => import("./pages/CourseCalendar"));
 const ClassGroups = lazy(() => import("./pages/ClassGroups"));
 const GlobalDashboard = lazy(() => import("./pages/GlobalDashboard"));
 const QuickMessages = lazy(() => import("./pages/QuickMessages"));
-const CursosPlanilha = lazy(() => import("./pages/CursosPlanilha"));
+
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient({
@@ -72,7 +72,7 @@ const App = () => (
                 <Route path="/turmas" element={<ProtectedRoute><ClassGroups /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><GlobalDashboard /></ProtectedRoute>} />
                 <Route path="/mensagens" element={<ProtectedRoute><QuickMessages /></ProtectedRoute>} />
-                <Route path="/cursos-planilha" element={<ProtectedRoute><CursosPlanilha /></ProtectedRoute>} />
+                
                 <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
                 <Route path="/admin/audit" element={<ProtectedRoute adminOnly><AdminAudit /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
