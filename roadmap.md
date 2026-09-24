@@ -8,4 +8,4 @@
 - [x] Identificar as ofertas de 2027 como híbridas, com cidade definida por quórum mínimo.
 - [x] Adicionar seletor 2026 / 2027 na aba WhatsApp.
 - [x] Omitir módulos sem data nas mensagens de 2027.
-- [ ] Validar o seletor e as mensagens de 2027 no preview autenticado.
+- [x] Validar o seletor e as mensagens de 2027 no preview autenticado.
