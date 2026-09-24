@@ -53,6 +53,7 @@ export const slugify = (text: string): string => {
 export interface CourseFull {
   id: string;
   name: string;
+  mnemonic?: string | null;
   slug: string | null;
   type: "pos_graduacao" | "modular";
   unit: CourseUnit;

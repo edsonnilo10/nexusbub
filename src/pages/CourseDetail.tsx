@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText, Activity } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText, Activity, CalendarClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { CourseWhatsAppTab } from "@/components/course/CourseWhatsAppTab";
 import { CourseClassesTab } from "@/components/course/CourseClassesTab";
 import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
+import { Course2027Tab } from "@/components/course/Course2027Tab";
+import { getPostgraduate2027Schedule } from "@/lib/postgraduate2027";
 
 import { CourseOperationsTab } from "@/components/course/CourseOperationsTab";
 import { ComboTabs } from "@/components/course/ComboTabs";
@@ -82,6 +84,8 @@ const CourseDetail = () => {
     );
   }
 
+  const schedule2027 = getPostgraduate2027Schedule(course);
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <AppHeader />
@@ -146,6 +150,11 @@ const CourseDetail = () => {
               <TabsTrigger value="classes" className="shrink-0 text-xs sm:text-sm">Turmas</TabsTrigger>
               <TabsTrigger value="landing" className="shrink-0 text-xs sm:text-sm">Apresentação</TabsTrigger>
               <TabsTrigger value="whatsapp" className="shrink-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
+              {schedule2027 && (
+                <TabsTrigger value="class-2027" className="shrink-0 gap-1.5 text-xs sm:text-sm">
+                  <CalendarClock className="h-3.5 w-3.5" /> Turma 2027
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
           <TabsContent value="assistant" className="mt-4 sm:mt-6">
@@ -178,6 +187,11 @@ const CourseDetail = () => {
           <TabsContent value="whatsapp" className="mt-4 sm:mt-6">
             <CourseWhatsAppTab course={course} modules={modules} classes={classes} />
           </TabsContent>
+          {schedule2027 && (
+            <TabsContent value="class-2027" className="mt-4 sm:mt-6">
+              <Course2027Tab course={course} />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>
