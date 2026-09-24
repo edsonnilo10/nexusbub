@@ -39,7 +39,7 @@ export const Course2027Tab = ({ course }: Props) => {
             </CardTitle>
             <Badge variant="secondary">Previsão</Badge>
           </div>
-          <CardDescription>Calendário previsto dos módulos desta turma.</CardDescription>
+          <CardDescription>Calendário previsto da turma híbrida, com realização em Brasília ou São Paulo conforme o quórum mínimo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-start gap-3 rounded-md border p-3">
@@ -50,12 +50,10 @@ export const Course2027Tab = ({ course }: Props) => {
             </div>
           </div>
           <ol className="divide-y rounded-md border">
-            {Array.from({ length: schedule.moduleCount }, (_, index) => (
+            {schedule.dates.map((date, index) => (
               <li key={index} className="flex items-center justify-between gap-4 px-3 py-2.5 text-sm">
                 <span className="font-medium">Módulo {index + 1}</span>
-                <span className={schedule.dates[index] ? "text-right" : "text-right text-muted-foreground"}>
-                  {schedule.dates[index] ?? "A decidir"}
-                </span>
+                <span className="text-right">{date}</span>
               </li>
             ))}
           </ol>

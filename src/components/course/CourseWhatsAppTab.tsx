@@ -11,6 +11,14 @@ import { shortMessage, fullMessage, followUpMessage, programaticContentMessage, 
 import { useCourseOverrides, CourseOverrides } from "@/hooks/useCourseOverrides";
 import { CourseFaqCard } from "@/components/course/CourseFaqCard";
 import { toast } from "@/hooks/use-toast";
+import {
+  getPostgraduate2027Schedule,
+  postgraduate2027ContentMessage,
+  postgraduate2027DateMessage,
+  postgraduate2027FollowUpMessage,
+  postgraduate2027FullMessage,
+  postgraduate2027InvestmentMessage,
+} from "@/lib/postgraduate2027";
 
 interface Props {
   course: CourseFull;
@@ -19,9 +27,12 @@ interface Props {
 }
 
 type WaKey = "wa_short" | "wa_full" | "wa_followup" | "wa_content" | "wa_investment";
+type MessageYear = "2026" | "2027";
 
 export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
   const { overrides, loaded, save } = useCourseOverrides(course.id);
+  const schedule2027 = getPostgraduate2027Schedule(course);
+  const [messageYear, setMessageYear] = useState<MessageYear>("2026");
 
   // Turmas elegíveis (não-encerradas) ordenadas
   const eligibleClasses = useMemo(
@@ -43,7 +54,53 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
   const cardKey = selectedClassId;
 
   const templates = useMemo(
-    () => [
+    () => {
+      if (messageYear === "2027" && schedule2027) {
+        return [
+          {
+            id: "wa_short" as WaKey,
+            label: "Mensagem curta",
+            desc: "Datas previstas, coordenação e cidades",
+            icon: MessageCircle,
+            defaultText: postgraduate2027DateMessage(course, schedule2027),
+            savedKey: null as keyof CourseOverrides | null,
+          },
+          {
+            id: "wa_full" as WaKey,
+            label: "Mensagem completa",
+            desc: "Apresentação, datas e conteúdo",
+            icon: MessageCircle,
+            defaultText: postgraduate2027FullMessage(course, modules, schedule2027),
+            savedKey: null as keyof CourseOverrides | null,
+          },
+          {
+            id: "wa_followup" as WaKey,
+            label: "Follow-up",
+            desc: "Para retomar contato sobre 2027",
+            icon: MessageCircle,
+            defaultText: postgraduate2027FollowUpMessage(course, schedule2027),
+            savedKey: null as keyof CourseOverrides | null,
+          },
+          {
+            id: "wa_content" as WaKey,
+            label: "Conteúdo programático",
+            desc: "Detalhamento completo da pós",
+            icon: BookOpen,
+            defaultText: postgraduate2027ContentMessage(course, modules),
+            savedKey: null as keyof CourseOverrides | null,
+          },
+          {
+            id: "wa_investment" as WaKey,
+            label: "Investimento",
+            desc: "Carga horária e valores em aberto",
+            icon: MessageCircle,
+            defaultText: postgraduate2027InvestmentMessage(course),
+            savedKey: null as keyof CourseOverrides | null,
+          },
+        ];
+      }
+
+      return [
       {
         id: "wa_short" as WaKey,
         label: "Mensagem curta",
@@ -87,8 +144,9 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
         defaultText: investmentMessage(course, classes, selectedClass),
         savedKey: "wa_investment" as keyof CourseOverrides,
       },
-    ],
-    [course, modules, classes, selectedClass],
+    ];
+    },
+    [course, modules, classes, selectedClass, messageYear, schedule2027],
   );
 
   if (!loaded) {
@@ -101,12 +159,43 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
 
   return (
     <div className="space-y-5">
+      {schedule2027 && (
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Ano das mensagens</p>
+            <p className="text-xs text-muted-foreground">Escolha o conjunto que deseja copiar.</p>
+          </div>
+          <div className="grid grid-cols-2 rounded-md border bg-muted p-1" aria-label="Ano das mensagens">
+            <Button
+              type="button"
+              size="sm"
+              variant={messageYear === "2026" ? "default" : "ghost"}
+              onClick={() => setMessageYear("2026")}
+            >
+              2026
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={messageYear === "2027" ? "default" : "ghost"}
+              onClick={() => setMessageYear("2027")}
+            >
+              2027
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border bg-secondary/30 p-4 text-sm text-muted-foreground">
-        💡 Suas edições são <strong>salvas automaticamente</strong> e ficam apenas na sua conta — outros usuários não veem nem alteram seus textos. Use <code className="rounded bg-background px-1">*texto*</code> para negrito e <code className="rounded bg-background px-1">_texto_</code> para itálico.
+        {messageYear === "2026" ? (
+          <>💡 Suas edições são <strong>salvas automaticamente</strong> e ficam apenas na sua conta — outros usuários não veem nem alteram seus textos. Use <code className="rounded bg-background px-1">*texto*</code> para negrito e <code className="rounded bg-background px-1">_texto_</code> para itálico.</>
+        ) : (
+          <>As mensagens de 2027 incluem somente as datas já previstas e informam que a cidade será definida entre Brasília e São Paulo conforme o quórum mínimo.</>
+        )}
       </div>
 
       {/* Seletor de turma global para os templates */}
-      <Card>
+      {messageYear === "2026" && <Card>
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
           <Label htmlFor="wa-class-select" className="flex shrink-0 items-center gap-2 text-sm font-medium">
             <Calendar className="h-4 w-4 text-primary" />
@@ -131,19 +220,19 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
             </p>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
         {templates.map((t) => (
           <TemplateCard
-            key={`${t.id}-${cardKey}`}
+            key={`${t.id}-${messageYear}-${cardKey}`}
             templateKey={t.id}
             label={t.label}
             desc={t.desc}
             Icon={t.icon}
             defaultText={t.defaultText}
-            savedText={t.savedKey ? overrides[t.savedKey] as string | null : null}
-            onSave={t.savedKey ? save : null}
+            savedText={messageYear === "2026" && t.savedKey ? overrides[t.savedKey] as string | null : null}
+            onSave={messageYear === "2026" && t.savedKey ? save : null}
             courseName={course.name}
           />
         ))}
