@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   CalendarDays,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +15,7 @@ import nexusLogo from "@/assets/nexus-logo.jpg";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { to: "/turmas", label: "Turmas", icon: CalendarDays, adminOnly: false },
+  { to: "/pos-2027", label: "Pós 2027", icon: GraduationCap, adminOnly: false },
   
   { to: "/mensagens", label: "Mensagens", icon: MessageSquare, adminOnly: false },
   { to: "/admin/approvals", label: "Aprovações", icon: ShieldCheck, adminOnly: true },
