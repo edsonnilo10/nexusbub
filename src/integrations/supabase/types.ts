@@ -730,6 +730,7 @@ export type Database = {
           proposal_start_date: string | null
           updated_at: string
           user_id: string
+          wa_2027: Json | null
           wa_followup: string | null
           wa_full: string | null
           wa_investment: string | null
@@ -747,6 +748,7 @@ export type Database = {
           proposal_start_date?: string | null
           updated_at?: string
           user_id: string
+          wa_2027?: Json | null
           wa_followup?: string | null
           wa_full?: string | null
           wa_investment?: string | null
@@ -764,6 +766,7 @@ export type Database = {
           proposal_start_date?: string | null
           updated_at?: string
           user_id?: string
+          wa_2027?: Json | null
           wa_followup?: string | null
           wa_full?: string | null
           wa_investment?: string | null
