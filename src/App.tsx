@@ -25,7 +25,6 @@ const CourseCalendar = lazy(() => import("./pages/CourseCalendar"));
 const ClassGroups = lazy(() => import("./pages/ClassGroups"));
 const GlobalDashboard = lazy(() => import("./pages/GlobalDashboard"));
 const QuickMessages = lazy(() => import("./pages/QuickMessages"));
-const PosGraduacao2027 = lazy(() => import("./pages/PosGraduacao2027"));
 
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
@@ -73,7 +72,6 @@ const App = () => (
                 <Route path="/turmas" element={<ProtectedRoute><ClassGroups /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><GlobalDashboard /></ProtectedRoute>} />
                 <Route path="/mensagens" element={<ProtectedRoute><QuickMessages /></ProtectedRoute>} />
-                <Route path="/pos-2027" element={<ProtectedRoute><PosGraduacao2027 /></ProtectedRoute>} />
                 
                 <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><AdminApprovals /></ProtectedRoute>} />
                 <Route path="/admin/audit" element={<ProtectedRoute adminOnly><AdminAudit /></ProtectedRoute>} />
