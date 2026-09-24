@@ -1,10 +1,13 @@
-import { CourseFull } from "@/lib/courseHelpers";
+import { CourseFull, CourseModule } from "@/lib/courseHelpers";
 
 export interface Postgraduate2027Schedule {
   coordinator: string;
   dates: string[];
   moduleCount: number;
 }
+
+const HYBRID_CITY_MESSAGE =
+  "A turma 2027 será híbrida, com possibilidade de realização em Brasília ou em São Paulo, a depender da formação do quórum mínimo.";
 
 const schedules: Record<string, Postgraduate2027Schedule> = {
   "PG US ECOF": {
@@ -81,18 +84,20 @@ export const postgraduate2027DateMessage = (
   course: Pick<CourseFull, "name">,
   schedule: Postgraduate2027Schedule,
 ): string => {
-  const cleanName = course.name.replace(/^PG\s+US\s+\w+(?:\s+T\d+)?\s*[:–-]?\s*/i, "").trim();
+  const cleanName = cleanCourseName(course.name);
   const lines = [
     `*${cleanName} 2027:*`,
+    "",
+    `*Formato:* ${HYBRID_CITY_MESSAGE}`,
     "",
     `*Coordenação:* ${schedule.coordinator}`,
     "",
   ];
 
-  for (let index = 0; index < schedule.moduleCount; index += 1) {
-    const date = schedule.dates[index] ?? "A DECIDIR";
+  schedule.dates.forEach((date, index) => {
+    if (!date) return;
     lines.push(`MÓDULO ${index + 1}\t${date}.`);
-  }
+  });
 
   lines.push(
     "",
@@ -100,4 +105,131 @@ export const postgraduate2027DateMessage = (
   );
 
   return lines.join("\n");
+};
+
+const cleanCourseName = (name: string): string =>
+  name.replace(/^PG\s+US\s+\w+(?:\s+T\d+)?\s*[:–-]?\s*/i, "").trim();
+
+const formatWorkload = (course: Pick<CourseFull, "workload_hours" | "workload_breakdown">): string => {
+  const base = course.workload_hours ? `${course.workload_hours}h` : "Carga horária a confirmar";
+  return course.workload_breakdown ? `${base} — ${course.workload_breakdown}` : base;
+};
+
+const datesLines = (schedule: Postgraduate2027Schedule): string[] =>
+  schedule.dates.flatMap((date, index) => (date ? [`MÓDULO ${index + 1}\t${date}.`] : []));
+
+export const postgraduate2027FullMessage = (
+  course: CourseFull,
+  modules: CourseModule[],
+  schedule: Postgraduate2027Schedule,
+): string => {
+  const cleanName = cleanCourseName(course.name);
+  const lines: string[] = [`*${cleanName.toUpperCase()} – NEXUS 2027*`, ""];
+
+  if (course.description) {
+    lines.push(`_${course.description.split(/(?<=[.!?])\s/)[0]}_`, "");
+  }
+
+  lines.push(`🕒 *Carga Horária:* ${formatWorkload(course)}`);
+  lines.push(`📍 *Formato:* ${HYBRID_CITY_MESSAGE}`);
+  lines.push(`*Coordenação:* ${schedule.coordinator}`, "");
+  lines.push(`🗓️ *DATAS JÁ PREVISTAS*`, "", ...datesLines(schedule), "");
+  lines.push("Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.", "");
+
+  if (modules.length > 0) {
+    lines.push(`*O QUE VOCÊ VAI DOMINAR*`, "");
+    [...modules]
+      .sort((a, b) => a.order_index - b.order_index)
+      .forEach((module) => {
+        const workload = module.workload_hours ? ` _(${module.workload_hours}h)_` : "";
+        lines.push(`▪️ *${module.title}*${workload}`);
+        if (module.description) lines.push(module.description.trim());
+      });
+    lines.push("");
+  }
+
+  lines.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`);
+  lines.push("Se quiser, posso te passar os detalhes da matrícula.");
+
+  return lines.join("\n");
+};
+
+export const postgraduate2027FollowUpMessage = (
+  course: Pick<CourseFull, "name" | "workload_hours" | "workload_breakdown">,
+  schedule: Postgraduate2027Schedule,
+): string => {
+  const cleanName = cleanCourseName(course.name);
+  return [
+    "Olá! 👋",
+    "",
+    `Passando para te enviar as informações da turma 2027 da *${cleanName}* na Escola NEXUS.`,
+    "",
+    `🕒 *Carga Horária:* ${formatWorkload(course)}`,
+    `📍 *Formato:* ${HYBRID_CITY_MESSAGE}`,
+    `*Coordenação:* ${schedule.coordinator}`,
+    "",
+    `🗓️ *Datas já previstas:*`,
+    ...datesLines(schedule),
+    "",
+    "Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.",
+    "",
+    "Posso tirar alguma dúvida sobre a turma? 😊",
+  ].join("\n");
+};
+
+export const postgraduate2027ContentMessage = (
+  course: CourseFull,
+  modules: CourseModule[],
+): string => {
+  const cleanName = cleanCourseName(course.name);
+  const lines: string[] = [
+    "📚 *CONTEÚDO PROGRAMÁTICO*",
+    `*${cleanName.toUpperCase()} – NEXUS 2027*`,
+    "",
+    "Conforme solicitado, segue o *conteúdo programático completo* da nossa pós-graduação 👇",
+    "",
+    `🕒 *Carga horária total:* ${formatWorkload(course)}`,
+    `📍 *Formato:* ${HYBRID_CITY_MESSAGE}`,
+    "",
+  ];
+
+  if (modules.length === 0) {
+    lines.push("_Conteúdo programático em fase de atualização. Posso te enviar assim que estiver disponível._");
+  } else {
+    [...modules]
+      .sort((a, b) => a.order_index - b.order_index)
+      .forEach((module, index) => {
+        const workload = module.workload_hours ? ` _(${module.workload_hours}h)_` : "";
+        lines.push(`*${index + 1}. ${module.title}*${workload}`);
+        if (module.description) {
+          module.description
+            .split(/\n+|;/)
+            .map((topic) => topic.trim())
+            .filter(Boolean)
+            .forEach((topic) => lines.push(`   • ${topic.replace(/^[-•·▪️*]+\s*/, "")}`));
+        }
+        lines.push("");
+      });
+  }
+
+  lines.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`);
+  lines.push("Qualquer dúvida sobre algum módulo específico, é só me chamar! 😊");
+
+  return lines.join("\n");
+};
+
+export const postgraduate2027InvestmentMessage = (course: CourseFull): string => {
+  const cleanName = cleanCourseName(course.name);
+  return [
+    `*${cleanName.toUpperCase()} – NEXUS 2027*`,
+    `🕒 *Carga Horária:* ${formatWorkload(course)}`,
+    `📍 *Formato:* ${HYBRID_CITY_MESSAGE}`,
+    "",
+    "💰 *INVESTIMENTO*",
+    "",
+    "✔️ *Valor 2027:* R$ _________",
+    "",
+    "✔️ *Valor com desconto e parcelamento:*",
+    "( ) R$ _________ em ___x de R$ _________",
+  ].join("\n");
 };
