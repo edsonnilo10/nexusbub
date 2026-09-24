@@ -233,19 +233,35 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
       </Card>}
 
       <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
-        {templates.map((t) => (
-          <TemplateCard
-            key={`${t.id}-${messageYear}-${cardKey}`}
-            templateKey={t.id}
-            label={t.label}
-            desc={t.desc}
-            Icon={t.icon}
-            defaultText={t.defaultText}
-            savedText={messageYear === "2026" && t.savedKey ? overrides[t.savedKey] as string | null : null}
-            onSave={messageYear === "2026" && t.savedKey ? save : null}
-            courseName={course.name}
-          />
-        ))}
+        {templates.map((t) => {
+          const storageKey2027 = `wa2027:${course.id}:${t.id}`;
+          const is2027 = messageYear === "2027";
+          return (
+            <TemplateCard
+              key={`${t.id}-${messageYear}-${cardKey}`}
+              templateKey={t.id}
+              label={t.label}
+              desc={t.desc}
+              Icon={t.icon}
+              defaultText={t.defaultText}
+              savedText={
+                is2027
+                  ? (typeof window !== "undefined" ? window.localStorage.getItem(storageKey2027) : null)
+                  : t.savedKey ? (overrides[t.savedKey] as string | null) : null
+              }
+              onSave={
+                is2027
+                  ? (patch) => {
+                      const v = (patch as Record<string, string | null>)[t.id];
+                      if (v == null) window.localStorage.removeItem(storageKey2027);
+                      else window.localStorage.setItem(storageKey2027, v);
+                    }
+                  : t.savedKey ? save : null
+              }
+              courseName={course.name}
+            />
+          );
+        })}
       </div>
 
       <CourseFaqCard course={course} modules={modules} classes={classes} />
