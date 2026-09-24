@@ -234,8 +234,8 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
 
       <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
         {templates.map((t) => {
-          const storageKey2027 = `wa2027:${course.id}:${t.id}`;
           const is2027 = messageYear === "2027";
+          const saved2027 = overrides.wa_2027 ?? {};
           return (
             <TemplateCard
               key={`${t.id}-${messageYear}-${cardKey}`}
@@ -246,15 +246,17 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
               defaultText={t.defaultText}
               savedText={
                 is2027
-                  ? (typeof window !== "undefined" ? window.localStorage.getItem(storageKey2027) : null)
+                  ? saved2027[t.id] ?? null
                   : t.savedKey ? (overrides[t.savedKey] as string | null) : null
               }
               onSave={
                 is2027
                   ? (patch) => {
                       const v = (patch as Record<string, string | null>)[t.id];
-                      if (v == null) window.localStorage.removeItem(storageKey2027);
-                      else window.localStorage.setItem(storageKey2027, v);
+                      const next = { ...(overrides.wa_2027 ?? {}) };
+                      if (v == null) delete next[t.id];
+                      else next[t.id] = v;
+                      save({ wa_2027: next });
                     }
                   : t.savedKey ? save : null
               }

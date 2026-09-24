@@ -13,6 +13,7 @@ export interface CourseOverrides {
   proposal_coordinators: string | null;
   proposal_installments: number | null;
   proposal_class_id: string | null;
+  wa_2027: Record<string, string> | null;
 }
 
 const EMPTY: CourseOverrides = {
@@ -26,6 +27,7 @@ const EMPTY: CourseOverrides = {
   proposal_coordinators: null,
   proposal_installments: null,
   proposal_class_id: null,
+  wa_2027: null,
 };
 
 /**
@@ -65,6 +67,7 @@ export const useCourseOverrides = (courseId: string | undefined) => {
           proposal_coordinators: data.proposal_coordinators,
           proposal_installments: (data as any).proposal_installments ?? null,
           proposal_class_id: (data as any).proposal_class_id ?? null,
+          wa_2027: (data as any).wa_2027 ?? null,
         });
       }
       setLoaded(true);
@@ -86,7 +89,7 @@ export const useCourseOverrides = (courseId: string | undefined) => {
             user_id: user.id,
             course_id: courseId,
             ...patch,
-          },
+          } as any,
           { onConflict: "user_id,course_id" }
         );
       }, 600);
