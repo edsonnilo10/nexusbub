@@ -28,6 +28,16 @@ interface Props {
 
 type WaKey = "wa_short" | "wa_full" | "wa_followup" | "wa_content" | "wa_investment";
 type MessageYear = "2026" | "2027";
+const WHATSAPP_MESSAGE_LIMIT = 4095;
+
+const limitWhatsAppMessage = (text: string): string => {
+  if (text.length <= WHATSAPP_MESSAGE_LIMIT) return text;
+
+  const shortened = text.slice(0, WHATSAPP_MESSAGE_LIMIT - 1);
+  const lastBreak = Math.max(shortened.lastIndexOf("\n"), shortened.lastIndexOf(" "));
+  const safeEnd = lastBreak > WHATSAPP_MESSAGE_LIMIT - 200 ? lastBreak : shortened.length;
+  return `${shortened.slice(0, safeEnd).trimEnd()}…`;
+};
 
 export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
   const { overrides, loaded, save } = useCourseOverrides(course.id);
@@ -277,20 +287,22 @@ const downloadBlob = (blob: Blob, filename: string) => {
 
 const TemplateCard = ({ templateKey, label, desc, Icon, defaultText, savedText, onSave, courseName }: CardProps) => {
   const [copied, setCopied] = useState(false);
-  const [edited, setEdited] = useState<string>(savedText ?? defaultText);
+  const limitedDefaultText = limitWhatsAppMessage(defaultText);
+  const [edited, setEdited] = useState<string>(limitWhatsAppMessage(savedText ?? defaultText));
 
   useEffect(() => {
-    setEdited(savedText ?? defaultText);
+    setEdited(limitWhatsAppMessage(savedText ?? defaultText));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedText, defaultText]);
 
   const handleChange = (value: string) => {
-    setEdited(value);
-    if (onSave) onSave({ [templateKey]: value } as Partial<CourseOverrides>);
+    const limitedValue = value.slice(0, WHATSAPP_MESSAGE_LIMIT);
+    setEdited(limitedValue);
+    if (onSave) onSave({ [templateKey]: limitedValue } as Partial<CourseOverrides>);
   };
 
   const handleReset = () => {
-    setEdited(defaultText);
+    setEdited(limitedDefaultText);
     if (onSave) onSave({ [templateKey]: null } as Partial<CourseOverrides>);
     toast({ title: "Texto restaurado", description: "Voltou para o padrão automático." });
   };
@@ -380,8 +392,12 @@ const TemplateCard = ({ templateKey, label, desc, Icon, defaultText, savedText, 
           value={edited}
           onChange={(e) => handleChange(e.target.value)}
           readOnly={!canEdit}
+          maxLength={WHATSAPP_MESSAGE_LIMIT}
           className="min-h-[260px] flex-1 font-mono text-xs leading-relaxed"
         />
+        <p className="text-right text-xs text-muted-foreground" aria-live="polite">
+          {edited.length.toLocaleString("pt-BR")} / {WHATSAPP_MESSAGE_LIMIT.toLocaleString("pt-BR")} caracteres
+        </p>
         <div className="flex gap-2">
           <Button onClick={handleCopy} variant={copied ? "secondary" : "default"} size="sm" className="flex-1">
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
