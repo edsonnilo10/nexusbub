@@ -9,3 +9,4 @@
 - [x] Adicionar seletor 2026 / 2027 na aba WhatsApp.
 - [x] Omitir módulos sem data nas mensagens de 2027.
 - [x] Validar o seletor e as mensagens de 2027 no preview autenticado.
+- [x] Corrigir os textos de 2027 para indicar como híbridas somente ECOF, ECOV, GINE e PEDN.

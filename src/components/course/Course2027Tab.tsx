@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { CourseFull } from "@/lib/courseHelpers";
-import { getPostgraduate2027Schedule, postgraduate2027DateMessage } from "@/lib/postgraduate2027";
+import {
+  getPostgraduate2027Schedule,
+  isPostgraduate2027Hybrid,
+  postgraduate2027DateMessage,
+} from "@/lib/postgraduate2027";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -14,6 +18,7 @@ interface Props {
 
 export const Course2027Tab = ({ course }: Props) => {
   const schedule = getPostgraduate2027Schedule(course);
+  const isHybrid = isPostgraduate2027Hybrid(course);
   const message = useMemo(
     () => (schedule ? postgraduate2027DateMessage(course, schedule) : ""),
     [course, schedule],
@@ -39,7 +44,11 @@ export const Course2027Tab = ({ course }: Props) => {
             </CardTitle>
             <Badge variant="secondary">Previsão</Badge>
           </div>
-          <CardDescription>Calendário previsto da turma híbrida, com realização em Brasília ou São Paulo conforme o quórum mínimo.</CardDescription>
+          <CardDescription>
+            {isHybrid
+              ? "Calendário previsto da turma híbrida, com realização em Brasília ou São Paulo conforme o quórum mínimo."
+              : `Calendário previsto da turma com realização em ${course.unit === "brasilia" ? "Brasília" : "São Paulo"}.`}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-start gap-3 rounded-md border p-3">

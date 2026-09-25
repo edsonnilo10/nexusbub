@@ -13,6 +13,7 @@ import { CourseFaqCard } from "@/components/course/CourseFaqCard";
 import { toast } from "@/hooks/use-toast";
 import {
   getPostgraduate2027Schedule,
+  isPostgraduate2027Hybrid,
   postgraduate2027ContentMessage,
   postgraduate2027DateMessage,
   postgraduate2027FollowUpMessage,
@@ -42,6 +43,7 @@ const limitWhatsAppMessage = (text: string): string => {
 export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
   const { overrides, loaded, save } = useCourseOverrides(course.id);
   const schedule2027 = getPostgraduate2027Schedule(course);
+  const isHybrid2027 = isPostgraduate2027Hybrid(course);
   const [messageYear, setMessageYear] = useState<MessageYear>("2026");
 
   // Turmas elegíveis (não-encerradas) ordenadas
@@ -200,7 +202,11 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
         {messageYear === "2026" ? (
           <>💡 Suas edições são <strong>salvas automaticamente</strong> e ficam apenas na sua conta — outros usuários não veem nem alteram seus textos. Use <code className="rounded bg-background px-1">*texto*</code> para negrito e <code className="rounded bg-background px-1">_texto_</code> para itálico.</>
         ) : (
-          <>As mensagens de 2027 incluem somente as datas já previstas e informam que a cidade será definida entre Brasília e São Paulo conforme o quórum mínimo.</>
+          <>
+            {isHybrid2027
+              ? "As mensagens de 2027 incluem somente as datas já previstas e informam que a cidade será definida entre Brasília e São Paulo conforme o quórum mínimo."
+              : `As mensagens de 2027 incluem somente as datas já previstas e informam a realização em ${course.unit === "brasilia" ? "Brasília" : "São Paulo"}.`}
+          </>
         )}
       </div>
 

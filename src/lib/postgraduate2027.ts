@@ -6,8 +6,10 @@ export interface Postgraduate2027Schedule {
   moduleCount: number;
 }
 
+const HYBRID_COURSE_KEYS = new Set(["PG US ECOF", "PG US ECOV", "PG US GINE", "PG US PEDN"]);
+
 const HYBRID_CITY_MESSAGE =
-  "A turma 2027 será híbrida, com possibilidade de realização em Brasília ou em São Paulo, a depender da formação do quórum mínimo.";
+  "Turma híbrida, com possibilidade de realização em Brasília ou em São Paulo, a depender da formação do quórum mínimo.";
 
 const schedules: Record<string, Postgraduate2027Schedule> = {
   "PG US ECOF": {
@@ -62,33 +64,56 @@ const nameFallbacks: Array<[string, string]> = [
   ["ecocardiografia fetal", "PG US ECOF"],
   ["ecografia vascular", "PG US ECOV"],
   ["ultrassonografia vascular", "PG US ECOV"],
+  ["ginecologia avançada e endometriose", "PG US GINE"],
   ["ginecologia e obstetrícia", "PG US GIOB"],
   ["medicina interna", "PG US MEDI"],
   ["pediátrica e neonatal", "PG US PEDN"],
   ["intervenção em dor", "PG US DORM"],
 ];
 
+const getCourseKey = (course: Pick<CourseFull, "mnemonic" | "name">): string | null => {
+  const mnemonic = course.mnemonic?.toUpperCase().replace(/\s+T\d+$/, "").trim();
+  if (mnemonic) {
+    const matchingKey = [...HYBRID_COURSE_KEYS, ...Object.keys(schedules)]
+      .find((key) => mnemonic.startsWith(key));
+    if (matchingKey) return matchingKey;
+  }
+
+  const normalizedName = course.name.toLowerCase();
+  return nameFallbacks.find(([term]) => normalizedName.includes(term))?.[1] ?? null;
+};
+
+export const isPostgraduate2027Hybrid = (
+  course: Pick<CourseFull, "mnemonic" | "name">,
+): boolean => {
+  const key = getCourseKey(course);
+  return key ? HYBRID_COURSE_KEYS.has(key) : false;
+};
+
+export const postgraduate2027LocationMessage = (
+  course: Pick<CourseFull, "mnemonic" | "name" | "unit">,
+): string => {
+  if (isPostgraduate2027Hybrid(course)) return HYBRID_CITY_MESSAGE;
+  return course.unit === "brasilia" ? "Realização em Brasília." : "Realização em São Paulo.";
+};
+
 export const getPostgraduate2027Schedule = (
   course: Pick<CourseFull, "mnemonic" | "name" | "type">,
 ): Postgraduate2027Schedule | null => {
   if (course.type !== "pos_graduacao") return null;
-  const mnemonic = course.mnemonic?.toUpperCase().replace(/\s+T\d+$/, "").trim();
-  if (mnemonic && schedules[mnemonic]) return schedules[mnemonic];
-
-  const normalizedName = course.name.toLowerCase();
-  const match = nameFallbacks.find(([term]) => normalizedName.includes(term));
-  return match ? schedules[match[1]] : null;
+  const key = getCourseKey(course);
+  return key ? schedules[key] ?? null : null;
 };
 
 export const postgraduate2027DateMessage = (
-  course: Pick<CourseFull, "name">,
+  course: Pick<CourseFull, "name" | "mnemonic" | "unit">,
   schedule: Postgraduate2027Schedule,
 ): string => {
   const cleanName = cleanCourseName(course.name);
   const lines = [
     `*${cleanName} 2027:*`,
     "",
-    `*Formato:* ${HYBRID_CITY_MESSAGE}`,
+    `*Formato:* ${postgraduate2027LocationMessage(course)}`,
     "",
     `*Coordenação:* ${schedule.coordinator}`,
     "",
@@ -131,7 +156,7 @@ export const postgraduate2027FullMessage = (
   }
 
   lines.push(`🕒 *Carga Horária:* ${formatWorkload(course)}`);
-  lines.push(`📍 *Formato:* ${HYBRID_CITY_MESSAGE}`);
+  lines.push(`📍 *Formato:* ${postgraduate2027LocationMessage(course)}`);
   lines.push(`*Coordenação:* ${schedule.coordinator}`, "");
   lines.push(`🗓️ *DATAS JÁ PREVISTAS*`, "", ...datesLines(schedule), "");
   lines.push("Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.", "");
@@ -155,7 +180,7 @@ export const postgraduate2027FullMessage = (
 };
 
 export const postgraduate2027FollowUpMessage = (
-  course: Pick<CourseFull, "name" | "workload_hours" | "workload_breakdown">,
+  course: Pick<CourseFull, "name" | "mnemonic" | "unit" | "workload_hours" | "workload_breakdown">,
   schedule: Postgraduate2027Schedule,
 ): string => {
   const cleanName = cleanCourseName(course.name);
@@ -165,7 +190,7 @@ export const postgraduate2027FollowUpMessage = (
     `Passando para te enviar as informações da turma 2027 da *${cleanName}* na Escola NEXUS.`,
     "",
     `🕒 *Carga Horária:* ${formatWorkload(course)}`,
-    `📍 *Formato:* ${HYBRID_CITY_MESSAGE}`,
+    `📍 *Formato:* ${postgraduate2027LocationMessage(course)}`,
     `*Coordenação:* ${schedule.coordinator}`,
     "",
     `🗓️ *Datas já previstas:*`,
@@ -189,7 +214,7 @@ export const postgraduate2027ContentMessage = (
     "Conforme solicitado, segue o *conteúdo programático completo* da nossa pós-graduação 👇",
     "",
     `🕒 *Carga horária total:* ${formatWorkload(course)}`,
-    `📍 *Formato:* ${HYBRID_CITY_MESSAGE}`,
+    `📍 *Formato:* ${postgraduate2027LocationMessage(course)}`,
     "",
   ];
 
@@ -223,7 +248,7 @@ export const postgraduate2027InvestmentMessage = (course: CourseFull): string =>
   return [
     `*${cleanName.toUpperCase()} – NEXUS 2027*`,
     `🕒 *Carga Horária:* ${formatWorkload(course)}`,
-    `📍 *Formato:* ${HYBRID_CITY_MESSAGE}`,
+    `📍 *Formato:* ${postgraduate2027LocationMessage(course)}`,
     "",
     "💰 *INVESTIMENTO*",
     "",
