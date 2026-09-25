@@ -12,6 +12,11 @@ const HYBRID_CITY_MESSAGE =
   "Turma híbrida, com possibilidade de realização em Brasília ou em São Paulo, a depender da formação do quórum mínimo.";
 
 const schedules: Record<string, Postgraduate2027Schedule> = {
+  "PG US USGR": {
+    coordinator: "A confirmar",
+    dates: [],
+    moduleCount: 4,
+  },
   "PG US ECOF": {
     coordinator: "Jorge Afiuni",
     dates: ["06 A 07/08/27", "03 A 04/09/27", "01 A 02/10/27", "05 A 06/11/27"],
@@ -58,9 +63,15 @@ const schedules: Record<string, Postgraduate2027Schedule> = {
     ],
     moduleCount: 10,
   },
+  "PG US NEUR": {
+    coordinator: "A confirmar",
+    dates: [],
+    moduleCount: 24,
+  },
 };
 
 const nameFallbacks: Array<[string, string]> = [
+  ["ultrassonografia geral", "PG US USGR"],
   ["ecocardiografia fetal", "PG US ECOF"],
   ["ecografia vascular", "PG US ECOV"],
   ["ultrassonografia vascular", "PG US ECOV"],
@@ -69,6 +80,7 @@ const nameFallbacks: Array<[string, string]> = [
   ["medicina interna", "PG US MEDI"],
   ["pediátrica e neonatal", "PG US PEDN"],
   ["intervenção em dor", "PG US DORM"],
+  ["neurossonografia fetal", "PG US NEUR"],
 ];
 
 const getCourseKey = (course: Pick<CourseFull, "mnemonic" | "name">): string | null => {

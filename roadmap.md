@@ -10,3 +10,6 @@
 - [x] Omitir módulos sem data nas mensagens de 2027.
 - [x] Validar o seletor e as mensagens de 2027 no preview autenticado.
 - [x] Corrigir os textos de 2027 para indicar como híbridas somente ECOF, ECOV, GINE e PEDN.
+- [x] Padronizar as oito pós-graduações oficiais de São Paulo em 2027.
+- [x] Habilitar mensagens 2027 para USGR e NEUR sem inventar datas.
+- [x] Validar os oito cursos e suas mensagens no computador e no celular.

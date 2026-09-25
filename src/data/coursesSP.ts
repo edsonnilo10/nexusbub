@@ -45,10 +45,13 @@ export const COURSES_SP: Course[] = [
   { code: "CM US PUVA.SP", name: "Punção Vascular Ecoguiada", tab: "SP" },
   { code: "CM US DAPO.SP", name: "Doppler Avançado em Patologias Obstétricas", tab: "SP" },
   { code: "CM US NEO2.SP", name: "Hemodinâmica Neonatal guiada por Ultrassom cardíaco avançado", tab: "SP" },
+  { code: "PG US USGR.SP", name: "Pós-Graduação em Ultrassonografia Geral", tab: "SP" },
   { code: "PG US ECOF.SP", name: "PG US ECOF T1 - Pós-Graduação em Ecocardiografia Fetal", tab: "SP" },
   { code: "PG US ECOV.SP", name: "PG US ECOV T1 - Pós-Graduação em Ultrassonografia Vascular", tab: "SP" },
   { code: "PG US GIOB.SP", name: "PG US GIOB T1 - Pós-Graduação Ultrassonografia em Ginecologia e Obstetrícia", tab: "SP" },
   { code: "PG US MEDI.SP", name: "PG US MEDI T1 - Pós-Graduação Ultrassonografia em Medicina Interna", tab: "SP" },
+  { code: "PG US PEDN.SP", name: "PG US PEDN T1 - Pós-Graduação em Ultrassonografia Pediátrica e Neonatal", tab: "SP" },
+  { code: "PG US NEUR.SP", name: "Pós-Graduação em Neurossonografia Fetal", tab: "SP" },
   { code: "PG US DORM.SP", name: "PG US DORM T1 - Pós-Graduação em Ultrassonografia e Intervenção em Dor", tab: "SP" },
 ];
 
