@@ -18,3 +18,5 @@
 - [x] Preservar a sequência das pós-graduações até 2028 nas turmas e mensagens.
 - [x] Auditar contagens, duplicidades, vínculos e datas invertidas.
 - [x] Validar calendário e abas de cursos no computador e no celular.
+- [x] Substituir o calendário de Brasília pela planilha de 2027 (sem datas anteriores a 06/10/2026).
+- [x] Atualizar as datas 2027–2028 das pós de Brasília na aba Turma 2027 e no WhatsApp.
