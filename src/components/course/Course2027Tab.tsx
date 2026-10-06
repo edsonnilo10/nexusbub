@@ -66,9 +66,11 @@ export const Course2027Tab = ({ course }: Props) => {
               </li>
             ))}
           </ol>
-          <p className="text-sm text-muted-foreground">
-            Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.
-          </p>
+          {schedule.dates.length < schedule.moduleCount && (
+            <p className="text-sm text-muted-foreground">
+              Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.
+            </p>
+          )}
         </CardContent>
       </Card>
 

@@ -144,10 +144,12 @@ export const postgraduate2027DateMessage = (
     lines.push(`MÓDULO ${index + 1}\t${date}.`);
   });
 
-  lines.push(
-    "",
-    "Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.",
-  );
+  if (schedule.dates.length < schedule.moduleCount) {
+    lines.push(
+      "",
+      "Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.",
+    );
+  }
 
   return lines.join("\n");
 };
@@ -179,7 +181,9 @@ export const postgraduate2027FullMessage = (
   lines.push(`📍 *Formato:* ${postgraduate2027LocationMessage(course)}`);
   lines.push(`*Coordenação:* ${schedule.coordinator}`, "");
   lines.push(`🗓️ *DATAS JÁ PREVISTAS*`, "", ...datesLines(schedule), "");
-  lines.push("Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.", "");
+  if (schedule.dates.length < schedule.moduleCount) {
+    lines.push("Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.", "");
+  }
 
   if (modules.length > 0) {
     lines.push(`*O QUE VOCÊ VAI DOMINAR*`, "");
@@ -204,7 +208,7 @@ export const postgraduate2027FollowUpMessage = (
   schedule: Postgraduate2027Schedule,
 ): string => {
   const cleanName = cleanCourseName(course.name);
-  return [
+  const lines = [
     "Olá! 👋",
     "",
     `Passando para te enviar as informações da turma 2027 da *${cleanName}* na Escola NEXUS.`,
@@ -216,10 +220,14 @@ export const postgraduate2027FollowUpMessage = (
     `🗓️ *Datas já previstas:*`,
     ...datesLines(schedule),
     "",
-    "Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.",
-    "",
-    "Posso tirar alguma dúvida sobre a turma? 😊",
-  ].join("\n");
+  ];
+
+  if (schedule.dates.length < schedule.moduleCount) {
+    lines.push("Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.", "");
+  }
+  lines.push("Posso tirar alguma dúvida sobre a turma? 😊");
+
+  return lines.join("\n");
 };
 
 export const postgraduate2027ContentMessage = (
