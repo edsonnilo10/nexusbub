@@ -13,3 +13,8 @@
 - [x] Padronizar as oito pós-graduações oficiais de São Paulo em 2027.
 - [x] Habilitar mensagens 2027 para USGR e NEUR sem inventar datas.
 - [x] Validar os oito cursos e suas mensagens no computador e no celular.
+- [ ] Substituir todo o calendário de São Paulo pelas datas da planilha de 2027.
+- [ ] Remover turmas de São Paulo encerradas antes de 06/10/2026.
+- [ ] Preservar a sequência das pós-graduações até 2028 nas turmas e mensagens.
+- [ ] Auditar contagens, duplicidades, vínculos e datas invertidas.
+- [ ] Validar calendário e abas de cursos no computador e no celular.
