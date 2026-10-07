@@ -20,6 +20,6 @@
 - [x] Validar calendário e abas de cursos no computador e no celular.
 - [x] Substituir o calendário de Brasília pela planilha de 2027 (sem datas anteriores a 06/10/2026).
 - [x] Atualizar as datas 2027–2028 das pós de Brasília na aba Turma 2027 e no WhatsApp.
-- [ ] Restaurar as agendas oficiais restantes de 2026 de São Paulo e Brasília sem alterar 2027–2028.
-- [ ] Confirmar que calendário, turmas e mensagens voltaram a receber as datas de 2026.
-- [ ] Auditar contagens, duplicidades e períodos invertidos após a restauração.
+- [x] Restaurar as agendas oficiais restantes de 2026 de São Paulo e Brasília sem alterar 2027–2028.
+- [x] Confirmar que calendário, turmas e mensagens voltaram a receber as datas de 2026.
+- [x] Auditar contagens, duplicidades e períodos invertidos após a restauração.
