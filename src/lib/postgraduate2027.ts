@@ -1,4 +1,5 @@
 import { CourseFull, CourseModule } from "@/lib/courseHelpers";
+import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 
 export interface Postgraduate2027Schedule {
   coordinator: string;
@@ -240,6 +241,9 @@ export const postgraduate2027FullMessage = (
   modules: CourseModule[],
   schedule: Postgraduate2027Schedule,
 ): string => {
+  if (isPainPostgraduate(course)) {
+    return painPostgraduateMessage(course, 2027, datesLines(schedule), postgraduate2027LocationMessage(course), schedule.dates.length < schedule.moduleCount);
+  }
   const cleanName = cleanCourseName(course.name);
   const lines: string[] = [`*${cleanName.toUpperCase()} – NEXUS 2027*`, ""];
 
