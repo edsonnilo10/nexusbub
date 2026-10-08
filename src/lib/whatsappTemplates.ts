@@ -2,6 +2,7 @@ import {
   CourseFull, CourseModule, CourseClass, ClassStatus,
   formatBRL, unitLabel, formatClassDateRange, classStatusLabel,
 } from "./courseHelpers";
+import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 
 const parseDate = (date: string | null | undefined): Date | null => {
   if (!date) return null;
@@ -140,6 +141,15 @@ export const fullMessage = (
 ): string => {
   const cls = resolveClass(classes, selectedClass);
   const year = referenceYear(classes, selectedClass);
+  if (isPainPostgraduate(course)) {
+    const dates = selectedClass && cls ? [cls] : allFutureOrCurrent(classes);
+    const shortDate = (date: string) => date.slice(0, 10).split("-").reverse().join("/");
+    return painPostgraduateMessage(course, year, dates.flatMap((date) => {
+      if (!date.start_date) return [];
+      const range = shortDate(date.start_date) + (date.end_date && date.end_date !== date.start_date ? ` a ${shortDate(date.end_date)}` : "");
+      return [`${statusEmoji(date.status)} ${range} — ${classStatusLabel(date.status)}${date.location && date.location !== locationFor(course, cls) ? ` (${date.location})` : ""}`];
+    }), locationFor(course, cls));
+  }
   const lines: string[] = [];
 
   lines.push(`*${course.name.toUpperCase()} – NEXUS ${year}*`);
