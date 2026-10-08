@@ -63,7 +63,7 @@ const schedules: Record<string, Postgraduate2027Schedule> = {
     moduleCount: 10,
   },
   "PG US DORM": {
-    coordinator: "Erick Baroni",
+    coordinator: "Erik Halex Barone dos Santos",
     dates: [
       "14 A 16/05/27", "18 A 20/06/27", "16 A 18/07/27", "20 A 22/08/27",
       "17 A 19/09/27", "15 A 17/10/27", "19 A 21/11/27", "16 A 18/12/27",
@@ -155,6 +155,7 @@ const nameFallbacks: Array<[string, string]> = [
   ["medicina interna", "PG US MEDI"],
   ["pediátrica e neonatal", "PG US PEDN"],
   ["intervenção em dor", "PG US DORM"],
+  ["intervenções ambulatoriais em dor", "PG US DORM"],
   ["neurossonografia fetal", "PG US NEUR"],
 ];
 
