@@ -3,8 +3,8 @@ import { generalUltrasoundBlockMessage, generalUltrasoundBlocks } from "./genera
 import { CourseClass } from "./courseHelpers";
 
 describe("Datas por bloco da Pós Geral", () => {
-  it("mantém 490h, com três blocos e TCC", () => {
-    expect(generalUltrasoundBlocks.flatMap(b => b.courses).reduce((sum, c) => sum + c[2], 20)).toBe(490);
+  it("preserva as cargas individuais da tabela enviada", () => {
+    expect(generalUltrasoundBlocks.map(b => b.courses.reduce((sum, c) => sum + c[2], 0))).toEqual([230, 90, 155]);
   });
   it("separa cidade, ano, cursos e turmas encerradas sem duplicar datas", () => {
     const courses = [{ id: "sp", mnemonic: "CM US GIOB", unit: "sao_paulo" as const }, { id: "df", mnemonic: "CM US GIOB", unit: "brasilia" as const }];
