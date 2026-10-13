@@ -23,5 +23,5 @@
 - [x] Restaurar as agendas oficiais restantes de 2026 de São Paulo e Brasília sem alterar 2027–2028.
 - [x] Confirmar que calendário, turmas e mensagens voltaram a receber as datas de 2026.
 - [x] Auditar contagens, duplicidades e períodos invertidos após a restauração.
-- [ ] Adicionar mensagens separadas dos três blocos da Pós em Ultrassonografia Geral nas duas cidades.
-- [ ] Conferir datas dos cursos modulares e cópia das mensagens sem misturar cidades.
+- [x] Adicionar mensagens separadas dos três blocos da Pós em Ultrassonografia Geral nas duas cidades.
+- [x] Conferir datas dos cursos modulares e cópia das mensagens sem misturar cidades.
