@@ -15,6 +15,8 @@ import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
 import { Course2027Tab } from "@/components/course/Course2027Tab";
 import { getPostgraduate2027Schedule } from "@/lib/postgraduate2027";
+import { GeneralUltrasoundDatesTab } from "@/components/course/GeneralUltrasoundDatesTab";
+import { isGeneralUltrasoundPostgraduate } from "@/lib/generalUltrasoundBlocks";
 
 import { CourseOperationsTab } from "@/components/course/CourseOperationsTab";
 import { ComboTabs } from "@/components/course/ComboTabs";
@@ -150,6 +152,7 @@ const CourseDetail = () => {
               <TabsTrigger value="classes" className="shrink-0 text-xs sm:text-sm">Turmas</TabsTrigger>
               <TabsTrigger value="landing" className="shrink-0 text-xs sm:text-sm">Apresentação</TabsTrigger>
               <TabsTrigger value="whatsapp" className="shrink-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
+              {isGeneralUltrasoundPostgraduate(course) && <TabsTrigger value="block-dates" className="shrink-0 text-xs sm:text-sm">Datas por bloco</TabsTrigger>}
               {schedule2027 && (
                 <TabsTrigger value="class-2027" className="shrink-0 gap-1.5 text-xs sm:text-sm">
                   <CalendarClock className="h-3.5 w-3.5" /> Turma 2027
@@ -192,6 +195,7 @@ const CourseDetail = () => {
               <Course2027Tab course={course} />
             </TabsContent>
           )}
+          {isGeneralUltrasoundPostgraduate(course) && <TabsContent value="block-dates" className="mt-4 sm:mt-6"><GeneralUltrasoundDatesTab course={course} /></TabsContent>}
         </Tabs>
       </main>
     </div>
