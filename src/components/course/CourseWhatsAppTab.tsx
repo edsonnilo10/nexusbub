@@ -19,7 +19,9 @@ import {
   postgraduate2027FollowUpMessage,
   postgraduate2027FullMessage,
   postgraduate2027InvestmentMessage,
+  postgraduate2027LocationMessage,
 } from "@/lib/postgraduate2027";
+import { buildCoursePdf, coursePdfFilename } from "@/lib/coursePdf";
 
 interface Props {
   course: CourseFull;
@@ -45,6 +47,28 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
   const schedule2027 = getPostgraduate2027Schedule(course);
   const isHybrid2027 = isPostgraduate2027Hybrid(course);
   const [messageYear, setMessageYear] = useState<MessageYear>("2026");
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const handleCoursePdf = async () => {
+    if (!schedule2027) return;
+    setPdfBusy(true);
+    try {
+      const doc = await buildCoursePdf({
+        course,
+        modules,
+        yearLabel: "2027",
+        coordinator: schedule2027.coordinator !== "A confirmar" ? schedule2027.coordinator : null,
+        dates: schedule2027.dates,
+        moduleCount: schedule2027.moduleCount,
+        locationText: postgraduate2027LocationMessage(course),
+      });
+      doc.save(coursePdfFilename(course, "2027"));
+      toast({ title: "PDF gerado" });
+    } catch (e) {
+      toast({ title: "Não foi possível gerar o PDF", variant: "destructive" });
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   // Turmas elegíveis (não-encerradas) ordenadas
   const eligibleClasses = useMemo(
@@ -209,6 +233,21 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
           </>
         )}
       </div>
+
+      {messageYear === "2027" && schedule2027 && (
+        <Card>
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium"><FileText className="h-4 w-4 text-primary" /> PDF da turma 2027</p>
+              <p className="text-xs text-muted-foreground">Apresentação com a identidade Nexus: curso, coordenação, datas, conteúdo e investimento, pronta para enviar ao aluno.</p>
+            </div>
+            <Button onClick={handleCoursePdf} disabled={pdfBusy} className="shrink-0">
+              {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+              Gerar PDF
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Seletor de turma global para os templates */}
       {messageYear === "2026" && <Card>
