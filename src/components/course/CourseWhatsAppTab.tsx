@@ -21,6 +21,7 @@ import {
   postgraduate2027InvestmentMessage,
   postgraduate2027LocationMessage,
 } from "@/lib/postgraduate2027";
+import { CalendarPdfDialog } from "@/components/CalendarPdfDialog";
 import { buildCoursePdf, coursePdfFilename } from "@/lib/coursePdf";
 
 interface Props {
@@ -245,6 +246,7 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
               {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
               Gerar PDF
             </Button>
+            <CalendarPdfDialog />
           </CardContent>
         </Card>
       )}

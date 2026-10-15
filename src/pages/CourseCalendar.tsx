@@ -17,6 +17,7 @@ import {
   classStatusLabel, formatClassDateRange, courseTypeLabel, unitLabel,
 } from "@/lib/courseHelpers";
 import { loadAllCourseClasses } from "@/lib/classGroupsResolver";
+import { CalendarPdfDialog } from "@/components/CalendarPdfDialog";
 
 interface CalendarEvent {
   classId: string;
@@ -134,6 +135,7 @@ const CourseCalendar = () => {
           <p className="text-xs text-muted-foreground sm:text-sm">
             {events.length} turma(s) cadastrada(s) entre as duas unidades.
           </p>
+          <div className="pt-2"><CalendarPdfDialog /></div>
         </div>
 
         {/* Toolbar: view + unit filter */}
