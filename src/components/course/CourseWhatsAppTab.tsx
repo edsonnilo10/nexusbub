@@ -246,10 +246,19 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
               {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
               Gerar PDF
             </Button>
-            <CalendarPdfDialog />
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium"><FileDown className="h-4 w-4 text-primary" /> PDF do calendário</p>
+            <p className="text-xs text-muted-foreground">Monte um PDF com a identidade Nexus filtrando por unidade, tipo de curso, ano, período e tema — pronto para enviar no WhatsApp.</p>
+          </div>
+          <CalendarPdfDialog />
+        </CardContent>
+      </Card>
 
       {/* Seletor de turma global para os templates */}
       {messageYear === "2026" && <Card>
