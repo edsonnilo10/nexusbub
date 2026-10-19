@@ -1,5 +1,6 @@
 import { CourseFull, CourseModule } from "@/lib/courseHelpers";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
+import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
 
 export interface Postgraduate2027Schedule {
   coordinator: string;
@@ -7,7 +8,7 @@ export interface Postgraduate2027Schedule {
   moduleCount: number;
 }
 
-const HYBRID_COURSE_KEYS = new Set(["PG US ECOF", "PG US ECOV", "PG US GINE", "PG US PEDN"]);
+const HYBRID_COURSE_KEYS = new Set(["PG US ECOF", "PG US ECOV", "PG US PEDN"]);
 
 const HYBRID_CITY_MESSAGE =
   "Turma híbrida, com possibilidade de realização em Brasília ou em São Paulo, a depender da formação do quórum mínimo.";
@@ -102,9 +103,9 @@ const brasiliaSchedules: Record<string, Postgraduate2027Schedule> = {
     moduleCount: 8,
   },
   "PG US GINE": {
-    coordinator: "Adriana Garrido",
+    coordinator: "Adriana Gualda Garrido",
     dates: ["11 A 13/03/27"],
-    moduleCount: 12,
+    moduleCount: 11,
   },
   "PG US GIOB": {
     coordinator: "Adriana Garrido, Evaldo Trajano e José Paulo Netto",
@@ -185,6 +186,7 @@ export const isPostgraduate2027Hybrid = (
 export const postgraduate2027LocationMessage = (
   course: Pick<CourseFull, "mnemonic" | "name" | "unit">,
 ): string => {
+  if (isGinePostgraduate(course)) return "Presencial, exclusivamente em Brasília.";
   if (isPostgraduate2027Hybrid(course)) return HYBRID_CITY_MESSAGE;
   return course.unit === "brasilia" ? "Realização em Brasília." : "Realização em São Paulo.";
 };
@@ -244,6 +246,9 @@ export const postgraduate2027FullMessage = (
   modules: CourseModule[],
   schedule: Postgraduate2027Schedule,
 ): string => {
+  if (isGinePostgraduate(course)) {
+    return ginePostgraduateMessage(course, modules, 2027, datesLines(schedule));
+  }
   if (isPainPostgraduate(course)) {
     return painPostgraduateMessage(course, 2027, datesLines(schedule), postgraduate2027LocationMessage(course), schedule.dates.length < schedule.moduleCount);
   }
@@ -311,6 +316,7 @@ export const postgraduate2027ContentMessage = (
   course: CourseFull,
   modules: CourseModule[],
 ): string => {
+  if (isGinePostgraduate(course)) return ginePostgraduateMessage(course, modules, 2027, [], true);
   const cleanName = cleanCourseName(course.name);
   const lines: string[] = [
     "📚 *CONTEÚDO PROGRAMÁTICO*",
