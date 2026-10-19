@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Atualizar PG US GINE pelo documento, com cronograma completo e cópia por módulo.
+- [ ] Garantir oferta somente presencial em Brasília nas mensagens e materiais, sem cadastro em SP.
+- [ ] Verificar conteúdo, datas preservadas e botões de cópia na conta autenticada.
+
 - [x] Adicionar a aba “Turma 2027” somente às pós-graduações informadas.
 - [x] Gerar mensagem de datas por módulo, com módulos restantes como “A decidir”.
 - [x] Preservar integralmente as turmas e mensagens existentes de 2026.
