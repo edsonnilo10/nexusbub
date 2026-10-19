@@ -104,7 +104,11 @@ const brasiliaSchedules: Record<string, Postgraduate2027Schedule> = {
   },
   "PG US GINE": {
     coordinator: "Adriana Gualda Garrido",
-    dates: ["11 A 13/03/27"],
+    dates: [
+      "11 A 13/03/27", "08 A 10/04/27", "06 A 08/05/27", "03 A 05/06/27",
+      "01 A 03/07/27", "05 A 07/08/27", "09 A 11/09/27", "30/09 A 02/10/27",
+      "11 A 13/11/27", "09 A 11/12/27", "21/01/28",
+    ],
     moduleCount: 11,
   },
   "PG US GIOB": {
