@@ -39,7 +39,6 @@ export const buildModuleSchedule = (modules: CourseModule[], dates: string[]) =>
 export const ModuleScheduleTab = ({ course, modules }: Props) => {
   const schedule = getPostgraduate2027Schedule(course);
   const rows = useMemo(() => buildModuleSchedule(modules, schedule?.dates ?? []), [modules, schedule]);
-  const [copied, setCopied] = useState(false);
 
   const courseTitle = course.name.replace(/^PG\s+US\s+\w+(\s+T\d+)?\s*[:–-]?\s*/i, "").toUpperCase();
   const moduleText = (r: (typeof rows)[number], i: number) =>
@@ -49,8 +48,22 @@ export const ModuleScheduleTab = ({ course, modules }: Props) => {
       `🗓️ ${r.date ?? "Data a confirmar"}`,
       ...r.topics.map((t) => `• ${t}`),
     ].join("\n");
-  const message = useMemo(
-    () => [`*CRONOGRAMA – ${courseTitle}*`, "", ...rows.map((r, i) => moduleText(r, i) + "\n")].join("\n").trim(),
+  // WhatsApp aceita até 4.095 caracteres: divide o cronograma em partes completas por módulo.
+  const parts = useMemo(
+    () => {
+      const out: string[] = [];
+      let cur = `*CRONOGRAMA – ${courseTitle}*`;
+      rows.forEach((r, i) => {
+        const block = moduleText(r, i);
+        if ((cur + "\n\n" + block).length > 4000 && cur.includes("MÓDULO")) {
+          out.push(cur);
+          cur = `*CRONOGRAMA – ${courseTitle} (continuação)*`;
+        }
+        cur += "\n\n" + block;
+      });
+      if (cur.includes("MÓDULO")) out.push(cur);
+      return out;
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rows, courseTitle],
   );
@@ -59,11 +72,10 @@ export const ModuleScheduleTab = ({ course, modules }: Props) => {
   const copyText = async (text: string, key: string, label: string) => {
     await navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    setCopied(key === "all");
     toast({ title: `${label} copiado` });
-    window.setTimeout(() => { setCopiedKey(null); setCopied(false); }, 2000);
+    window.setTimeout(() => { setCopiedKey(null); }, 2000);
   };
-  const copy = () => copyText(message, "all", "Cronograma completo");
+
 
   return (
     <Card>
@@ -74,9 +86,14 @@ export const ModuleScheduleTab = ({ course, modules }: Props) => {
           </CardTitle>
           <CardDescription>Conteúdo programático de cada módulo, com carga horária e data.</CardDescription>
         </div>
-        <Button size="sm" onClick={copy} disabled={rows.length === 0}>
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} Copiar tudo
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {parts.map((text, idx) => (
+            <Button key={idx} size="sm" onClick={() => copyText(text, `all-${idx}`, parts.length > 1 ? `Parte ${idx + 1}` : "Cronograma completo")}>
+              {copiedKey === `all-${idx}` ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {parts.length > 1 ? `Copiar tudo – parte ${idx + 1}/${parts.length}` : "Copiar tudo"}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
