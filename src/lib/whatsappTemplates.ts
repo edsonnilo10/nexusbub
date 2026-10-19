@@ -3,6 +3,7 @@ import {
   formatBRL, unitLabel, formatClassDateRange, classStatusLabel,
 } from "./courseHelpers";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
+import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
 
 const parseDate = (date: string | null | undefined): Date | null => {
   if (!date) return null;
@@ -141,6 +142,10 @@ export const fullMessage = (
 ): string => {
   const cls = resolveClass(classes, selectedClass);
   const year = referenceYear(classes, selectedClass);
+  if (isGinePostgraduate(course)) {
+    const dates = selectedClass && cls ? [cls] : allFutureOrCurrent(classes);
+    return ginePostgraduateMessage(course, modules, year, dates.filter((c) => c.start_date).map((c) => formatClassDateRange(c.start_date, c.end_date)));
+  }
   if (isPainPostgraduate(course)) {
     const dates = selectedClass && cls ? [cls] : allFutureOrCurrent(classes);
     const shortDate = (date: string) => date.slice(0, 10).split("-").reverse().join("/");
@@ -321,6 +326,7 @@ export const programaticContentMessage = (
   const cls = resolveClass(classes, selectedClass);
   const year = referenceYear(classes, selectedClass);
   const isPos = course.type === "pos_graduacao";
+  if (isGinePostgraduate(course)) return ginePostgraduateMessage(course, modules, year, [], true);
   const lines: string[] = [];
 
   lines.push(`📚 *CONTEÚDO PROGRAMÁTICO*`);

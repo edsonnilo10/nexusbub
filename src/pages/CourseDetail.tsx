@@ -88,7 +88,7 @@ const CourseDetail = () => {
   }
 
   const schedule2027 = getPostgraduate2027Schedule(course);
-  const showModuleSchedule = course.type === "pos_graduacao" && /^PG US GIOB/i.test(course.mnemonic ?? "");
+  const showModuleSchedule = course.type === "pos_graduacao" && /^PG US (GIOB|GINE)\b/i.test(course.mnemonic ?? "");
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
