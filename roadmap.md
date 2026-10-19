@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Atualizar e conferir as 11 datas da turma 03 da GINE somente em Brasília, incluindo mensagens e cronograma.
+
 - [x] Atualizar PG US GINE pelo documento, com cronograma completo e cópia por módulo.
 - [x] Garantir oferta somente presencial em Brasília nas mensagens e materiais, sem cadastro em SP.
 - [x] Verificar conteúdo, datas preservadas e botões de cópia na conta autenticada.

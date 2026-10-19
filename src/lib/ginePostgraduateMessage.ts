@@ -20,7 +20,11 @@ export const ginePostgraduateMessage = (
     "🕒 *Carga horária:* 360h: 100h teóricas + 200h práticas nos módulos 1–10; 20h de TCC e avaliação; 30h de orientação de TCC; 10h complementares.",
     "*Duração:* 11 meses, com encontros às quintas, sextas e sábados, o dia todo.", "",
   ];
-  if (!contentOnly) lines.push("🗓️ *DATAS PREVISTAS*", ...dates, "As demais datas serão confirmadas pela secretaria acadêmica.", "");
+  if (!contentOnly) {
+    lines.push("🗓️ *DATAS PREVISTAS*", ...dates);
+    if (dates.length < 11) lines.push("As demais datas serão confirmadas pela secretaria acadêmica.");
+    lines.push("");
+  }
   lines.push("📚 *CONTEÚDO PROGRAMÁTICO*", "");
   [...modules].sort((a, b) => a.order_index - b.order_index).forEach((module, i) => {
     const title = module.title.replace(/^M[óo]dulo\s*\d+\s*[:–-]\s*/i, "");
