@@ -14,6 +14,7 @@ import { CourseClassesTab } from "@/components/course/CourseClassesTab";
 import { CourseAssistant } from "@/components/course/CourseAssistant";
 import { CourseProposal } from "@/components/course/CourseProposal";
 import { Course2027Tab } from "@/components/course/Course2027Tab";
+import { ModuleScheduleTab } from "@/components/course/ModuleScheduleTab";
 import { getPostgraduate2027Schedule } from "@/lib/postgraduate2027";
 import { GeneralUltrasoundDatesTab } from "@/components/course/GeneralUltrasoundDatesTab";
 import { isGeneralUltrasoundPostgraduate } from "@/lib/generalUltrasoundBlocks";
@@ -87,6 +88,7 @@ const CourseDetail = () => {
   }
 
   const schedule2027 = getPostgraduate2027Schedule(course);
+  const showModuleSchedule = course.type === "pos_graduacao" && /^PG US GIOB/i.test(course.mnemonic ?? "");
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -158,6 +160,7 @@ const CourseDetail = () => {
                   <CalendarClock className="h-3.5 w-3.5" /> Turma 2027
                 </TabsTrigger>
               )}
+              {showModuleSchedule && <TabsTrigger value="module-schedule" className="shrink-0 text-xs sm:text-sm">Cronograma</TabsTrigger>}
             </TabsList>
           </div>
           <TabsContent value="assistant" className="mt-4 sm:mt-6">
@@ -196,6 +199,7 @@ const CourseDetail = () => {
             </TabsContent>
           )}
           {isGeneralUltrasoundPostgraduate(course) && <TabsContent value="block-dates" className="mt-4 sm:mt-6"><GeneralUltrasoundDatesTab course={course} /></TabsContent>}
+          {showModuleSchedule && <TabsContent value="module-schedule" className="mt-4 sm:mt-6"><ModuleScheduleTab course={course} modules={modules} /></TabsContent>}
         </Tabs>
       </main>
     </div>
