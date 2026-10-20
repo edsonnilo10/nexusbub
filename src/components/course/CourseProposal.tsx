@@ -24,7 +24,27 @@ const formatLong = (iso: string) => {
   return `${dd}/${mm} | ${days[d.getDay()]}`;
 };
 
-const TOTAL_PAGES = 8;
+const BASE_PAGES = 7;
+
+const parseBullets = (desc?: string | null) =>
+  (desc || "").trim()
+    ? (desc || "").trim().split(/\n+|;\s*/).map((s) => s.replace(/^[-•·*]\s*/, "").trim()).filter(Boolean)
+    : [];
+
+/** Divide os módulos em páginas A4 sem cortar nenhum cartão (estimativa em px a 96dpi). */
+const chunkModules = <T extends { title: string; description?: string | null }>(mods: T[], firstPageExtra: number) => {
+  const chunks: { items: T[]; offset: number }[] = [];
+  let cur: T[] = []; let offset = 0;
+  let avail = 1123 - 136 - firstPageExtra;
+  for (const m of mods) {
+    const lines = parseBullets(m.description).reduce((n, b) => n + Math.max(1, Math.ceil(b.length / 95)), 0);
+    const h = 44 + Math.ceil(m.title.length / 70) * 18 + (lines ? 24 + lines * 20 + parseBullets(m.description).length * 6 : 0) + 12;
+    if (cur.length && h > avail) { chunks.push({ items: cur, offset }); offset += cur.length; cur = []; avail = 1123 - 136 - 20; }
+    cur.push(m); avail -= h;
+  }
+  chunks.push({ items: cur, offset });
+  return chunks;
+};
 
 const sanitizeProposalFileName = (courseName: string) =>
   `Proposta_${courseName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
@@ -127,6 +147,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
   const [downloading, setDownloading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const proposalDocRef = useRef<HTMLDivElement | null>(null);
+  const moduleChunks = useMemo(() => chunkModules(modules, 260), [modules]);
+  const TOTAL_PAGES = BASE_PAGES + moduleChunks.length - 1 + 1;
   const { overrides, loaded, save } = useCourseOverrides(course.id);
 
   const defaultPrice = course.price ? formatBRL(course.price).replace("R$", "").trim() : "0,00";
@@ -260,9 +282,9 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
       for (let i = 0; i < pages.length; i++) {
         let canvas: HTMLCanvasElement;
         try {
-          canvas = await renderProposalPage(html2canvas, pages[i], true, logoDataUrl);
-        } catch {
           canvas = await renderProposalPage(html2canvas, pages[i], false, logoDataUrl);
+        } catch {
+          canvas = await renderProposalPage(html2canvas, pages[i], true, logoDataUrl);
         }
         // JPEG 0.95 alivia memória do mobile (evita "branco" silencioso)
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
@@ -594,7 +616,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                 <div
                   style={{
                     marginTop: "40px",
-                    display: "inline-flex",
+                    display: "flex", width: "max-content", marginLeft: "auto", marginRight: "auto",
                     alignItems: "center",
                     gap: "12px",
                     borderRadius: "9999px",
@@ -611,8 +633,10 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
           </section>
 
           {/* PAGE 6 — Programa do curso */}
-          <section className="proposal-page relative bg-[#f3f8f5]" style={pageStyle}>
+          {moduleChunks.map((chunk, ci) => (
+          <section key={ci} className="proposal-page relative bg-[#f3f8f5]" style={pageStyle}>
             <div className="p-[18mm]">
+              {ci === 0 && (<>
               <h2 className="text-center text-[24px] font-bold uppercase text-[#0d6b4f]">
                 {course.name}
               </h2>
@@ -644,14 +668,16 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                 </div>
               )}
 
-              <div className="mt-8 space-y-3">
-                {modules.length === 0 ? (
+              </>)}
+              <div className={ci === 0 ? "mt-8 space-y-3" : "space-y-3"}>
+                {modules.length === 0 && ci === 0 ? (
                   <div className="rounded-xl bg-white p-6 text-center text-sm text-neutral-500">
                     Nenhum módulo cadastrado ainda. Adicione módulos na aba "Informações" para
                     aparecerem aqui automaticamente.
                   </div>
                 ) : (
-                  modules.map((m, i) => {
+                  chunk.items.map((m, j) => {
+                    const i = chunk.offset + j;
                     // Parse description as bullet points if it contains line breaks or semicolons
                     const desc = (m.description || "").trim();
                     const bullets = desc
@@ -677,8 +703,8 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                         {bullets.length > 0 && (
                           <ul className="space-y-1.5 px-5 py-3 text-[12px] leading-relaxed text-neutral-700">
                             {bullets.map((b, idx) => (
-                              <li key={idx} className="flex gap-2">
-                                <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#0d6b4f]" />
+                              <li key={idx} className="flex gap-2" style={{ lineHeight: "18px" }}>
+                                <span className="mt-[6px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#0d6b4f]" />
                                 <span>{b}</span>
                               </li>
                             ))}
@@ -691,6 +717,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
               </div>
             </div>
           </section>
+          ))}
 
           {/* PAGE 7 — Valor */}
           <section className="proposal-page relative" style={{ ...pageStyle, backgroundColor: "#ffffff" }}>
@@ -742,7 +769,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                 <div
                   style={{
                     marginTop: "20px",
-                    display: "inline-block",
+                    display: "block", width: "max-content", marginLeft: "auto", marginRight: "auto",
                     borderRadius: "16px",
                     backgroundColor: "#0d6b4f",
                     padding: "24px 40px",
@@ -761,7 +788,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                   >
                     Valor total
                   </div>
-                  <div style={{ marginTop: "4px", fontSize: "44px", fontWeight: 800, lineHeight: 1, color: "#ffffff" }}>
+                  <div style={{ marginTop: "4px", fontSize: `${Math.min(44, Math.floor(560 / Math.max(6, (priceValue || "").length + 3)))}px`, fontWeight: 800, lineHeight: 1.1, color: "#ffffff", whiteSpace: "nowrap" }}>
                     R$ {priceValue || "—"}
                   </div>
                 </div>
@@ -769,7 +796,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                   <div
                     style={{
                       marginTop: "24px",
-                      display: "inline-block",
+                      display: "block", width: "max-content", marginLeft: "auto", marginRight: "auto",
                       borderRadius: "16px",
                       border: "2px dashed #0d6b4f",
                       backgroundColor: "#f3f8f5",
@@ -787,7 +814,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                     >
                       Ou parcele em
                     </div>
-                    <div style={{ marginTop: "4px", fontSize: "28px", fontWeight: 800, lineHeight: 1, color: "#0d6b4f" }}>
+                    <div style={{ marginTop: "4px", fontSize: "28px", fontWeight: 800, lineHeight: 1.1, color: "#0d6b4f", whiteSpace: "nowrap" }}>
                       {installments}x de {formatBRL(installmentValue)}
                     </div>
                     <div style={{ marginTop: "4px", fontSize: "11px", color: "#525252" }}>sem juros</div>
@@ -836,14 +863,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         .proposal-page:last-child {
           page-break-after: auto;
         }
-        .proposal-doc[data-active-page="1"] .proposal-page:not(:nth-child(1)),
-        .proposal-doc[data-active-page="2"] .proposal-page:not(:nth-child(2)),
-        .proposal-doc[data-active-page="3"] .proposal-page:not(:nth-child(3)),
-        .proposal-doc[data-active-page="4"] .proposal-page:not(:nth-child(4)),
-        .proposal-doc[data-active-page="5"] .proposal-page:not(:nth-child(5)),
-        .proposal-doc[data-active-page="6"] .proposal-page:not(:nth-child(6)),
-        .proposal-doc[data-active-page="7"] .proposal-page:not(:nth-child(7)),
-        .proposal-doc[data-active-page="8"] .proposal-page:not(:nth-child(8)) {
+        ${Array.from({ length: TOTAL_PAGES }, (_, i) => `.proposal-doc[data-active-page="${i + 1}"] .proposal-page:not(:nth-child(${i + 1}))`).join(", ")} {
           display: none;
         }
         .proposal-doc[data-exporting="true"] .proposal-page {
