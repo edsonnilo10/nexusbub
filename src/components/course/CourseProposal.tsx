@@ -616,7 +616,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                 <div
                   style={{
                     marginTop: "40px",
-                    display: "inline-flex",
+                    display: "flex", width: "max-content", marginLeft: "auto", marginRight: "auto",
                     alignItems: "center",
                     gap: "12px",
                     borderRadius: "9999px",
@@ -769,7 +769,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                 <div
                   style={{
                     marginTop: "20px",
-                    display: "inline-block",
+                    display: "block", width: "max-content", marginLeft: "auto", marginRight: "auto",
                     borderRadius: "16px",
                     backgroundColor: "#0d6b4f",
                     padding: "24px 40px",
@@ -796,7 +796,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
                   <div
                     style={{
                       marginTop: "24px",
-                      display: "inline-block",
+                      display: "block", width: "max-content", marginLeft: "auto", marginRight: "auto",
                       borderRadius: "16px",
                       border: "2px dashed #0d6b4f",
                       backgroundColor: "#f3f8f5",
