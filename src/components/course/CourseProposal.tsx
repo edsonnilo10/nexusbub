@@ -863,8 +863,7 @@ export const CourseProposal = ({ course, modules, classes }: Props) => {
         .proposal-page:last-child {
           page-break-after: auto;
         }
-        ${Array.from({ length: TOTAL_PAGES }, (_, i) => `.proposal-doc[data-active-page="${i + 1}"] .proposal-page:not(:nth-child(${i + 1}))`).join(",
-")} {
+        ${Array.from({ length: TOTAL_PAGES }, (_, i) => `.proposal-doc[data-active-page="${i + 1}"] .proposal-page:not(:nth-child(${i + 1}))`).join(", ")} {
           display: none;
         }
         .proposal-doc[data-exporting="true"] .proposal-page {
