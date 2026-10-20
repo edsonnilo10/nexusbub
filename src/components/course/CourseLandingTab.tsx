@@ -29,7 +29,19 @@ export const CourseLandingTab = ({ course, modules, classes }: Props) => {
         import("html2canvas"),
         import("jspdf"),
       ]);
-      const canvas = await html2canvas(landingRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      // Largura fixa de A4 (794px a 96dpi), independente do tamanho da tela.
+      const canvas = await html2canvas(landingRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        foreignObjectRendering: false,
+        windowWidth: 1280,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (_doc, el) => {
+          Object.assign(el.style, { width: "794px", maxWidth: "794px", margin: "0", overflow: "visible" });
+        },
+      });
       const imgData = canvas.toDataURL("image/jpeg", 0.92);
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();
