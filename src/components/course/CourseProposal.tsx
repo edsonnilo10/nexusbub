@@ -96,7 +96,11 @@ const renderProposalPage = async (
   );
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const scale = Math.min(2, window.devicePixelRatio || 2);
+  const scale = 2;
+  // Dimensões fixas de A4 (96dpi) — independem do tamanho da tela,
+  // evitando cortes e sobreposições em janelas estreitas.
+  const A4_W = 794;
+  const A4_H = 1123;
   try {
     return await html2canvas(clone, {
       scale,
@@ -105,10 +109,14 @@ const renderProposalPage = async (
       backgroundColor: "#ffffff",
       logging: false,
       foreignObjectRendering,
+      x: 0,
+      y: 0,
+      width: A4_W,
+      height: A4_H,
       scrollY: 0,
       scrollX: 0,
-      windowWidth: clone.scrollWidth,
-      windowHeight: clone.scrollHeight,
+      windowWidth: Math.max(A4_W, 1280),
+      windowHeight: Math.max(A4_H, 1800),
     });
   } finally {
     document.body.removeChild(clone);
