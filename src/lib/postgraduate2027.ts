@@ -114,8 +114,8 @@ const brasiliaSchedules: Record<string, Postgraduate2027Schedule> = {
   "PG US GIOB": {
     coordinator: "Adriana Garrido, Evaldo Trajano e José Paulo Netto",
     dates: [
-      "05 A 07/03/27", "02 A 04/04/27", "30/04 A 02/05/27", "04 A 06/06/27",
-      "01 A 04/07/27", "05 A 07/08/27", "03 A 05/09/27", "01 A 03/10/27",
+      "05 A 07/03/27", "02 A 04/04/27", "30/04 A 02/05/27", "11 A 13/06/27",
+      "02 A 04/07/27", "05 A 07/08/27", "03 A 05/09/27", "01 A 03/10/27",
       "05 A 07/11/27", "03 A 05/12/27", "14 A 16/01/28", "11/02/28",
     ],
     moduleCount: 12,
