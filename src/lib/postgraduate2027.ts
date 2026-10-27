@@ -1,4 +1,5 @@
 import { CourseFull, CourseModule } from "@/lib/courseHelpers";
+import { fitModulesMessage } from "./whatsappFit";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
 
@@ -271,22 +272,14 @@ export const postgraduate2027FullMessage = (
     lines.push("Nossa secretaria acadêmica irá confirmar o restante das datas em breve. Estão acertando com a coordenação.", "");
   }
 
-  if (modules.length > 0) {
-    lines.push(`*O QUE VOCÊ VAI DOMINAR*`, "");
-    [...modules]
-      .sort((a, b) => a.order_index - b.order_index)
-      .forEach((module) => {
-        const workload = module.workload_hours ? ` _(${module.workload_hours}h)_` : "";
-        lines.push(`▪️ *${module.title}*${workload}`);
-        if (module.description) lines.push(module.description.trim());
-      });
-    lines.push("");
-  }
+  if (modules.length > 0) lines.push(`*O QUE VOCÊ VAI DOMINAR*`, "");
 
-  lines.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`);
-  lines.push("Se quiser, posso te passar os detalhes da matrícula.");
-
-  return lines.join("\n");
+  const tail = [
+    `🎓 *Pré-Requisito:* Graduação em Medicina.`,
+    "Se quiser, posso te passar os detalhes da matrícula.",
+  ];
+  return fitModulesMessage(lines, modules, tail, (module) =>
+    `▪️ *${module.title}*${module.workload_hours ? ` _(${module.workload_hours}h)_` : ""}`);
 };
 
 export const postgraduate2027FollowUpMessage = (
