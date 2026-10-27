@@ -4,6 +4,7 @@ import {
 } from "./courseHelpers";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
+import { fitModulesMessage } from "./whatsappFit";
 
 const parseDate = (date: string | null | undefined): Date | null => {
   if (!date) return null;
