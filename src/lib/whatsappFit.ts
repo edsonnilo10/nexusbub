@@ -1,4 +1,4 @@
-import type { CourseModule } from "@/hooks/useCourses";
+import type { CourseModule } from "@/lib/courseHelpers";
 
 export const WHATSAPP_LIMIT = 4095;
 

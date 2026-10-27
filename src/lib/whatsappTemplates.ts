@@ -196,44 +196,30 @@ export const fullMessage = (
     lines.push("");
     lines.push(`O programa foca na interpretação de padrões, diagnóstico e conduta clínica nas principais aplicações abordadas no curso.`);
     lines.push("");
-    modules
-      .sort((a, b) => a.order_index - b.order_index)
-      .forEach((m) => {
-        const wlm = m.workload_hours ? ` _(${m.workload_hours}h)_` : "";
-        lines.push(`▪️ *${m.title}*${wlm}`);
-        if (m.description) lines.push(m.description.trim());
-      });
-    lines.push("");
   }
 
+  const tail: string[] = [];
   if (course.highlights) {
-    lines.push(`*DIFERENCIAIS DETERMINANTES*`);
-    lines.push("");
-    splitToBullets(course.highlights).forEach((b) => lines.push(`✅ ${b}`));
-    lines.push("");
+    tail.push(`*DIFERENCIAIS DETERMINANTES*`, "");
+    splitToBullets(course.highlights).forEach((b) => tail.push(`✅ ${b}`));
+    tail.push("");
   }
 
-  lines.push(`🕒 *CRONOGRAMA E LOGÍSTICA*`);
-  lines.push("");
-  lines.push(`*Carga Horária Total:* ${formatWorkload(course)}`);
-  lines.push("");
+  tail.push(`🕒 *CRONOGRAMA E LOGÍSTICA*`, "", `*Carga Horária Total:* ${formatWorkload(course)}`, "");
 
   if (course.price) {
-    lines.push(`💰 *INVESTIMENTO*`);
-    lines.push("");
-    lines.push(`À vista: *${formatBRL(course.price)}*`);
+    tail.push(`💰 *INVESTIMENTO*`, "", `À vista: *${formatBRL(course.price)}*`);
     if (course.installments && course.installments > 1) {
-      lines.push(`Parcelado: *${course.installments}x de ${formatBRL(course.price / course.installments)}*`);
+      tail.push(`Parcelado: *${course.installments}x de ${formatBRL(course.price / course.installments)}*`);
     }
-    if (course.payment_methods) lines.push(`_${course.payment_methods}_`);
-    lines.push("");
+    if (course.payment_methods) tail.push(`_${course.payment_methods}_`);
+    tail.push("");
   }
 
-  lines.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`);
-  lines.push("");
-  lines.push(`Posso te ajudar a garantir sua vaga? 🎯`);
+  tail.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`, "", `Posso te ajudar a garantir sua vaga? 🎯`);
 
-  return lines.join("\n");
+  return fitModulesMessage(lines, modules, tail, (m) =>
+    `▪️ *${m.title}*${m.workload_hours ? ` _(${m.workload_hours}h)_` : ""}`);
 };
 
 /** Mensagem curta */
