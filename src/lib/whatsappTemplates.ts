@@ -1,3 +1,4 @@
+import { fitBulletModulesMessage } from "@/lib/whatsappFit";
 import {
   CourseFull, CourseModule, CourseClass, ClassStatus,
   formatBRL, unitLabel, formatClassDateRange, classStatusLabel,
@@ -335,33 +336,14 @@ export const programaticContentMessage = (
   }
   lines.push("");
 
+  const tail: string[] = isPos
+    ? [`🎓 *Pré-Requisito:* Graduação em Medicina.`, "", `Qualquer dúvida sobre algum módulo específico, é só me chamar! 😊`]
+    : [`Qualquer dúvida sobre o conteúdo, é só me chamar! 😊`];
   if (modules.length === 0) {
-    lines.push(`_Conteúdo programático em fase de atualização. Posso te enviar assim que estiver disponível._`);
-  } else {
-    const sorted = [...modules].sort((a, b) => a.order_index - b.order_index);
-    sorted.forEach((m, idx) => {
-      const wlm = m.workload_hours ? ` _(${m.workload_hours}h)_` : "";
-      lines.push(`*${idx + 1}. ${m.title}*${wlm}`);
-      if (m.description) {
-        const topics = m.description
-          .split(/\n+|;/)
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-        topics.forEach((t) => lines.push(`   • ${t.replace(/^[-•·▪️*]+\s*/, "")}`));
-      }
-      lines.push("");
-    });
+    lines.push(`_Conteúdo programático em fase de atualização. Posso te enviar assim que estiver disponível._`, "");
+    return [...lines, ...tail].join("\n");
   }
-
-  if (isPos) {
-    lines.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`);
-    lines.push("");
-    lines.push(`Qualquer dúvida sobre algum módulo específico, é só me chamar! 😊`);
-  } else {
-    lines.push(`Qualquer dúvida sobre o conteúdo, é só me chamar! 😊`);
-  }
-
-  return lines.join("\n");
+  return fitBulletModulesMessage(lines, modules, tail);
 };
 
 /** Mensagem de Investimento — valores em aberto, prontos para preencher */
