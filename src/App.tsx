@@ -63,10 +63,10 @@ const App = () => (
                 <Route path="/pending" element={<PendingApproval />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                <Route path="/courses/new" element={<ProtectedRoute><CourseEditor /></ProtectedRoute>} />
+                <Route path="/courses/new" element={<ProtectedRoute adminOnly><CourseEditor /></ProtectedRoute>} />
                 <Route path="/courses/:id" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
-                <Route path="/courses/:id/edit" element={<ProtectedRoute><CourseEditor /></ProtectedRoute>} />
-                <Route path="/import" element={<ProtectedRoute><ImportCourses /></ProtectedRoute>} />
+                <Route path="/courses/:id/edit" element={<ProtectedRoute adminOnly><CourseEditor /></ProtectedRoute>} />
+                <Route path="/import" element={<ProtectedRoute adminOnly><ImportCourses /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
                 <Route path="/calendar" element={<ProtectedRoute><CourseCalendar /></ProtectedRoute>} />
                 <Route path="/turmas" element={<ProtectedRoute><ClassGroups /></ProtectedRoute>} />

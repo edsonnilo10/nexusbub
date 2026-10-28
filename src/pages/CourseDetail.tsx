@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Edit, Loader2, Trash2, Sparkles, FileText, Activity, CalendarClock } from "lucide-react";
@@ -31,6 +32,7 @@ import {
 const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [course, setCourse] = useState<CourseFull | null>(null);
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [classes, setClasses] = useState<CourseClass[]>([]);
@@ -110,7 +112,7 @@ const CourseDetail = () => {
             </div>
             <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-4xl">{course.name}</h1>
           </div>
-          <div className="flex w-full gap-2 sm:w-auto">
+          {isAdmin && (<div className="flex w-full gap-2 sm:w-auto">
             <Button variant="outline" onClick={() => navigate(`/courses/${course.id}/edit`)} className="flex-1 sm:flex-none">
               <Edit className="h-4 w-4" /> Editar
             </Button>
@@ -133,7 +135,7 @@ const CourseDetail = () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </div>
+          </div>)}
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}>

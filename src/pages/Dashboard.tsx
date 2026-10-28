@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, Upload, Clock, Calendar, Tag, MapPin, CalendarDays } from "lucide-react";
@@ -20,6 +21,7 @@ type CourseWithClass = CourseFull & { next_class?: CourseClass | null };
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [courses, setCourses] = useState<CourseWithClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -91,7 +93,7 @@ const Dashboard = () => {
             >
               <CalendarDays className="h-4 w-4" /> Calendário de cursos
             </Button>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+            {isAdmin && (<div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
               <Button variant="outline" onClick={() => navigate("/import")} className="w-full sm:w-auto">
                 <Upload className="h-4 w-4" />
                 <span className="sm:hidden">Importar</span>
@@ -102,7 +104,7 @@ const Dashboard = () => {
                 <span className="sm:hidden">Novo</span>
                 <span className="hidden sm:inline">Novo curso</span>
               </Button>
-            </div>
+            </div>)}
           </div>
         </div>
 
@@ -162,7 +164,7 @@ const Dashboard = () => {
                   ? "Cadastre seu primeiro curso ou importe seus arquivos (PDF, imagem ou planilha)."
                   : "Tente ajustar os filtros ou a busca."}
               </p>
-              {courses.length === 0 && (
+              {isAdmin && courses.length === 0 && (
                 <div className="mt-6 flex gap-2">
                   <Button variant="outline" onClick={() => navigate("/import")}>
                     <Upload className="h-4 w-4" /> Importar arquivos
