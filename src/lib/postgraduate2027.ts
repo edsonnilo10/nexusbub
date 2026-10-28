@@ -1,5 +1,5 @@
 import { CourseFull, CourseModule } from "@/lib/courseHelpers";
-import { fitModulesMessage } from "./whatsappFit";
+import { fitModulesMessage, fitBulletModulesMessage } from "./whatsappFit";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
 
@@ -326,29 +326,12 @@ export const postgraduate2027ContentMessage = (
     "",
   ];
 
+  const tail = ["🎓 *Pré-Requisito:* Graduação em Medicina.", "Qualquer dúvida sobre algum módulo específico, é só me chamar! 😊"];
   if (modules.length === 0) {
-    lines.push("_Conteúdo programático em fase de atualização. Posso te enviar assim que estiver disponível._");
-  } else {
-    [...modules]
-      .sort((a, b) => a.order_index - b.order_index)
-      .forEach((module, index) => {
-        const workload = module.workload_hours ? ` _(${module.workload_hours}h)_` : "";
-        lines.push(`*${index + 1}. ${module.title}*${workload}`);
-        if (module.description) {
-          module.description
-            .split(/\n+|;/)
-            .map((topic) => topic.trim())
-            .filter(Boolean)
-            .forEach((topic) => lines.push(`   • ${topic.replace(/^[-•·▪️*]+\s*/, "")}`));
-        }
-        lines.push("");
-      });
+    lines.push("_Conteúdo programático em fase de atualização. Posso te enviar assim que estiver disponível._", "");
+    return [...lines, ...tail].join("\n");
   }
-
-  lines.push(`🎓 *Pré-Requisito:* Graduação em Medicina.`);
-  lines.push("Qualquer dúvida sobre algum módulo específico, é só me chamar! 😊");
-
-  return lines.join("\n");
+  return fitBulletModulesMessage(lines, modules, tail);
 };
 
 export const postgraduate2027InvestmentMessage = (course: CourseFull): string => {

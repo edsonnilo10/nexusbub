@@ -52,3 +52,35 @@ export const fitModulesMessage = (
   }
   return build(0);
 };
+
+/**
+ * Lista módulos com tópicos em bullets cabendo no limite: reduz o número de tópicos por módulo
+ * (sempre tópicos inteiros) mantendo todos os módulos, cabeçalho e encerramento.
+ */
+export const fitBulletModulesMessage = (
+  head: string[],
+  modules: CourseModule[],
+  tail: string[],
+  limit = WHATSAPP_LIMIT,
+): string => {
+  const sorted = [...modules].sort((a, b) => a.order_index - b.order_index);
+  const topics = sorted.map((m) =>
+    (m.description ?? "").split(/\n+|;/).map((t) => t.trim().replace(/^[-•·▪️*]+\s*/, "")).filter(Boolean),
+  );
+  const build = (max: number) => {
+    const body: string[] = [];
+    sorted.forEach((m, i) => {
+      const wl = m.workload_hours ? ` _(${m.workload_hours}h)_` : "";
+      body.push(`*${i + 1}. ${m.title}*${wl}`);
+      topics[i].slice(0, max).forEach((t) => body.push(`   • ${t}`));
+      body.push("");
+    });
+    return [...head, ...body, ...tail].join("\n");
+  };
+  const most = Math.max(0, ...topics.map((t) => t.length));
+  for (let max = most; max >= 0; max--) {
+    const text = build(max);
+    if (text.length <= limit) return text;
+  }
+  return build(0);
+};
