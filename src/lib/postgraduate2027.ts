@@ -1,6 +1,5 @@
-import { fitBulletModulesMessage } from "@/lib/whatsappFit";
 import { CourseFull, CourseModule } from "@/lib/courseHelpers";
-import { fitModulesMessage } from "./whatsappFit";
+import { fitModulesMessage, fitBulletModulesMessage } from "./whatsappFit";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
 
