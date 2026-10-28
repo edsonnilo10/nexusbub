@@ -81,6 +81,8 @@ const Auth = () => {
     if (error) {
       const description = error.message === "Invalid login credentials"
         ? "E-mail ou senha inválidos."
+        : /not confirmed/i.test(error.message)
+        ? "Seu e-mail ainda não foi confirmado. Clique no link enviado ao seu e-mail (veja também o spam) ou aguarde a aprovação do administrador."
         : error.message;
       toast({ title: "Erro ao entrar", description, variant: "destructive" });
     }
@@ -89,7 +91,7 @@ const Auth = () => {
   const handleSignupSuccess = () => {
     toast({
       title: "Cadastro enviado!",
-      description: "Sua conta será analisada pelo administrador antes de liberar o acesso.",
+      description: "Enviamos um e-mail de confirmação. Confirme seu e-mail; o acesso é liberado após a aprovação do administrador.",
     });
   };
 

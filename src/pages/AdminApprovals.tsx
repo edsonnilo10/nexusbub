@@ -43,7 +43,12 @@ const AdminApprovals = () => {
 
   const setApproved = async (id: string, approved: boolean) => {
     setBusyId(id);
-    const { error } = await supabase.from("profiles").update({ approved }).eq("id", id);
+    let { error } = await supabase.from("profiles").update({ approved }).eq("id", id);
+    if (!error && approved) {
+      // Approval also confirms the e-mail so the user can sign in right away
+      const res = await supabase.functions.invoke("confirm-approved-user", { body: { userId: id } });
+      if (res.error) error = res.error as any;
+    }
     setBusyId(null);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
