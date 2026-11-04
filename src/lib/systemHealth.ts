@@ -20,7 +20,7 @@ export interface CourseLite {
 
 export interface ClassLink {
   course_id: string;
-  start_date: string;
+  start_date: string | null;
   end_date: string | null;
 }
 
@@ -191,7 +191,9 @@ export const evaluateSystemHealth = (input: HealthInput): HealthResult[] => {
 
   // 6) Calendar dates. Links without a start date are placeholders ("a decidir")
   // and are reported by the links check instead, so they never count as repeats.
-  const dated = input.classLinks.filter((l) => !!l.start_date);
+  const dated = input.classLinks.filter(
+    (l): l is ClassLink & { start_date: string } => !!l.start_date,
+  );
   const seen = new Map<string, number>();
   let inverted = 0;
   let past = 0;
