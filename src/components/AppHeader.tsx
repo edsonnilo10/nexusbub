@@ -6,7 +6,9 @@ import {
   LayoutDashboard,
   MessageSquare,
   CalendarDays,
+  HelpCircle,
 } from "lucide-react";
+import { WelcomeTour, OPEN_TOUR_EVENT } from "@/components/WelcomeTour";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import nexusLogo from "@/assets/nexus-logo.jpg";
@@ -117,6 +119,16 @@ export const AppHeader = () => {
             </div>
           </div>
 
+          <WelcomeTour />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.dispatchEvent(new Event(OPEN_TOUR_EVENT))}
+            className="h-9 px-2 text-muted-foreground sm:px-3"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Tutorial</span>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
