@@ -189,11 +189,13 @@ export const evaluateSystemHealth = (input: HealthInput): HealthResult[] => {
         },
   );
 
-  // 6) Calendar dates
+  // 6) Calendar dates. Links without a start date are placeholders ("a decidir")
+  // and are reported by the links check instead, so they never count as repeats.
+  const dated = input.classLinks.filter((l) => !!l.start_date);
   const seen = new Map<string, number>();
   let inverted = 0;
   let past = 0;
-  for (const link of input.classLinks) {
+  for (const link of dated) {
     if (link.end_date && link.end_date < link.start_date) inverted += 1;
     const last = link.end_date || link.start_date;
     if (last && last < input.today) past += 1;
@@ -224,7 +226,7 @@ export const evaluateSystemHealth = (input: HealthInput): HealthResult[] => {
             id: "dates",
             label: "Datas do calendário",
             status: "ok",
-            detail: `${input.classLinks.length} datas no calendário, todas corretas e futuras.`,
+            detail: `${dated.length} datas no calendário, todas corretas e futuras.`,
           },
   );
 
