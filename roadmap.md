@@ -31,3 +31,6 @@
 - [x] Auditar contagens, duplicidades e períodos invertidos após a restauração.
 - [x] Adicionar mensagens separadas dos três blocos da Pós em Ultrassonografia Geral nas duas cidades.
 - [x] Conferir datas dos cursos modulares e cópia das mensagens sem misturar cidades.
+- [x] Adicionar botão de teste do sistema, visível apenas para administrador, na tela de Configurações.
+- [x] Manter todas as verificações do teste como leituras, sem alterar nem enviar nada.
+- [x] Validar o teste na conta autenticada e conferir as verificações apontadas.
