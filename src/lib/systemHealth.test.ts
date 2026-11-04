@@ -98,6 +98,20 @@ describe("teste do sistema: checagens de administrador", () => {
     expect(check.detail).toContain("repetida");
   });
 
+  it("não conta como repetida a vinculação sem data", () => {
+    const results = evaluateSystemHealth(
+      base({
+        classLinks: [
+          { course_id: "c1", start_date: null, end_date: null },
+          { course_id: "c1", start_date: null, end_date: null },
+          { course_id: "c2", start_date: "2027-04-02", end_date: "2027-04-04" },
+        ],
+      }),
+    );
+    const check = byId(results, "dates");
+    expect(check.status).toBe("ok");
+  });
+
   it("avisa quando a data já passou", () => {
     const results = evaluateSystemHealth(
       base({
