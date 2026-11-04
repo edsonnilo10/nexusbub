@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { MirrorModulesSection } from "@/components/settings/MirrorModulesSection";
 import { ComboRulesSection } from "@/components/settings/ComboRulesSection";
+import { SystemHealthSection } from "@/components/settings/SystemHealthSection";
 
 const Settings = () => {
   const navigate = useNavigate();
