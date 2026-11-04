@@ -24,7 +24,11 @@ const Settings = () => {
 
         <h1 className="mb-6 text-3xl font-bold tracking-tight">Configurações</h1>
 
-        <ComboRulesSection />
+        <SystemHealthSection />
+
+        <div className="mt-6">
+          <ComboRulesSection />
+        </div>
 
         <div className="mt-6">
           <MirrorModulesSection />
