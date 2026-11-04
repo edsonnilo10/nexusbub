@@ -34,3 +34,4 @@
 - [x] Adicionar botão de teste do sistema, visível apenas para administrador, na tela de Configurações.
 - [x] Manter todas as verificações do teste como leituras, sem alterar nem enviar nada.
 - [x] Validar o teste na conta autenticada e conferir as verificações apontadas.
+- [x] Adicionar no tutorial a escolha "Não mostrar mais este tutorial", reversível pelo botão "Tutorial" do topo.
