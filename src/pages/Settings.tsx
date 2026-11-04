@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { MirrorModulesSection } from "@/components/settings/MirrorModulesSection";
 import { ComboRulesSection } from "@/components/settings/ComboRulesSection";
+import { SystemHealthSection } from "@/components/settings/SystemHealthSection";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -23,7 +24,11 @@ const Settings = () => {
 
         <h1 className="mb-6 text-3xl font-bold tracking-tight">Configurações</h1>
 
-        <ComboRulesSection />
+        <SystemHealthSection />
+
+        <div className="mt-6">
+          <ComboRulesSection />
+        </div>
 
         <div className="mt-6">
           <MirrorModulesSection />
