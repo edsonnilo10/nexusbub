@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { isTourHidden, setTourHidden } from "@/lib/welcomeTour";
 
 export const OPEN_TOUR_EVENT = "nexus:open-welcome-tour";
-const keyFor = (id: string) => `nexus-welcome-tour-v1:${id}`;
 
 type Step = { title: string; body: string[] };
 
@@ -26,25 +28,38 @@ export const WelcomeTour = () => {
   const { user, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
+  const [hideAgain, setHideAgain] = useState(false);
   const steps = isAdmin ? [...baseSteps.slice(0, -1), adminStep, baseSteps[baseSteps.length - 1]] : baseSteps;
 
+  // Abre sozinho na primeira entrada, enquanto o usuário não escolher o contrário.
   useEffect(() => {
     if (!user) return;
-    try {
-      if (!localStorage.getItem(keyFor(user.id))) setOpen(true);
-    } catch { /* ignore */ }
+    if (!isTourHidden(user.id)) {
+      setI(0);
+      setHideAgain(false);
+      setOpen(true);
+    }
   }, [user]);
 
+  // Abrir pelo botão "Tutorial" do topo: mostra a escolha atual para poder mudar.
   useEffect(() => {
-    const h = () => { setI(0); setOpen(true); };
+    const h = () => {
+      setI(0);
+      setHideAgain(isTourHidden(user?.id));
+      setOpen(true);
+    };
     window.addEventListener(OPEN_TOUR_EVENT, h);
     return () => window.removeEventListener(OPEN_TOUR_EVENT, h);
-  }, []);
+  }, [user]);
+
+  const toggleHide = (checked: boolean) => {
+    setHideAgain(checked);
+    setTourHidden(user?.id, checked);
+  };
 
   const close = () => {
     setOpen(false);
     setI(0);
-    try { if (user) localStorage.setItem(keyFor(user.id), "1"); } catch { /* ignore */ }
   };
 
   if (!user) return null;
@@ -65,6 +80,26 @@ export const WelcomeTour = () => {
         </DialogHeader>
         <div className="flex justify-center gap-1.5">
           {steps.map((_, k) => <span key={k} className={`h-1.5 w-6 rounded-full ${k === i ? "bg-primary" : "bg-muted"}`} />)}
+        </div>
+        <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5">
+          <div className="flex items-start gap-2.5">
+            <Checkbox
+              id="welcome-tour-hide"
+              checked={hideAgain}
+              onCheckedChange={(c) => toggleHide(c === true)}
+              className="mt-0.5"
+            />
+            <div className="min-w-0">
+              <Label htmlFor="welcome-tour-hide" className="cursor-pointer text-sm font-medium leading-snug">
+                Não mostrar mais este tutorial
+              </Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {hideAgain
+                  ? "Escolha salva: ele não abre sozinho. Use \"Tutorial\" no topo para rever."
+                  : "Sem marcar, ele abre de novo na próxima entrada neste navegador."}
+              </p>
+            </div>
+          </div>
         </div>
         <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
           <Button variant="ghost" size="sm" onClick={close}>Pular</Button>
