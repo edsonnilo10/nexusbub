@@ -155,6 +155,9 @@ const AdminApprovals = () => {
                         <div className="truncate font-medium">{p.full_name || "Sem nome"}</div>
                         <div className="truncate text-sm text-muted-foreground">{p.email}</div>
                       </div>
+                      {p.email?.toLowerCase() === "edson.nilo10@gmail.com" ? (
+                        <Badge variant="secondary">Administrador principal</Badge>
+                      ) : (
                       <Button
                         size="sm"
                         variant="outline"
@@ -168,6 +171,7 @@ const AdminApprovals = () => {
                         )}
                         Revogar
                       </Button>
+                      )}
                     </div>
                   ))
                 )}
