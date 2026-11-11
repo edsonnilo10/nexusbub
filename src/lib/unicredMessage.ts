@@ -30,7 +30,7 @@ export const unicredFinancingMessage = (args: {
     "",
     `🏦 Agora também contamos com o *Financiamento Estudantil Unicred*, parceira da Nexus, que facilita ainda mais o seu investimento!`,
     "",
-    `📅 O primeiro pagamento pode ser feito em até *45 dias*, com as seguintes opções:`,
+    `📅 O primeiro pagamento pode ser feito em até *30 dias*, com as seguintes opções:`,
     "",
     ...(opts.length ? opts.map((o) => `( ) ${o.parcelas}x de ${formatBRL(o.valor)}`) : ["( ) ___x de R$ _________"]),
     "",

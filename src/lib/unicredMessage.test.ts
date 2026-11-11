@@ -7,7 +7,7 @@ describe("unicred message", () => {
       options: [{ parcelas: 15, valor: 1130.5 }, { parcelas: 14, valor: 1202.4 }] });
     expect(m).toContain("*Valor à vista:* R$ 14.338,00");
     expect(m.indexOf("14x de R$ 1.202,40")).toBeLessThan(m.indexOf("15x de R$ 1.130,50"));
-    expect(m).toContain("45 dias");
+    expect(m).toContain("30 dias");
     expect(m).not.toMatch(/juros|IOF|CET/i);
   });
   it("dedupes by installment count", () => {
