@@ -69,7 +69,7 @@ const resolveClass = (classes: CourseClass[], selected?: CourseClass | null): Co
 };
 
 /** Ano de referência: pega da turma selecionada/próxima; se não houver, garante mínimo 2026 */
-const referenceYear = (classes: CourseClass[], selected?: CourseClass | null): number => {
+export const referenceYear = (classes: CourseClass[], selected?: CourseClass | null): number => {
   const cls = resolveClass(classes, selected);
   const fromClass = parseDate(cls?.start_date)?.getFullYear();
   if (fromClass) return fromClass;
@@ -92,7 +92,7 @@ const locationFor = (course: CourseFull, cls: CourseClass | null): string => {
 };
 
 /** Exibe a carga horária de forma sucinta, incluindo divisão teórica/prática quando disponível */
-const formatWorkload = (course: CourseFull): string => {
+export const formatWorkload = (course: CourseFull): string => {
   const base = course.workload_hours ? `${course.workload_hours}h` : "Carga horária a confirmar";
   if (course.workload_breakdown) {
     return `${base} — ${course.workload_breakdown}`;

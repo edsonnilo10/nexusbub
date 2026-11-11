@@ -10,6 +10,7 @@ import { CourseFull, CourseModule, CourseClass, formatClassDateRange, classStatu
 import { shortMessage, fullMessage, followUpMessage, programaticContentMessage, investmentMessage } from "@/lib/whatsappTemplates";
 import { useCourseOverrides, CourseOverrides } from "@/hooks/useCourseOverrides";
 import { CourseFaqCard } from "@/components/course/CourseFaqCard";
+import { UnicredFinancingCard } from "@/components/course/UnicredFinancingCard";
 import { toast } from "@/hooks/use-toast";
 import {
   getPostgraduate2027Schedule,
@@ -321,6 +322,8 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
           );
         })}
       </div>
+
+      <UnicredFinancingCard course={course} classes={classes} selectedClass={selectedClass} year={messageYear === "2027" ? "2027" : undefined} />
 
       <CourseFaqCard course={course} modules={modules} classes={classes} />
     </div>
