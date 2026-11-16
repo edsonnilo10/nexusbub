@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +29,7 @@ export const UnicredFinancingCard = ({ course, classes, selectedClass, year }: P
   const [text, setText] = useState("");
   const [edited, setEdited] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showTotal, setShowTotal] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const generated = useMemo(() => unicredFinancingMessage({
@@ -36,7 +38,8 @@ export const UnicredFinancingCard = ({ course, classes, selectedClass, year }: P
     year: year ?? referenceYear(classes, selectedClass),
     cashValue: parseNum(cash) || null,
     options: rows.map((r): UnicredOption => ({ parcelas: parseInt(r.parcelas, 10), valor: parseNum(r.valor) })),
-  }), [course, classes, selectedClass, year, cash, rows]);
+    showTotal,
+  }), [course, classes, selectedClass, year, cash, rows, showTotal]);
 
   useEffect(() => { if (!edited) setText(generated); }, [generated, edited]);
 
@@ -120,6 +123,10 @@ export const UnicredFinancingCard = ({ course, classes, selectedClass, year }: P
             </div>
           ))}
           <Button size="sm" variant="outline" onClick={() => setRows((p) => [...p, { parcelas: "", valor: "" }])}><Plus className="mr-1 h-4 w-4" /> Adicionar parcela</Button>
+          <div className="flex items-center gap-2 pt-1">
+            <Switch id={`total-${course.id}`} checked={showTotal} onCheckedChange={(v) => { setShowTotal(v); setEdited(false); }} />
+            <Label htmlFor={`total-${course.id}`} className="font-normal">Mostrar o valor total de cada opção na mensagem</Label>
+          </div>
         </div>
         <Textarea rows={14} value={text} maxLength={LIMIT} onChange={(e) => { setText(e.target.value); setEdited(true); }} aria-label="Mensagem Unicred" />
         <div className="flex items-center justify-between">

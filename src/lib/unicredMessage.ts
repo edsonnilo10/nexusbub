@@ -18,6 +18,7 @@ export const unicredFinancingMessage = (args: {
   year: number | string;
   cashValue: number | null;
   options: UnicredOption[];
+  showTotal?: boolean;
 }): string => {
   const opts = normalizeOptions(args.options);
   const lines = [
@@ -32,7 +33,7 @@ export const unicredFinancingMessage = (args: {
     "",
     `📅 O primeiro pagamento pode ser feito em até *30 dias*, com as seguintes opções:`,
     "",
-    ...(opts.length ? opts.map((o) => `( ) ${o.parcelas}x de ${formatBRL(o.valor)}`) : ["( ) ___x de R$ _________"]),
+    ...(opts.length ? opts.map((o) => `( ) ${o.parcelas}x de ${formatBRL(o.valor)}${args.showTotal ? ` (total: ${formatBRL(Math.round(o.parcelas * o.valor * 100) / 100)})` : ""}`) : ["( ) ___x de R$ _________"]),
     "",
     `Podemos prosseguir com a reserva da sua vaga? 😊`,
   ];
