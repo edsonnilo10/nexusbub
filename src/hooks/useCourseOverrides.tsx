@@ -14,6 +14,15 @@ export interface CourseOverrides {
   proposal_installments: number | null;
   proposal_class_id: string | null;
   wa_2027: Record<string, string> | null;
+  unicred_sim: UnicredSim | null;
+}
+
+/** Última simulação de financiamento Unicred salva na conta do usuário */
+export interface UnicredSim {
+  cash: string;
+  options: { parcelas: string; valor: string }[];
+  showTotal: boolean;
+  text: string | null;
 }
 
 const EMPTY: CourseOverrides = {
@@ -28,6 +37,7 @@ const EMPTY: CourseOverrides = {
   proposal_installments: null,
   proposal_class_id: null,
   wa_2027: null,
+  unicred_sim: null,
 };
 
 /**
@@ -68,6 +78,7 @@ export const useCourseOverrides = (courseId: string | undefined) => {
           proposal_installments: (data as any).proposal_installments ?? null,
           proposal_class_id: (data as any).proposal_class_id ?? null,
           wa_2027: (data as any).wa_2027 ?? null,
+          unicred_sim: (data as any).unicred_sim ?? null,
         });
       }
       setLoaded(true);
