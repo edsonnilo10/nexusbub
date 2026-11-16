@@ -14,3 +14,10 @@ describe("unicred message", () => {
     expect(normalizeOptions([{ parcelas: 14, valor: 1 }, { parcelas: 14, valor: 2 }])).toEqual([{ parcelas: 14, valor: 2 }]);
   });
 });
+
+import { unicredFinancingMessage as m2 } from "./unicredMessage";
+test("total opcional por parcela", () => {
+  const base = { courseName: "X", workload: "1h", year: 2027, cashValue: 14338, options: [{ parcelas: 14, valor: 1202.4 }] };
+  expect(m2(base)).not.toContain("total:");
+  expect(m2({ ...base, showTotal: true })).toContain("14x de R$ 1.202,40 (total: R$ 16.833,60)");
+});
