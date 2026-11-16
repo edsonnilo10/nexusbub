@@ -11,8 +11,16 @@ import { toast } from "@/hooks/use-toast";
 import { CourseFull, CourseClass } from "@/lib/courseHelpers";
 import { formatWorkload, referenceYear } from "@/lib/whatsappTemplates";
 import { unicredFinancingMessage, UnicredOption } from "@/lib/unicredMessage";
+import { UnicredSim } from "@/hooks/useCourseOverrides";
 
-interface Props { course: CourseFull; classes: CourseClass[]; selectedClass?: CourseClass | null; year?: string }
+interface Props {
+  course: CourseFull;
+  classes: CourseClass[];
+  selectedClass?: CourseClass | null;
+  year?: string;
+  savedSim?: UnicredSim | null;
+  onSaveSim?: (sim: UnicredSim) => void;
+}
 
 const LIMIT = 4095;
 const toDataUrl = (f: File) => new Promise<string>((res, rej) => {
@@ -21,15 +29,15 @@ const toDataUrl = (f: File) => new Promise<string>((res, rej) => {
 const parseNum = (s: string) => Number(s.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
 const fmt = (n: number) => (n ? n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "");
 
-export const UnicredFinancingCard = ({ course, classes, selectedClass, year }: Props) => {
-  const [cash, setCash] = useState("");
-  const [rows, setRows] = useState<{ parcelas: string; valor: string }[]>([]);
+export const UnicredFinancingCard = ({ course, classes, selectedClass, year, savedSim, onSaveSim }: Props) => {
+  const [cash, setCash] = useState(savedSim?.cash ?? "");
+  const [rows, setRows] = useState<{ parcelas: string; valor: string }[]>(savedSim?.options ?? []);
   const [busy, setBusy] = useState(false);
   const [warn, setWarn] = useState<string | null>(null);
-  const [text, setText] = useState("");
-  const [edited, setEdited] = useState(false);
+  const [text, setText] = useState(savedSim?.text ?? "");
+  const [edited, setEdited] = useState(!!savedSim?.text);
   const [copied, setCopied] = useState(false);
-  const [showTotal, setShowTotal] = useState(false);
+  const [showTotal, setShowTotal] = useState(savedSim?.showTotal ?? false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const generated = useMemo(() => unicredFinancingMessage({
