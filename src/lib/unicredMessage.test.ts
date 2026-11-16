@@ -9,6 +9,9 @@ describe("unicred message", () => {
     expect(m.indexOf("14x de R$ 1.202,40")).toBeLessThan(m.indexOf("15x de R$ 1.130,50"));
     expect(m).toContain("30 dias");
     expect(m).not.toMatch(/juros|IOF|CET/i);
+    expect(m).toContain("parceira oficial da Nexus");
+    expect(m).toContain("exclusiva para alunos Nexus");
+    expect(m).toContain("diferenciadas da parceria Nexus + Unicred");
   });
   it("dedupes by installment count", () => {
     expect(normalizeOptions([{ parcelas: 14, valor: 1 }, { parcelas: 14, valor: 2 }])).toEqual([{ parcelas: 14, valor: 2 }]);
