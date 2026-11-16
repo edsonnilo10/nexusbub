@@ -728,6 +728,7 @@ export type Database = {
           proposal_installments: number | null
           proposal_price: string | null
           proposal_start_date: string | null
+          unicred_sim: Json | null
           updated_at: string
           user_id: string
           wa_2027: Json | null
@@ -746,6 +747,7 @@ export type Database = {
           proposal_installments?: number | null
           proposal_price?: string | null
           proposal_start_date?: string | null
+          unicred_sim?: Json | null
           updated_at?: string
           user_id: string
           wa_2027?: Json | null
@@ -764,6 +766,7 @@ export type Database = {
           proposal_installments?: number | null
           proposal_price?: string | null
           proposal_start_date?: string | null
+          unicred_sim?: Json | null
           updated_at?: string
           user_id?: string
           wa_2027?: Json | null
