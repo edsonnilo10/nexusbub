@@ -51,6 +51,14 @@ export const UnicredFinancingCard = ({ course, classes, selectedClass, year, sav
 
   useEffect(() => { if (!edited) setText(generated); }, [generated, edited]);
 
+  // Persiste a última simulação na conta (muda só com novo print ou edição manual)
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    onSaveSim?.({ cash, options: rows, showTotal, text: edited ? text : null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cash, rows, showTotal, text, edited]);
+
   const handleFiles = async (files: File[]) => {
     const imgs = files.filter((f) => f.type.startsWith("image/")).slice(0, 10);
     if (!imgs.length) return;

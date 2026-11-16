@@ -323,7 +323,14 @@ export const CourseWhatsAppTab = ({ course, modules, classes }: Props) => {
         })}
       </div>
 
-      <UnicredFinancingCard course={course} classes={classes} selectedClass={selectedClass} year={messageYear === "2027" ? "2027" : undefined} />
+      <UnicredFinancingCard
+        course={course}
+        classes={classes}
+        selectedClass={selectedClass}
+        year={messageYear === "2027" ? "2027" : undefined}
+        savedSim={overrides.unicred_sim}
+        onSaveSim={(sim) => save({ unicred_sim: sim })}
+      />
 
       <CourseFaqCard course={course} modules={modules} classes={classes} />
     </div>
