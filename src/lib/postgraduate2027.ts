@@ -1,4 +1,4 @@
-import { CourseFull, CourseModule } from "@/lib/courseHelpers";
+import { CourseFull, CourseModule, formatWorkloadLine } from "@/lib/courseHelpers";
 import { fitModulesMessage, fitBulletModulesMessage } from "./whatsappFit";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
@@ -238,10 +238,8 @@ export const postgraduate2027DateMessage = (
 const cleanCourseName = (name: string): string =>
   name.replace(/^PG\s+US\s+\w+(?:\s+T\d+)?\s*[:–-]?\s*/i, "").trim();
 
-const formatWorkload = (course: Pick<CourseFull, "workload_hours" | "workload_breakdown">): string => {
-  const base = course.workload_hours ? `${course.workload_hours}h` : "Carga horária a confirmar";
-  return course.workload_breakdown ? `${base} — ${course.workload_breakdown}` : base;
-};
+const formatWorkload = (course: Pick<CourseFull, "workload_hours" | "workload_breakdown">): string =>
+  formatWorkloadLine(course);
 
 const datesLines = (schedule: Postgraduate2027Schedule): string[] =>
   schedule.dates.flatMap((date, index) => (date ? [`MÓDULO ${index + 1}\t${date}.`] : []));

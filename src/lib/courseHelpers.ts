@@ -125,6 +125,26 @@ export const isComboCourse = (course: Pick<CourseFull, "name" | "slug">): boolea
   return n.includes(" + ") || s.includes("combo") || s.startsWith("basico-giob-trvg");
 };
 
+/**
+ * Linha de carga horária para mensagens: total + divisão teórica/prática.
+ * Não repete o total quando o detalhamento já começa com ele
+ * (ex.: "10h — 2h teóricas + 8h práticas" não vira "10h — 10h — ...").
+ */
+export const formatWorkloadLine = (
+  course: Pick<CourseFull, "workload_hours" | "workload_breakdown">,
+): string => {
+  const base = course.workload_hours ? `${course.workload_hours}h` : "Carga horária a confirmar";
+  const breakdown = (course.workload_breakdown || "").trim();
+  if (!breakdown) return base;
+  // "10h — ", "48 horas: ", "25h: " — só remove quando o número é o próprio total
+  const leading = breakdown.match(/^(\d+)\s*(?:h|horas?|horários?)\b\s*(?:[—–:-]\s*|:\s*)?/i);
+  const rest =
+    leading && course.workload_hours && Number(leading[1]) === course.workload_hours
+      ? breakdown.slice(leading[0].length).trim()
+      : breakdown;
+  return rest ? `${base} — ${rest}` : base;
+};
+
 export const formatClassDateRange = (start: string | null, end: string | null): string => {
   if (!start) return "—";
   const s = new Date(start + "T00:00:00");

@@ -1,4 +1,4 @@
-import { CourseFull, formatBRL, unitLabel } from "./courseHelpers";
+import { CourseFull, formatBRL, formatWorkloadLine, unitLabel } from "./courseHelpers";
 
 export const isPainPostgraduate = (course: CourseFull): boolean =>
   course.type === "pos_graduacao" &&
@@ -18,7 +18,7 @@ export const painPostgraduateMessage = (
     "Formação teórico-prática no controle da dor aguda e crônica, com procedimentos guiados por ultrassonografia e abordagem multidimensional da dor.",
     "",
     "*Coordenação:* Dr. Erik Halex Barone dos Santos — Medicina Física e Reabilitação, HC FMUSP; título ABMFR; CEO da Clínica Barone Rehab.",
-    `🕒 *Carga horária:* ${course.workload_hours ?? "A confirmar"}h${course.workload_breakdown ? ` — ${course.workload_breakdown}` : ""}.`,
+    `🕒 *Carga horária:* ${formatWorkloadLine(course)}.`,
     `📍 *Local:* ${location || unitLabel(course.unit)}`,
     "",
     "🗓️ *DATAS DAS TURMAS*",

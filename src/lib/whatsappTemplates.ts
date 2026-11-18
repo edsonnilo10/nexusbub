@@ -1,7 +1,7 @@
 import { fitBulletModulesMessage } from "@/lib/whatsappFit";
 import {
   CourseFull, CourseModule, CourseClass, ClassStatus,
-  formatBRL, unitLabel, formatClassDateRange, classStatusLabel,
+  formatBRL, unitLabel, formatClassDateRange, classStatusLabel, formatWorkloadLine,
 } from "./courseHelpers";
 import { isPainPostgraduate, painPostgraduateMessage } from "./painPostgraduateMessage";
 import { isGinePostgraduate, ginePostgraduateMessage } from "./ginePostgraduateMessage";
@@ -92,13 +92,7 @@ const locationFor = (course: CourseFull, cls: CourseClass | null): string => {
 };
 
 /** Exibe a carga horária de forma sucinta, incluindo divisão teórica/prática quando disponível */
-export const formatWorkload = (course: CourseFull): string => {
-  const base = course.workload_hours ? `${course.workload_hours}h` : "Carga horária a confirmar";
-  if (course.workload_breakdown) {
-    return `${base} — ${course.workload_breakdown}`;
-  }
-  return base;
-};
+export const formatWorkload = (course: CourseFull): string => formatWorkloadLine(course);
 
 /** Bloco de turmas formatado para WhatsApp — usado no editor e no template completo */
 export const classesBlock = (classes: CourseClass[]): string => {
